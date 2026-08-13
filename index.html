@@ -90,6 +90,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 6px; }
 .addr-label { font-size: 13px; color: #666; margin-bottom: 6px; }
+.field-label { font-size: 13px; color: #666; margin-bottom: 6px; }
 .form-group input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: 15px; outline: none; transition: border-color 0.2s; background: #fafafa; }
 .form-group input:focus { border-color: #1a7af8; background: white; }
 .form-group input:read-only { background: #f5f5f5; color: #888; border-color: #e0e0e0; }
@@ -192,18 +193,19 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <input type="date" id="fDate" style="text-align:center;font-size:15px;padding:10px">
       </div>
 
+      <div class="field-label">车牌</div>
       <div class="two-col" style="margin-bottom:10px">
         <input type="text" id="fPlateMain" placeholder="主车：粤K12345">
         <input type="text" id="fPlateTrailer" placeholder="挂车：粤K3333挂">
       </div>
 
-      <div class="form-group" style="margin-bottom:10px">
+      <div class="field-label">姓名</div>
+      <div class="two-col" style="margin-bottom:10px">
         <input type="text" id="fName" placeholder="姓名：赵钱孙">
+        <input type="tel" id="fPhone" placeholder="手机：18912345678">
       </div>
 
-      <div class="form-group" style="margin-bottom:4px">
-        <div class="addr-label">装货地 — 收货地</div>
-      </div>
+      <div class="addr-label">装货地 — 收货地</div>
       <div class="two-col" style="margin-bottom:10px">
         <input type="text" id="fFrom" placeholder="沉香工地">
         <input type="text" id="fTo" placeholder="仓库">
@@ -222,14 +224,13 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
       <div class="two-col" style="margin-bottom:10px">
         <input type="number" id="fFreight" placeholder="运费（元）">
-        <input type="number" id="fWeight" placeholder="过磅（公斤）">
+        <div style="display:flex;align-items:center;gap:6px">
+          <input type="number" id="fWeight" placeholder="过磅（公斤）" style="flex:1" oninput="updateTon()">
+          <span id="tonDisplay" style="font-size:12px;color:#888;white-space:nowrap"></span>
+        </div>
       </div>
 
-      <div class="form-group" style="margin-bottom:0">
-        <input type="number" id="fWeighFee" placeholder="过磅费（元）">
-      </div>
-
-      <input type="tel" id="fPhone" placeholder="手机号" style="display:none">
+      <input type="number" id="fWeighFee" placeholder="过磅费（元）" style="width:100%;border:1px solid #ddd;border-radius:8px;padding:10px 12px;font-size:15px;background:#fafafa">
       <input type="text" id="fIdCard" readonly style="display:none">
     </div>
 
@@ -327,20 +328,25 @@ function recognize(rawText) {
   if (phoneWithLabel) result.phone = phoneWithLabel[1];
   else { const phoneAll = allText.match(/(?:^|[^\d])(\d{11})(?=[^\d]|$)/); if (phoneAll) result.phone = phoneAll[1]; }
 
-  // 姓名
-  const nameWithLabel = allText.match(/姓名[：:\s]*([\u4e00-\u9fa5]{2,4})/);
-  if (nameWithLabel) result.name = nameWithLabel[1];
-  else { const nameLine = lines.find(l => /^[\u4e00-\u9fa5]{2,4}$/.test(l) && l.length >= 2 && l.length <= 4); if (nameLine) result.name = nameLine; }
-
-  // 货物
+  // 货物（先识别，防止误识别为姓名）
   for (const line of lines) {
     if (line.includes('盘扣')) { result.goods = '盘扣'; break; }
     if (line.includes('套扣')) { result.goods = '套扣'; break; }
-    if (/^其他[\s\d\u4e00-\u9fa5]/.test(line)) { result.goods = line.replace(/^其他/, '').trim(); result.goodsRaw = '其他'; break; }
+    if (/^其他[\s\d\u4e00-\u9fa5]/.test(line)) { result.goods = line.replace(/^其他/, '').trim() || '其他'; result.goodsRaw = '其他'; break; }
   }
   if (!result.goods) {
     const goodsLine = lines.find(l => l.includes('盘扣') || l.includes('套扣'));
     if (goodsLine) { if (goodsLine.includes('盘扣')) result.goods = '盘扣'; else if (goodsLine.includes('套扣')) result.goods = '套扣'; }
+  }
+
+  // 姓名（必须在货物之后，忽略盘扣/套扣）
+  const nameWithLabel = allText.match(/姓名[：:\s]*([\u4e00-\u9fa5]{2,4})/);
+  if (nameWithLabel) result.name = nameWithLabel[1];
+  else {
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      if (/^[\u4e00-\u9fa5]{2,4}$/.test(l) && l !== '盘扣' && l !== '套扣' && l !== '其他') { result.name = l; break; }
+    }
   }
 
   // 运费
@@ -365,7 +371,21 @@ function recognize(rawText) {
   if (!result.from || !result.to) { for (const line of lines) { if (/退回|送至|→/.test(line) && line.length > 3 && line.length < 50) { const parts = line.split(/退回|送至|→/).map(s => s.trim()); if (!result.from && parts[0]) result.from = parts[0]; if (!result.to && parts[1]) result.to = parts[1]; if (result.from && result.to) break; } } }
   if (!result.from || !result.to) { const fullLine = allText.match(/([\u4e00-\u9fa5]{2,20})(?:退回|送至|→)([\u4e00-\u9fa5]{2,20})/); if (fullLine) { result.from = result.from || fullLine[1]; result.to = result.to || fullLine[2]; } }
 
+  // 过磅重量
+  const weightWithLabel = allText.match(/(?:过磅|磅单|重量)[^\d]*(\d+)/);
+  if (weightWithLabel) result.weight = weightWithLabel[1];
+  else { const w = allText.match(/(?:公斤|kg|KG)[^\d]*(\d+)/); if (w) result.weight = w[1]; }
+
   return result;
+}
+
+// 过磅公斤→吨换算
+function updateTon() {
+  const v = document.getElementById('fWeight').value;
+  const el = document.getElementById('tonDisplay');
+  if (!v || isNaN(v) || Number(v) <= 0) { el.textContent = ''; return; }
+  const t = (Number(v) / 1000).toFixed(2);
+  el.textContent = ' = ' + t + ' 吨';
 }
 
 function doRecognize() {
@@ -385,6 +405,8 @@ function doRecognize() {
   document.getElementById('fFrom').value = r.from;
   document.getElementById('fTo').value = r.to;
   document.getElementById('fFreight').value = r.freight;
+  document.getElementById('fWeight').value = r.weight || '';
+  if (r.weight) updateTon();
   document.querySelectorAll('.goods-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('otherWrap').classList.remove('show');
   selectedGoods = '';
