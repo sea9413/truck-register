@@ -4,11 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>装货登记</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #333; font-size: 15px; }
-.container { max-width: 600px; margin: 0 auto; padding: 0 0 80px; }
+.container { max-width: 600px; margin: 0 auto; padding: 0 0 90px; }
 
 .header { background: #1a7af8; color: white; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; }
 .header h1 { font-size: 18px; font-weight: 600; }
@@ -21,60 +21,94 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .record-card:active { transform: scale(0.98); }
 .record-card .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
 .record-card .date { font-size: 13px; color: #888; }
-.record-card .plate { font-size: 16px; font-weight: 600; color: #222; }
-.record-card .bottom { display: flex; gap: 10px; font-size: 13px; color: #666; }
+.record-card .plate { font-size: 16px; font-weight: 600; }
+.record-card .bottom { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: #666; }
 .record-card .goods-tag { background: #e8f0ff; color: #1a7af8; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+.record-card .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
-.detail-page { padding: 0; display: none; }
-.detail-header { background: white; padding: 16px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px; }
+.detail-page { display: none; }
+.detail-header { background: white; padding: 14px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; }
+.detail-header-left { display: flex; align-items: center; gap: 12px; }
 .back-btn { background: none; border: none; font-size: 15px; color: #1a7af8; cursor: pointer; padding: 4px 0; }
-.detail-items { padding: 16px 20px; }
+.detail-actions { display: flex; gap: 8px; }
+.action-btn { padding: 6px 14px; border-radius: 8px; font-size: 13px; cursor: pointer; border: 1px solid #ddd; background: white; color: #666; }
+.action-btn.edit-btn { color: #1a7af8; border-color: #cce0ff; background: #f0f7ff; }
+.action-btn.delete-btn { color: #e74c3c; border-color: #fad7d4; background: #fff5f5; }
+.detail-items { padding: 8px 20px 16px; }
 .detail-item { display: flex; padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
 .detail-item:last-child { border-bottom: none; }
 .detail-item .label { color: #888; width: 90px; flex-shrink: 0; }
-.detail-item .value { color: #222; word-break: break-all; }
+.detail-item .value { color: #222; word-break: break-all; flex: 1; }
 .detail-item .value.highlight { color: #1a7af8; font-weight: 600; }
-.copy-notice-btn { display: block; width: calc(100% - 40px); margin: 16px 20px; background: #f0f7ff; color: #1a7af8; border: 1px solid #cce0ff; border-radius: 10px; padding: 12px; font-size: 14px; cursor: pointer; text-align: center; }
+.detail-item .value.pending { color: #ff9800; }
+.btn-row { padding: 8px 20px 16px; display: flex; flex-direction: column; gap: 10px; }
+.copy-notice-btn { display: block; width: 100%; background: #f0f9e8; color: #27ae60; border: 1px solid #c0e0a0; border-radius: 10px; padding: 12px; font-size: 14px; cursor: pointer; text-align: center; }
 
-.form-page { padding: 0; display: none; }
+/* Edit mode */
+.edit-section { background: white; margin: 12px; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: none; }
+.edit-section.show { display: block; }
+.edit-section-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.edit-section-title .tag { background: #ff9500; color: white; font-size: 11px; padding: 1px 6px; border-radius: 4px; font-weight: normal; }
+.edit-form { padding-bottom: 8px; }
+.edit-form .form-group { margin-bottom: 12px; }
+.edit-form label { display: block; font-size: 13px; color: #666; margin-bottom: 5px; }
+.edit-form input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 9px 12px; font-size: 15px; outline: none; transition: border-color 0.2s; background: #fafafa; }
+.edit-form input:focus { border-color: #1a7af8; background: white; }
+.edit-form input:read-only { background: #f5f5f5; color: #888; }
+.edit-btn-row { display: flex; gap: 10px; margin-top: 12px; }
+.save-edit-btn { flex: 1; background: #1a7af8; color: white; border: none; border-radius: 10px; padding: 12px; font-size: 15px; font-weight: 600; cursor: pointer; }
+.cancel-edit-btn { flex: 1; background: white; color: #666; border: 1px solid #ddd; border-radius: 10px; padding: 12px; font-size: 15px; cursor: pointer; }
+
+/* Delete confirm overlay */
+.confirm-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: none; align-items: center; justify-content: center; padding: 20px; }
+.confirm-overlay.show { display: flex; }
+.confirm-box { background: white; border-radius: 16px; padding: 28px 24px; width: 100%; max-width: 320px; text-align: center; }
+.confirm-icon { font-size: 40px; margin-bottom: 12px; }
+.confirm-title { font-size: 17px; font-weight: 600; margin-bottom: 8px; }
+.confirm-desc { font-size: 13px; color: #888; margin-bottom: 20px; line-height: 1.5; }
+.confirm-btn { display: block; width: 100%; padding: 14px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; margin-bottom: 10px; }
+.confirm-btn.primary { background: #e74c3c; color: white; }
+.confirm-btn.primary.step2 { background: #c0392b; }
+.confirm-btn.secondary { background: white; color: #666; border: 1px solid #ddd; margin-bottom: 0; }
+
+/* Form page */
+.form-page { display: none; }
 .form-header { background: white; padding: 14px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; gap: 12px; }
 .form-section { background: white; margin: 12px; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .section-title { font-size: 14px; font-weight: 600; color: #333; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
 .section-title .tag { background: #1a7af8; color: white; font-size: 11px; padding: 1px 6px; border-radius: 4px; font-weight: normal; }
-
 .paste-area { width: 100%; min-height: 120px; border: 2px dashed #ccc; border-radius: 10px; padding: 12px; font-size: 14px; color: #555; resize: none; outline: none; background: #fafafa; transition: border-color 0.2s; line-height: 1.6; }
 .paste-area:focus { border-color: #1a7af8; background: white; }
 .paste-area::placeholder { color: #bbb; }
-
 .recognize-btn { display: block; width: 100%; background: #ff9500; color: white; border: none; border-radius: 10px; padding: 14px; font-size: 16px; font-weight: 600; cursor: pointer; margin-top: 12px; }
 .recognize-btn:active { background: #e08600; }
 .recognize-btn:disabled { background: #ccc; cursor: not-allowed; }
-
-.recognize-result { background: #f0f9e8; border: 1px solid #c0e0a0; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #444; margin-top: 10px; line-height: 1.8; word-break: break-all; }
+.recognize-result { background: #f0f9e8; border: 1px solid #c0e0a0; border-radius: 8px; padding: 10px 12px; font-size: 13px; color: #444; margin-top: 10px; line-height: 1.8; word-break: break-all; display: none; }
 .recognize-result .unfilled { color: #ff6600; }
-
 .form-group { margin-bottom: 14px; }
 .form-group label { display: block; font-size: 13px; color: #666; margin-bottom: 6px; }
+.addr-label { font-size: 13px; color: #666; margin-bottom: 6px; }
 .form-group input { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: 15px; outline: none; transition: border-color 0.2s; background: #fafafa; }
 .form-group input:focus { border-color: #1a7af8; background: white; }
 .form-group input:read-only { background: #f5f5f5; color: #888; border-color: #e0e0e0; }
-
+input[id^="f"] { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 10px 12px; font-size: 15px; outline: none; background: #fafafa; }
+input[id^="f"]:focus { border-color: #1a7af8; background: white; }
+input[id="fDate"] { border-color: #1a7af8; background: #f0f7ff; color: #1a7af8; font-weight: 600; }
+input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 .goods-btns { display: flex; gap: 8px; }
 .goods-btn { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 8px; background: white; font-size: 14px; cursor: pointer; text-align: center; transition: all 0.15s; color: #666; }
 .goods-btn.active { background: #1a7af8; color: white; border-color: #1a7af8; font-weight: 600; }
-
 .other-input-wrap { display: none; margin-top: 8px; }
 .other-input-wrap.show { display: block; }
 .other-input-wrap input { border-color: #ff9500; }
-
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-
 .submit-btn { display: block; width: calc(100% - 24px); margin: 16px 12px; background: #1a7af8; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 17px; font-weight: 600; cursor: pointer; }
 .submit-btn:active { background: #1565d0; }
 .submit-btn:disabled { background: #ccc; cursor: not-allowed; }
 
+/* Toast */
 .toast { position: fixed; top: 70px; left: 50%; transform: translateX(-50%); background: #333; color: white; padding: 10px 20px; border-radius: 8px; font-size: 14px; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; white-space: nowrap; }
 .toast.show { opacity: 1; }
 .toast.green { background: #27ae60; }
@@ -83,31 +117,61 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .loading { text-align: center; padding: 40px; color: #aaa; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 .record-card { animation: slideDown 0.2s ease; }
-
-.sync-status { font-size: 12px; color: rgba(255,255,255,0.8); margin-left: 8px; }
 </style>
 </head>
 <body>
 
 <div class="container">
+  <!-- ===== 列表页 ===== -->
   <div class="list-page" id="listPage">
     <div class="header">
       <h1>🚛 装货登记</h1>
       <span class="count" id="recordCount">加载中…</span>
     </div>
-    <button class="add-btn" id="addBtn" onclick="showForm()">+ 新增登记</button>
+    <button class="add-btn" onclick="showForm()">+ 新增登记</button>
     <div id="recordList"><div class="loading">连接数据库…</div></div>
   </div>
 
+  <!-- ===== 详情页 ===== -->
   <div class="detail-page" id="detailPage">
     <div class="detail-header">
-      <button class="back-btn" onclick="showList()">← 返回</button>
-      <span style="font-weight:600">记录详情</span>
+      <div class="detail-header-left">
+        <button class="back-btn" onclick="showList()">← 返回</button>
+        <span style="font-weight:600">记录详情</span>
+      </div>
+      <div class="detail-actions">
+        <button class="action-btn edit-btn" id="editToggleBtn" onclick="toggleEdit()">✏️ 补填</button>
+        <button class="action-btn delete-btn" onclick="confirmDelete()">🗑️ 删除</button>
+      </div>
     </div>
     <div class="detail-items" id="detailItems"></div>
-    <button class="copy-notice-btn" id="detailCopyBtn" onclick="copyDetailNotice()">📋 复制通知文字</button>
+    <div class="btn-row">
+      <button class="copy-notice-btn" id="detailCopyBtn" onclick="copyDetailNotice()">📋 复制通知文字</button>
+    </div>
+
+    <!-- 补填编辑区 -->
+    <div class="edit-section" id="editSection">
+      <div class="edit-section-title">✏️ 补填 / 修改 <span class="tag">仅可修改过磅信息</span></div>
+      <div class="edit-form">
+        <div class="two-col">
+          <div class="form-group">
+            <label>过磅重量（公斤）</label>
+            <input type="number" id="eWeight" placeholder="如：20000">
+          </div>
+          <div class="form-group">
+            <label>过磅费（元）</label>
+            <input type="number" id="eWeighFee" placeholder="如：50">
+          </div>
+        </div>
+        <div class="edit-btn-row">
+          <button class="save-edit-btn" onclick="saveEdit()">保存修改</button>
+          <button class="cancel-edit-btn" onclick="toggleEdit()">取消</button>
+        </div>
+      </div>
+    </div>
   </div>
 
+  <!-- ===== 登记表单页 ===== -->
   <div class="form-page" id="formPage">
     <div class="form-header">
       <button class="back-btn" onclick="showList()">← 返回</button>
@@ -118,56 +182,34 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
       <div class="section-title">📋 粘贴识别区 <span class="tag">自动填入</span></div>
       <textarea class="paste-area" id="pasteArea" placeholder="把司机发来的信息整段粘贴到这里…" oninput="checkPaste()"></textarea>
       <button class="recognize-btn" id="recognizeBtn" onclick="doRecognize()" disabled>🔍 识别</button>
-      <div class="recognize-result" id="recognizeResult" style="display:none"></div>
+      <div class="recognize-result" id="recognizeResult"></div>
     </div>
 
     <div class="form-section">
       <div class="section-title">📝 核对与补填</div>
 
-      <div class="form-group">
-        <label>日期</label>
-        <input type="date" id="fDate">
+      <div class="form-group" style="margin-bottom:10px">
+        <input type="date" id="fDate" style="text-align:center;font-size:15px;padding:10px">
       </div>
 
-      <div class="two-col">
-        <div class="form-group">
-          <label>主车车牌 *</label>
-          <input type="text" id="fPlateMain" placeholder="如：粤K53163">
-        </div>
-        <div class="form-group">
-          <label>挂车车牌</label>
-          <input type="text" id="fPlateTrailer" placeholder="如：粤KH639挂">
-        </div>
+      <div class="two-col" style="margin-bottom:10px">
+        <input type="text" id="fPlateMain" placeholder="主车：粤K12345">
+        <input type="text" id="fPlateTrailer" placeholder="挂车：粤K3333挂">
       </div>
 
-      <div class="form-group">
-        <label>姓名</label>
-        <input type="text" id="fName" placeholder="司机姓名">
+      <div class="form-group" style="margin-bottom:10px">
+        <input type="text" id="fName" placeholder="姓名：赵钱孙">
       </div>
 
-      <div class="two-col">
-        <div class="form-group">
-          <label>手机号</label>
-          <input type="tel" id="fPhone" placeholder="手机号">
-        </div>
-        <div class="form-group">
-          <label>身份证号</label>
-          <input type="text" id="fIdCard" placeholder="自动填入" readonly>
-        </div>
+      <div class="form-group" style="margin-bottom:4px">
+        <div class="addr-label">装货地 — 收货地</div>
+      </div>
+      <div class="two-col" style="margin-bottom:10px">
+        <input type="text" id="fFrom" placeholder="沉香工地">
+        <input type="text" id="fTo" placeholder="仓库">
       </div>
 
-      <div class="form-group">
-        <label>装货地</label>
-        <input type="text" id="fFrom" placeholder="从哪里装货">
-      </div>
-
-      <div class="form-group">
-        <label>收货地</label>
-        <input type="text" id="fTo" placeholder="送到哪里">
-      </div>
-
-      <div class="form-group">
-        <label>货物</label>
+      <div class="form-group" style="margin-bottom:10px">
         <div class="goods-btns">
           <div class="goods-btn" onclick="selectGoods(this, '盘扣')">盘扣</div>
           <div class="goods-btn" onclick="selectGoods(this, '套扣')">套扣</div>
@@ -178,24 +220,31 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
         </div>
       </div>
 
-      <div class="two-col">
-        <div class="form-group">
-          <label>运费（元）</label>
-          <input type="number" id="fFreight" placeholder="如：1700">
-        </div>
-        <div class="form-group">
-          <label>过磅重量（公斤）</label>
-          <input type="number" id="fWeight" placeholder="如：20000">
-        </div>
+      <div class="two-col" style="margin-bottom:10px">
+        <input type="number" id="fFreight" placeholder="运费（元）">
+        <input type="number" id="fWeight" placeholder="过磅（公斤）">
       </div>
 
       <div class="form-group" style="margin-bottom:0">
-        <label>过磅费（元）</label>
-        <input type="number" id="fWeighFee" placeholder="如：50">
+        <input type="number" id="fWeighFee" placeholder="过磅费（元）">
       </div>
+
+      <input type="tel" id="fPhone" placeholder="手机号" style="display:none">
+      <input type="text" id="fIdCard" readonly style="display:none">
     </div>
 
     <button class="submit-btn" id="submitBtn" onclick="doSubmit()">提 交</button>
+  </div>
+</div>
+
+<!-- ===== 删除确认弹窗 ===== -->
+<div class="confirm-overlay" id="deleteConfirm">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="deleteIcon">⚠️</div>
+    <div class="confirm-title" id="deleteTitle">确定要删除这条记录吗？</div>
+    <div class="confirm-desc" id="deleteDesc">删除后数据无法恢复，请谨慎操作。</div>
+    <button class="confirm-btn primary" id="deleteBtn1" onclick="doDeleteStep1()">确定删除</button>
+    <button class="confirm-btn secondary" id="deleteBtn2" onclick="hideDeleteConfirm()">取消</button>
   </div>
 </div>
 
@@ -211,12 +260,14 @@ const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 let currentRecords = [];
 let currentDetail = null;
 let selectedGoods = '';
+let deleteStep = 0; // 0=未确认 1=第一步确认 2=第二步确认
 
 // 页面切换
 function showList() {
   document.getElementById('listPage').style.display = 'block';
   document.getElementById('detailPage').style.display = 'none';
   document.getElementById('formPage').style.display = 'none';
+  hideEdit();
   loadRecords();
 }
 function showDetail() {
@@ -235,8 +286,8 @@ function resetForm() {
   document.getElementById('pasteArea').value = '';
   document.getElementById('recognizeResult').style.display = 'none';
   document.getElementById('recognizeBtn').disabled = true;
-  const today = new Date().toISOString().split('T')[0];
-  document.getElementById('fDate').value = today;
+  const today = new Date();
+  document.getElementById('fDate').value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
   ['fPlateMain','fPlateTrailer','fName','fPhone','fIdCard','fFrom','fTo','fFreight','fWeight','fWeighFee'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fIdCard').readOnly = true;
   document.querySelectorAll('.goods-btn').forEach(b => b.classList.remove('active'));
@@ -266,12 +317,12 @@ function recognize(rawText) {
 
   const allText = text;
 
-  // 身份证号（优先带标签）
+  // 身份证
   const idWithLabel = allText.match(/身份证[：:\s]*([1-9]\d{5}(?:\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dx]|[3][01]\d{14}[\dx]))/i);
   if (idWithLabel) result.idCard = idWithLabel[1].toUpperCase();
   else { const idAll = allText.match(/([1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dx])/i); if (idAll) result.idCard = idAll[1].toUpperCase(); }
 
-  // 手机号（优先带标签）
+  // 手机号
   const phoneWithLabel = allText.match(/电话[：:\s]*(\d{11})/);
   if (phoneWithLabel) result.phone = phoneWithLabel[1];
   else { const phoneAll = allText.match(/(?:^|[^\d])(\d{11})(?=[^\d]|$)/); if (phoneAll) result.phone = phoneAll[1]; }
@@ -282,8 +333,15 @@ function recognize(rawText) {
   else { const nameLine = lines.find(l => /^[\u4e00-\u9fa5]{2,4}$/.test(l) && l.length >= 2 && l.length <= 4); if (nameLine) result.name = nameLine; }
 
   // 货物
-  for (const line of lines) { if (line.includes('盘扣')) { result.goods = '盘扣'; break; } if (line.includes('套扣')) { result.goods = '套扣'; break; } if (/^其他[\s\d\u4e00-\u9fa5]/.test(line)) { result.goods = line.replace(/^其他/, '').trim(); result.goodsRaw = '其他'; break; } }
-  if (!result.goods) { const goodsLine = lines.find(l => l.includes('盘扣') || l.includes('套扣')); if (goodsLine) { if (goodsLine.includes('盘扣')) result.goods = '盘扣'; else if (goodsLine.includes('套扣')) result.goods = '套扣'; } }
+  for (const line of lines) {
+    if (line.includes('盘扣')) { result.goods = '盘扣'; break; }
+    if (line.includes('套扣')) { result.goods = '套扣'; break; }
+    if (/^其他[\s\d\u4e00-\u9fa5]/.test(line)) { result.goods = line.replace(/^其他/, '').trim(); result.goodsRaw = '其他'; break; }
+  }
+  if (!result.goods) {
+    const goodsLine = lines.find(l => l.includes('盘扣') || l.includes('套扣'));
+    if (goodsLine) { if (goodsLine.includes('盘扣')) result.goods = '盘扣'; else if (goodsLine.includes('套扣')) result.goods = '套扣'; }
+  }
 
   // 运费
   const freightWithLabel = allText.match(/运费[：:\s]*(\d+)/);
@@ -315,6 +373,10 @@ function doRecognize() {
   if (!text.trim()) return;
   const r = recognize(text);
   document.getElementById('fDate').value = r.date;
+  if (r.date) {
+    const d = new Date(r.date);
+    document.getElementById('fDate').style.color = '#1a7af8';
+  }
   document.getElementById('fPlateMain').value = r.plateMain;
   document.getElementById('fPlateTrailer').value = r.plateTrailer;
   document.getElementById('fName').value = r.name;
@@ -330,9 +392,9 @@ function doRecognize() {
   else if (r.goods && r.goods !== '其他') { selectedGoods = r.goodsRaw || '其他'; document.querySelectorAll('.goods-btn').forEach(b => { if (b.textContent.trim() === '其他') b.classList.add('active'); }); document.getElementById('otherWrap').classList.add('show'); document.getElementById('fGoodsOther').value = r.goods; }
   const resultEl = document.getElementById('recognizeResult');
   const unfilled = [], filled = [];
-  const push = (label, val) => val ? filled.push(`${label} ${val}`) : unfilled.push(`${label}`);
+  const push = (label, val) => val ? filled.push(label + ' ' + val) : unfilled.push(label);
   push('日期', r.date); push('主车', r.plateMain); push('挂车', r.plateTrailer); push('姓名', r.name); push('手机', r.phone); push('身份证', r.idCard); push('运费', r.freight ? r.freight + '元' : ''); push('装货地', r.from); push('收货地', r.to); push('货物', r.goods);
-  resultEl.innerHTML = `<strong>已识别：</strong>${filled.join(' | ')}${unfilled.length ? `<br><span class="unfilled">未识别：${unfilled.join('、')}（请手动填写）</span>` : ''}`;
+  resultEl.innerHTML = '<strong>已识别：</strong>' + filled.join(' | ') + (unfilled.length ? '<br><span class="unfilled">未识别：' + unfilled.join('、') + '（请手动填写）</span>' : '');
   resultEl.style.display = 'block';
   toast('识别完成，请核对后提交', true);
 }
@@ -351,20 +413,26 @@ async function doSubmit() {
   const from = document.getElementById('fFrom').value.trim();
   if (!plate) { toast('请填写主车车牌'); return; }
   const goodsDisplay = selectedGoods === '其他' ? (document.getElementById('fGoodsOther').value.trim() || '其他') : (selectedGoods || '待填');
-  const record = {
+  const r = {
     date: document.getElementById('fDate').value || formatDate(new Date()),
-    plate_main: plate,
-    plate_trailer: document.getElementById('fPlateTrailer').value.trim(),
+    plateMain: plate,
+    plateTrailer: document.getElementById('fPlateTrailer').value.trim(),
     name: document.getElementById('fName').value.trim(),
     phone: document.getElementById('fPhone').value.trim(),
-    id_card: document.getElementById('fIdCard').value.trim(),
-    from_location: from,
-    to_location: document.getElementById('fTo').value.trim(),
+    idCard: document.getElementById('fIdCard').value.trim(),
+    from: from,
+    to: document.getElementById('fTo').value.trim(),
     goods: goodsDisplay,
     freight: document.getElementById('fFreight').value.trim(),
     weight: document.getElementById('fWeight').value.trim(),
-    weigh_fee: document.getElementById('fWeighFee').value.trim(),
-    notice: generateNotice({ date: document.getElementById('fDate').value, plateMain: plate, plateTrailer: document.getElementById('fPlateTrailer').value.trim(), name: document.getElementById('fName').value.trim(), phone: document.getElementById('fPhone').value.trim(), idCard: document.getElementById('fIdCard').value.trim(), from: from, to: document.getElementById('fTo').value.trim(), goods: goodsDisplay, freight: document.getElementById('fFreight').value.trim(), weight: document.getElementById('fWeight').value.trim(), weighFee: document.getElementById('fWeighFee').value.trim() })
+    weighFee: document.getElementById('fWeighFee').value.trim()
+  };
+  const record = {
+    date: r.date, plate_main: r.plateMain, plate_trailer: r.plateTrailer,
+    name: r.name, phone: r.phone, id_card: r.idCard,
+    from_location: r.from, to_location: r.to, goods: r.goods,
+    freight: r.freight, weight: r.weight, weigh_fee: r.weighFee,
+    notice: generateNotice(r)
   };
   const { error } = await supabaseClient.from('records').insert([record]);
   if (error) { toast('提交失败：' + error.message, false, true); return; }
@@ -373,18 +441,18 @@ async function doSubmit() {
 }
 
 function generateNotice(r) {
-  const plateStr = r.plateTrailer ? `${r.plateMain}+${r.plateTrailer}` : r.plateMain;
-  const nameStr = r.name ? ` | 姓名：${r.name}` : '';
-  const phoneStr = r.phone ? ` | 手机：${r.phone}` : '';
-  const weightStr = r.weight ? `${r.weight}公斤` : '待填';
-  const feeStr = r.weighFee ? `${r.weighFee}元` : '待填';
-  const route = r.from && r.to ? `装：${r.from} → 收：${r.to}` : (r.from ? `装货地：${r.from}` : (r.to ? `收货地：${r.to}` : ''));
-  return `🚛 已登记 | ${r.date} | 车牌：${plateStr}${nameStr}${phoneStr} | ${route} | 货物：${r.goods} | 运费：${r.freight}元 | 过磅：${weightStr} | 过磅费：${feeStr}`;
+  const plateStr = r.plateTrailer ? r.plateMain + '+' + r.plateTrailer : r.plateMain;
+  const nameStr = r.name ? ' | 姓名：' + r.name : '';
+  const phoneStr = r.phone ? ' | 手机：' + r.phone : '';
+  const weightStr = r.weight ? r.weight + '公斤' : '待填';
+  const feeStr = r.weighFee ? r.weighFee + '元' : '待填';
+  const route = r.from && r.to ? '装：' + r.from + ' → 收：' + r.to : (r.from ? '装货地：' + r.from : (r.to ? '收货地：' + r.to : ''));
+  return '🚛 已登记 | ' + r.date + ' | 车牌：' + plateStr + nameStr + phoneStr + ' | ' + route + ' | 货物：' + r.goods + ' | 运费：' + r.freight + '元 | 过磅：' + weightStr + ' | 过磅费：' + feeStr;
 }
 
 async function loadRecords() {
   const { data, error } = await supabaseClient.from('records').select('*').order('created_at', { ascending: false });
-  if (error) { document.getElementById('recordList').innerHTML = '<div class="empty">连接失败，请刷新</div>'; return; }
+  if (error) { document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>连接失败，请刷新</div>'; return; }
   currentRecords = data || [];
   renderList();
 }
@@ -394,15 +462,14 @@ function renderList() {
   const el = document.getElementById('recordList');
   if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>还没有登记记录<br>点上方按钮开始</div>'; return; }
   el.innerHTML = currentRecords.map(r => {
-    const plate = r.plate_trailer ? `${r.plate_main}+${r.plate_trailer}` : r.plate_main;
+    const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
+    const hasWeight = r.weight && r.weight.trim();
+    const badge = !hasWeight ? '<span class="badge-pending">待补过磅</span>' : '';
     const goods = r.goods || '待填';
-    return `<div class="record-card" onclick="showRecordDetail('${r.id}')">
-      <div class="top"><span class="date">${r.date || ''}</span><span class="plate">${plate}</span></div>
-      <div class="bottom">
-        <span class="goods-tag">${goods}</span>
-        ${r.from_location ? `<span>装：${r.from_location}</span>` : ''}
-      </div>
-    </div>`;
+    return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
+      '<div class="top"><span class="date">' + (r.date || '') + '</span><span class="plate">' + plate + '</span></div>' +
+      '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badge + (r.from_location ? '<span>装：' + r.from_location + '</span>' : '') + '</div>' +
+      '</div>';
   }).join('');
 }
 
@@ -410,20 +477,125 @@ function showRecordDetail(id) {
   const r = currentRecords.find(x => x.id === id);
   if (!r) return;
   currentDetail = r;
-  const plate = r.plate_trailer ? `${r.plate_main}+${r.plate_trailer}` : r.plate_main;
-  const fields = [
-    ['日期', r.date, true], ['主车车牌', r.plate_main, true], ['挂车车牌', r.plate_trailer || '—'],
-    ['姓名', r.name || '未填'], ['手机号', r.phone || '未填'], ['身份证号', r.id_card || '未填'],
-    ['装货地', r.from_location || '未填'], ['收货地', r.to_location || '未填'], ['货物', r.goods || '未填'],
-    ['运费', r.freight ? r.freight + ' 元' : '未填'], ['过磅重量', r.weight ? r.weight + ' 公斤' : '待填'], ['过磅费', r.weigh_fee ? r.weigh_fee + ' 元' : '待填']
-  ];
-  document.getElementById('detailItems').innerHTML = fields.map(([label, val, highlight]) => `<div class="detail-item"><span class="label">${label}</span><span class="value${highlight ? ' highlight' : ''}">${val}</span></div>`).join('');
+  renderDetail(r);
   showDetail();
+}
+
+function renderDetail(r) {
+  const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
+  const hasWeight = r.weight && r.weight.trim();
+  const fields = [
+    ['日期', r.date || '', true],
+    ['主车车牌', r.plate_main, true],
+    ['挂车车牌', r.plate_trailer || '—', false],
+    ['姓名', r.name || '未填', false],
+    ['手机号', r.phone || '未填', false],
+    ['身份证号', r.id_card || '未填', false],
+    ['装货地', r.from_location || '未填', false],
+    ['收货地', r.to_location || '未填', false],
+    ['货物', r.goods || '未填', false],
+    ['运费', r.freight ? r.freight + ' 元' : '未填', false],
+    ['过磅重量', r.weight ? r.weight + ' 公斤' : '待补填', !hasWeight],
+    ['过磅费', r.weigh_fee ? r.weigh_fee + ' 元' : '待补填', !hasWeight]
+  ];
+  document.getElementById('detailItems').innerHTML = fields.map(([label, val, isPending]) =>
+    '<div class="detail-item"><span class="label">' + label + '</span><span class="value' + (isPending ? ' pending' : '') + '">' + val + '</span></div>'
+  ).join('');
+  document.getElementById('eWeight').value = r.weight || '';
+  document.getElementById('eWeighFee').value = r.weigh_fee || '';
+  hideEdit();
+}
+
+// ===== 编辑/补填 =====
+function toggleEdit() {
+  const section = document.getElementById('editSection');
+  const btn = document.getElementById('editToggleBtn');
+  if (section.classList.contains('show')) { hideEdit(); }
+  else {
+    section.classList.add('show');
+    btn.textContent = '✏️ 收起';
+    document.getElementById('eWeight').value = currentDetail.weight || '';
+    document.getElementById('eWeighFee').value = currentDetail.weigh_fee || '';
+  }
+}
+
+function hideEdit() {
+  document.getElementById('editSection').classList.remove('show');
+  document.getElementById('editToggleBtn').textContent = '✏️ 补填';
+}
+
+async function saveEdit() {
+  if (!currentDetail) return;
+  const weight = document.getElementById('eWeight').value.trim();
+  const weigh_fee = document.getElementById('eWeighFee').value.trim();
+  // 同步更新通知文字
+  const r = {
+    date: currentDetail.date, plateMain: currentDetail.plate_main, plateTrailer: currentDetail.plate_trailer,
+    name: currentDetail.name, phone: currentDetail.phone, idCard: currentDetail.id_card,
+    from: currentDetail.from_location, to: currentDetail.to_location, goods: currentDetail.goods,
+    freight: currentDetail.freight, weight: weight, weighFee: weigh_fee
+  };
+  const { error } = await supabaseClient.from('records').update({
+    weight: weight, weigh_fee: weigh_fee,
+    notice: generateNotice(r)
+  }).eq('id', currentDetail.id);
+  if (error) { toast('保存失败：' + error.message, false, true); return; }
+  toast('已保存 ✓', true);
+  // 刷新当前记录
+  const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
+  if (data) { currentDetail = data; renderDetail(currentDetail); }
+  loadRecords();
+  hideEdit();
+}
+
+// ===== 删除（两步确认）=====
+function confirmDelete() {
+  deleteStep = 1;
+  document.getElementById('deleteIcon').textContent = '⚠️';
+  document.getElementById('deleteTitle').textContent = '确定要删除这条记录吗？';
+  document.getElementById('deleteDesc').textContent = '删除后数据无法恢复，请谨慎操作。';
+  document.getElementById('deleteBtn1').textContent = '确定删除';
+  document.getElementById('deleteBtn1').className = 'confirm-btn primary';
+  document.getElementById('deleteConfirm').classList.add('show');
+}
+
+function doDeleteStep1() {
+  if (deleteStep === 1) {
+    // 第二步：更强烈的警告
+    deleteStep = 2;
+    document.getElementById('deleteIcon').textContent = '🚫';
+    document.getElementById('deleteTitle').textContent = '再次确认删除！';
+    document.getElementById('deleteDesc').textContent = '这是最后一次确认，删除后数据永久消失，无法找回！';
+    document.getElementById('deleteBtn1').textContent = '确认删除（不可撤销）';
+    document.getElementById('deleteBtn1').className = 'confirm-btn primary step2';
+  } else if (deleteStep === 2) {
+    doDelete();
+  }
+}
+
+async function doDelete() {
+  if (!currentDetail) return;
+  hideDeleteConfirm();
+  const { error } = await supabaseClient.from('records').delete().eq('id', currentDetail.id);
+  if (error) { toast('删除失败：' + error.message, false, true); return; }
+  toast('已删除', true);
+  setTimeout(() => showList(), 600);
+}
+
+function hideDeleteConfirm() {
+  document.getElementById('deleteConfirm').classList.remove('show');
+  deleteStep = 0;
 }
 
 function copyDetailNotice() {
   if (!currentDetail) return;
-  const text = currentDetail.notice || generateNotice({ date: currentDetail.date, plateMain: currentDetail.plate_main, plateTrailer: currentDetail.plate_trailer, name: currentDetail.name, phone: currentDetail.phone, idCard: currentDetail.id_card, from: currentDetail.from_location, to: currentDetail.to_location, goods: currentDetail.goods, freight: currentDetail.freight, weight: currentDetail.weight, weighFee: currentDetail.weigh_fee });
+  const r = {
+    date: currentDetail.date, plateMain: currentDetail.plate_main, plateTrailer: currentDetail.plate_trailer,
+    name: currentDetail.name, phone: currentDetail.phone, idCard: currentDetail.id_card,
+    from: currentDetail.from_location, to: currentDetail.to_location, goods: currentDetail.goods,
+    freight: currentDetail.freight, weight: currentDetail.weight, weighFee: currentDetail.weigh_fee
+  };
+  const text = currentDetail.notice || generateNotice(r);
   copyText(text);
 }
 
@@ -432,7 +604,7 @@ function copyText(text) {
   else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('已复制，去微信群粘贴发送', true); }
 }
 
-function formatDate(d) { return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+function formatDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 
 function toast(msg, green, red) {
   const t = document.getElementById('toast');
@@ -442,7 +614,7 @@ function toast(msg, green, red) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// 初始化加载
+// 初始化
 loadRecords();
 </script>
 </body>
