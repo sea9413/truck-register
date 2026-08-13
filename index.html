@@ -119,6 +119,25 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 .loading { text-align: center; padding: 40px; color: #aaa; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 .record-card { animation: slideDown 0.2s ease; }
+.edit-section { background: #f8f9fa; padding: 15px; border-radius: 10px; margin-top: 15px; display: none; }
+.edit-section.show { display: block; }
+.edit-section .field-label { font-size: 12px; color: #888; margin: 8px 0 4px; }
+.edit-section input, .edit-section select { width: 100%; padding: 8px 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; margin-bottom: 6px; }
+.edit-section .two-col { display: flex; gap: 8px; }
+.edit-section .two-col input { flex: 1; }
+.edit-section .goods-btns { display: flex; gap: 6px; margin-bottom: 8px; }
+.edit-section .goods-btn { flex: 1; padding: 8px; border: 1px solid #ddd; border-radius: 6px; text-align: center; font-size: 13px; cursor: pointer; background: white; }
+.edit-section .goods-btn.active { background: #1a7af8; color: white; border-color: #1a7af8; }
+.edit-section .save-btn { width: 100%; background: #1a7af8; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 15px; font-weight: 600; margin-top: 10px; cursor: pointer; }
+.edit-section .save-btn:disabled { background: #ccc; }
+.edit-section .cancel-btn { width: 100%; background: #f0f0f0; color: #333; border: none; padding: 10px; border-radius: 8px; font-size: 14px; margin-top: 6px; cursor: pointer; }
+
+/* 修改提示横条 */
+.modify-banner { background: #fff3e0; border-left: 3px solid #e65100; padding: 8px 12px; margin: 10px 0; border-radius: 4px; font-size: 13px; color: #e65100; display: none; }
+.modify-banner.show { display: block; }
+
+/* 字段被修改后标红加粗 */
+.detail-item .value.changed { color: #d32f2f; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -142,6 +161,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <span style="font-weight:600">记录详情</span>
       </div>
       <div class="detail-actions">
+        <button class="action-btn edit-btn" onclick="openFullEdit()">📝 修改</button>
         <button class="action-btn edit-btn" id="editToggleBtn" onclick="toggleEdit()">✏️ 补填</button>
         <button class="action-btn delete-btn" onclick="confirmDelete()">🗑️ 删除</button>
       </div>
@@ -238,6 +258,54 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
     <button class="submit-btn" id="submitBtn" onclick="doSubmit()">提 交</button>
   </div>
+</div>
+
+<!-- ===== 完整修改弹窗 =====
+<div class="confirm-overlay" id="fullEditModal">
+  <div class="confirm-box" style="max-width:90%; width:500px; max-height:90vh; overflow-y:auto; text-align:left">
+    <div class="confirm-title">📝 修改记录</div>
+    <div id="fullEditForm">
+      <div class="field-label">日期</div>
+      <input type="date" id="mDate">
+      <div class="field-label">车牌号码</div>
+      <div class="two-col">
+        <input type="text" id="mPlateMain" placeholder="主车">
+        <input type="text" id="mPlateTrailer" placeholder="挂车">
+      </div>
+      <div class="field-label">司机信息</div>
+      <div class="two-col">
+        <input type="text" id="mName" placeholder="姓名">
+        <input type="tel" id="mPhone" placeholder="手机号">
+      </div>
+      <input type="text" id="mIdCard" placeholder="身份证号">
+      <div class="field-label">装货地 — 收货地</div>
+      <div class="two-col">
+        <input type="text" id="mFrom" placeholder="装货地">
+        <input type="text" id="mTo" placeholder="收货地">
+      </div>
+      <div class="field-label">货物</div>
+      <div class="goods-btns">
+        <div class="goods-btn" onclick="selectModalGoods(this, '盘扣')">盘扣</div>
+        <div class="goods-btn" onclick="selectModalGoods(this, '套扣')">套扣</div>
+        <div class="goods-btn" onclick="selectModalGoods(this, '其他')">其他</div>
+      </div>
+      <input type="text" id="mGoodsOther" placeholder="其他货物名称" style="display:none">
+      <div class="field-label">运费（元）</div>
+      <div class="two-col">
+        <input type="number" id="mFreight" placeholder="运费">
+        <input type="number" id="mWeighFee" placeholder="过磅费">
+      </div>
+      <div class="field-label">过磅重量（公斤）</div>
+      <input type="number" id="mWeight" placeholder="过磅重量">
+    </div>
+    <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">💾 保存修改</button>
+    <button class="cancel-btn" onclick="closeFullEdit()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">取消</button>
+  </div>
+</div>
+
+<!-- ===== 修改提示横幅 =====
+<div class="modify-banner" id="modifyBanner">
+  <div id="modifyBannerText"></div>
 </div>
 
 <!-- ===== 删除确认弹窗 ===== -->
@@ -533,6 +601,154 @@ function renderDetail(r) {
   document.getElementById('eWeight').value = r.weight || '';
   document.getElementById('eWeighFee').value = r.weigh_fee || '';
   hideEdit();
+}
+
+// ===== 完整修改功能 =====
+function openFullEdit() {
+  if (!currentDetail) return;
+  const r = currentDetail;
+  document.getElementById('mDate').value = r.date || '';
+  document.getElementById('mPlateMain').value = r.plate_main || '';
+  document.getElementById('mPlateTrailer').value = r.plate_trailer || '';
+  document.getElementById('mName').value = r.name || '';
+  document.getElementById('mPhone').value = r.phone || '';
+  document.getElementById('mIdCard').value = r.id_card || '';
+  document.getElementById('mFrom').value = r.from_location || '';
+  document.getElementById('mTo').value = r.to_location || '';
+  document.getElementById('mFreight').value = r.freight || '';
+  document.getElementById('mWeighFee').value = r.weigh_fee || '';
+  document.getElementById('mWeight').value = r.weight || '';
+  // 货物按钮
+  const goods = r.goods || '';
+  document.querySelectorAll('#fullEditModal .goods-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === goods);
+  });
+  const otherInput = document.getElementById('mGoodsOther');
+  if (goods && !['盘扣', '套扣'].includes(goods)) {
+    otherInput.style.display = 'block';
+    otherInput.value = goods;
+  } else {
+    otherInput.style.display = 'none';
+    otherInput.value = '';
+  }
+  document.getElementById('fullEditModal').classList.add('show');
+  modalEditOriginal = {
+    plate_main: r.plate_main, plate_trailer: r.plate_trailer,
+    name: r.name, phone: r.phone, from_location: r.from_location,
+    to_location: r.to_location, goods: r.goods, freight: r.freight,
+    weigh_fee: r.weigh_fee, weight: r.weight, date: r.date
+  };
+}
+
+let modalEditOriginal = {};
+
+function selectModalGoods(btn, name) {
+  document.querySelectorAll('#fullEditModal .goods-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const otherInput = document.getElementById('mGoodsOther');
+  if (name === '其他') {
+    otherInput.style.display = 'block';
+  } else {
+    otherInput.style.display = 'none';
+    otherInput.value = '';
+  }
+}
+
+function closeFullEdit() {
+  document.getElementById('fullEditModal').classList.remove('show');
+}
+
+async function saveFullEdit() {
+  if (!currentDetail) return;
+  // 选中的货物
+  const activeGoods = document.querySelector('#fullEditModal .goods-btn.active');
+  let goods = activeGoods ? activeGoods.textContent.trim() : '';
+  if (goods === '其他') {
+    const other = document.getElementById('mGoodsOther').value.trim();
+    goods = other || '其他';
+  }
+  const newData = {
+    date: document.getElementById('mDate').value,
+    plate_main: document.getElementById('mPlateMain').value.trim(),
+    plate_trailer: document.getElementById('mPlateTrailer').value.trim(),
+    name: document.getElementById('mName').value.trim(),
+    phone: document.getElementById('mPhone').value.trim(),
+    id_card: document.getElementById('mIdCard').value.trim(),
+    from_location: document.getElementById('mFrom').value.trim(),
+    to_location: document.getElementById('mTo').value.trim(),
+    goods: goods,
+    freight: document.getElementById('mFreight').value.trim(),
+    weigh_fee: document.getElementById('mWeighFee').value.trim(),
+    weight: document.getElementById('mWeight').value.trim()
+  };
+  // 找被修改的字段
+  const changedFields = [];
+  const fieldLabels = {
+    date: '日期', plate_main: '主车车牌', plate_trailer: '挂车车牌',
+    name: '姓名', phone: '手机号', from_location: '装货地',
+    to_location: '收货地', goods: '货物', freight: '运费',
+    weigh_fee: '过磅费', weight: '过磅重量'
+  };
+  Object.keys(fieldLabels).forEach(k => {
+    const oldVal = (modalEditOriginal[k] || '').toString().trim();
+    const newVal = (newData[k] || '').toString().trim();
+    if (oldVal !== newVal) {
+      changedFields.push({ key: k, label: fieldLabels[k], oldVal, newVal });
+    }
+  });
+  // 同步更新通知文字
+  newData.notice = generateNotice({
+    date: newData.date, plateMain: newData.plate_main, plateTrailer: newData.plate_trailer,
+    name: newData.name, phone: newData.phone, idCard: newData.id_card,
+    from: newData.from_location, to: newData.to_location, goods: newData.goods,
+    freight: newData.freight, weight: newData.weight, weighFee: newData.weigh_fee
+  });
+  const { error } = await supabaseClient.from('records').update(newData).eq('id', currentDetail.id);
+  if (error) { toast('保存失败：' + error.message, false, true); return; }
+  // 刷新当前记录
+  const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
+  if (data) {
+    currentDetail = data;
+    renderDetailWithChanges(data, changedFields);
+  }
+  closeFullEdit();
+  loadRecords();
+  // 顶部提示
+  if (changedFields.length > 0) {
+    const msg = '已修改 ' + changedFields.length + ' 项：' + changedFields.map(f => f.label).join('、');
+    showModifyBanner(msg, changedFields);
+  } else {
+    toast('未修改任何字段', true);
+  }
+}
+
+function showModifyBanner(msg, changedFields) {
+  const banner = document.getElementById('modifyBanner');
+  const text = document.getElementById('modifyBannerText');
+  text.innerHTML = '⚠️ ' + msg;
+  banner.classList.add('show');
+  // 5秒后自动隐藏
+  setTimeout(() => banner.classList.remove('show'), 8000);
+}
+
+function renderDetailWithChanges(r, changedFields) {
+  renderDetail(r);
+  // 给被修改的字段加红加粗
+  const changedKeys = changedFields.map(f => f.key);
+  const detailMap = {
+    date: '日期', plate_main: '主车车牌', plate_trailer: '挂车车牌',
+    name: '姓名', phone: '手机号', from_location: '装货地',
+    to_location: '收货地', goods: '货物', freight: '运费',
+    weigh_fee: '过磅费', weight: '过磅重量'
+  };
+  document.querySelectorAll('#detailItems .detail-item').forEach(item => {
+    const label = item.querySelector('.label').textContent;
+    const matched = Object.keys(detailMap).find(k => detailMap[k] === label);
+    if (matched && changedKeys.includes(matched)) {
+      const valSpan = item.querySelector('.value');
+      valSpan.classList.add('changed');
+    }
+  });
 }
 
 // ===== 编辑/补填 =====
