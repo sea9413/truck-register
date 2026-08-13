@@ -26,6 +26,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
     .record-card .fee-line { font-size: 13px; color: #333; margin: 4px 0; font-weight: 500; }
 .record-card .goods-tag { background: #e8f0ff; color: #1a7af8; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+.record-card .badge-modified { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+.summary-bar { background: #e8f5e9; color: #2e7d32; padding: 10px 16px; margin: 0 16px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; text-align: center; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
@@ -149,6 +151,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <h1>🚛 装货登记</h1>
       <span class="count" id="recordCount">加载中...</span>
     </div>
+    <div class="summary-bar" id="summaryBar" style="display:none"></div>
     <button class="add-btn" onclick="showForm()">+ 新增登记</button>
     <div id="recordList"><div class="loading">连接数据库...</div></div>
   </div>
@@ -622,12 +625,23 @@ async function loadRecords() {
 
 function renderList() {
   document.getElementById('recordCount').textContent = currentRecords.length + ' 条';
+  // 计算汇总
+  const totalFreight = currentRecords.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
+  const totalWeighFee = currentRecords.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
+  const summaryEl = document.getElementById('summaryBar');
+  if (summaryEl) {
+    summaryEl.innerHTML = '运费合计:' + totalFreight.toFixed(0) + '元 | 过磅费合计:' + totalWeighFee.toFixed(0) + '元';
+    summaryEl.style.display = currentRecords.length > 0 ? 'block' : 'none';
+  }
   const el = document.getElementById('recordList');
   if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>还没有登记记录<br>点上方按钮开始</div>'; return; }
   el.innerHTML = currentRecords.map(r => {
     const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
     const hasWeight = r.weight && r.weight.trim();
-    const badge = !hasWeight ? '<span class="badge-pending">待补过磅</span>' : '';
+    const badges = [];
+    if (!hasWeight) badges.push('<span class="badge-pending">待补过磅</span>');
+    if ((r.modified_count || 0) > 0) badges.push('<span class="badge-modified">已修改</span>');
+    const badgeStr = badges.join('');
     const goods = r.goods || '待填';
     const freightStr = r.freight ? '运费:' + r.freight + '元' : '';
     const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
@@ -636,7 +650,7 @@ function renderList() {
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate">' + plate + '</span></div>' +
       feeStr +
-      '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badge + (r.from_location ? '<span>装:' + r.from_location + '</span>' : '') + toStr + '</div>' +
+      '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badgeStr + (r.from_location ? '<span>装:' + r.from_location + '</span>' : '') + toStr + '</div>' +
       '</div>';
   }).join('');
 }
@@ -645,30 +659,34 @@ function showRecordDetail(id) {
   const r = currentRecords.find(x => x.id === id);
   if (!r) return;
   currentDetail = r;
-  renderDetail(r);
+  renderDetailChanged(r);
   showDetail();
 }
 
-function renderDetail(r) {
+function renderDetail(r, changedKeys) {
   const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
   const hasWeight = r.weight && r.weight.trim();
+  const detailMap = { date: '日期', plate_main: '主车车牌', plate_trailer: '挂车车牌', name: '姓名', phone: '手机号', id_card: '身份证号', from_location: '装货地', to_location: '收货地', goods: '货物', freight: '运费', weight: '过磅重量', weigh_fee: '过磅费' };
   const fields = [
-    ['日期', formatDateCN(r.date), true],
-    ['主车车牌', r.plate_main, true],
-    ['挂车车牌', r.plate_trailer || '-', false],
-    ['姓名', r.name || '未填', false],
-    ['手机号', r.phone || '未填', false],
-    ['身份证号', r.id_card || '未填', false],
-    ['装货地', r.from_location || '未填', false],
-    ['收货地', r.to_location || '未填', false],
-    ['货物', r.goods || '未填', false],
-    ['运费', r.freight ? r.freight + ' 元' : '未填', false],
-    ['过磅重量', r.weight ? r.weight + ' 公斤' : '待补填', !hasWeight],
-    ['过磅费', r.weigh_fee ? r.weigh_fee + ' 元' : '待补填', !hasWeight]
+    ['日期', formatDateCN(r.date), 'date'],
+    ['主车车牌', r.plate_main, 'plate_main'],
+    ['挂车车牌', r.plate_trailer || '-', 'plate_trailer'],
+    ['姓名', r.name || '未填', 'name'],
+    ['手机号', r.phone || '未填', 'phone'],
+    ['身份证号', r.id_card || '未填', 'id_card'],
+    ['装货地', r.from_location || '未填', 'from_location'],
+    ['收货地', r.to_location || '未填', 'to_location'],
+    ['货物', r.goods || '未填', 'goods'],
+    ['运费', r.freight ? r.freight + ' 元' : '未填', 'freight'],
+    ['过磅重量', r.weight ? r.weight + ' 公斤' : '待补填', 'weight'],
+    ['过磅费', r.weigh_fee ? r.weigh_fee + ' 元' : '待补填', 'weigh_fee']
   ];
-  document.getElementById('detailItems').innerHTML = fields.map(([label, val, isPending]) =>
-    '<div class="detail-item"><span class="label">' + label + '</span><span class="value' + (isPending ? ' pending' : '') + '">' + val + '</span></div>'
-  ).join('');
+  const changedSet = new Set(changedKeys || []);
+  document.getElementById('detailItems').innerHTML = fields.map(([label, val, key]) => {
+    const isPending = (key === 'weight' || key === 'weigh_fee') && !hasWeight;
+    const isChanged = changedSet.has(key);
+    return '<div class="detail-item"><span class="label">' + label + '</span><span class="value' + (isPending ? ' pending' : '') + (isChanged ? ' changed' : '') + '">' + val + '</span></div>';
+  }).join('');
   document.getElementById('eWeight').value = r.weight || '';
   document.getElementById('eWeighFee').value = r.weigh_fee || '';
   hideEdit();
@@ -774,6 +792,12 @@ async function saveFullEdit() {
     from: newData.from_location, to: newData.to_location, goods: newData.goods,
     freight: newData.freight, weight: newData.weight, weighFee: newData.weigh_fee
   });
+  // 记录修改历史
+  const existingModified = currentDetail.modified_fields || [];
+  const newModifiedKeys = changedFields.map(f => f.key);
+  const allModified = [...new Set([...existingModified, ...newModifiedKeys])];
+  newData.modified_fields = allModified;
+  newData.modified_count = (currentDetail.modified_count || 0) + changedFields.length;
   const { error } = await supabaseClient.from('records').update(newData).eq('id', currentDetail.id);
   if (error) { toast('保存失败:' + error.message, false, true); return; }
   // 刷新当前记录
@@ -798,28 +822,15 @@ function showModifyBanner(msg, changedFields) {
   const text = document.getElementById('modifyBannerText');
   text.innerHTML = '⚠️ ' + msg;
   banner.classList.add('show');
-  // 5秒后自动隐藏
-  setTimeout(() => banner.classList.remove('show'), 8000);
+  // 永久显示，不自动隐藏
 }
 
 function renderDetailWithChanges(r, changedFields) {
-  renderDetail(r);
-  // 给被修改的字段加红加粗
-  const changedKeys = changedFields.map(f => f.key);
-  const detailMap = {
-    date: '日期', plate_main: '主车车牌', plate_trailer: '挂车车牌',
-    name: '姓名', phone: '手机号', from_location: '装货地',
-    to_location: '收货地', goods: '货物', freight: '运费',
-    weigh_fee: '过磅费', weight: '过磅重量'
-  };
-  document.querySelectorAll('#detailItems .detail-item').forEach(item => {
-    const label = item.querySelector('.label').textContent;
-    const matched = Object.keys(detailMap).find(k => detailMap[k] === label);
-    if (matched && changedKeys.includes(matched)) {
-      const valSpan = item.querySelector('.value');
-      valSpan.classList.add('changed');
-    }
-  });
+  renderDetail(r, changedFields.map(f => f.key));
+}
+function renderDetailChanged(r) {
+  // 使用数据库记录的修改字段永久标红
+  renderDetail(r, r.modified_fields || []);
 }
 
 // ===== 编辑/补填 =====
@@ -844,6 +855,12 @@ async function saveEdit() {
   if (!currentDetail) return;
   const weight = document.getElementById('eWeight').value.trim();
   const weigh_fee = document.getElementById('eWeighFee').value.trim();
+  // 记录修改
+  const changedFields = [];
+  if ((weight || '') !== (currentDetail.weight || '')) changedFields.push('weight');
+  if ((weigh_fee || '') !== (currentDetail.weigh_fee || '')) changedFields.push('weigh_fee');
+  const existingModified = currentDetail.modified_fields || [];
+  const allModified = [...new Set([...existingModified, ...changedFields])];
   // 同步更新通知文字
   const r = {
     date: currentDetail.date, plateMain: currentDetail.plate_main, plateTrailer: currentDetail.plate_trailer,
@@ -853,13 +870,15 @@ async function saveEdit() {
   };
   const { error } = await supabaseClient.from('records').update({
     weight: weight, weigh_fee: weigh_fee,
-    notice: generateNotice(r)
+    notice: generateNotice(r),
+    modified_fields: allModified,
+    modified_count: (currentDetail.modified_count || 0) + changedFields.length
   }).eq('id', currentDetail.id);
   if (error) { toast('保存失败:' + error.message, false, true); return; }
   toast('已保存 ✓', true);
   // 刷新当前记录
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
-  if (data) { currentDetail = data; renderDetail(currentDetail); }
+  if (data) { currentDetail = data; renderDetailChanged(currentDetail); }
   loadRecords();
   hideEdit();
 }
