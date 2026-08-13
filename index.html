@@ -638,8 +638,10 @@ function renderList() {
   el.innerHTML = currentRecords.map(r => {
     const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
     const hasWeight = r.weight && r.weight.trim();
+    const hasWeighFee = r.weigh_fee && r.weigh_fee.trim();
     const badges = [];
-    if (!hasWeight) badges.push('<span class="badge-pending">待补过磅</span>');
+    if (!hasWeight) badges.push('<span class="badge-pending">待补重量</span>');
+    if (!hasWeighFee) badges.push('<span class="badge-pending">待补过磅费</span>');
     if ((r.modified_count || 0) > 0) badges.push('<span class="badge-modified">已修改</span>');
     const badgeStr = badges.join('');
     const goods = r.goods || '待填';
@@ -666,6 +668,7 @@ function showRecordDetail(id) {
 function renderDetail(r, changedKeys) {
   const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
   const hasWeight = r.weight && r.weight.trim();
+  const hasWeighFee = r.weigh_fee && r.weigh_fee.trim();
   const detailMap = { date: '日期', plate_main: '主车车牌', plate_trailer: '挂车车牌', name: '姓名', phone: '手机号', id_card: '身份证号', from_location: '装货地', to_location: '收货地', goods: '货物', freight: '运费', weight: '过磅重量', weigh_fee: '过磅费' };
   const fields = [
     ['日期', formatDateCN(r.date), 'date'],
@@ -678,12 +681,12 @@ function renderDetail(r, changedKeys) {
     ['收货地', r.to_location || '未填', 'to_location'],
     ['货物', r.goods || '未填', 'goods'],
     ['运费', r.freight ? r.freight + ' 元' : '未填', 'freight'],
-    ['过磅重量', r.weight ? r.weight + ' 公斤' : '待补填', 'weight'],
-    ['过磅费', r.weigh_fee ? r.weigh_fee + ' 元' : '待补填', 'weigh_fee']
+    ['过磅重量', r.weight ? r.weight + ' 公斤' : '待补重量', 'weight'],
+    ['过磅费', r.weigh_fee ? r.weigh_fee + ' 元' : '待补过磅费', 'weigh_fee']
   ];
   const changedSet = new Set(changedKeys || []);
   document.getElementById('detailItems').innerHTML = fields.map(([label, val, key]) => {
-    const isPending = (key === 'weight' || key === 'weigh_fee') && !hasWeight;
+    const isPending = (key === 'weight' && !hasWeight) || (key === 'weigh_fee' && !hasWeighFee);
     const isChanged = changedSet.has(key);
     return '<div class="detail-item"><span class="label">' + label + '</span><span class="value' + (isPending ? ' pending' : '') + (isChanged ? ' changed' : '') + '">' + val + '</span></div>';
   }).join('');
@@ -826,7 +829,11 @@ function showModifyBanner(msg, changedFields) {
 }
 
 function renderDetailWithChanges(r, changedFields) {
-  renderDetail(r, changedFields.map(f => f.key));
+  // 合并本次修改和数据库已记录的修改
+  const dbModified = r.modified_fields || [];
+  const currentChanged = changedFields.map(f => f.key);
+  const allChanged = [...new Set([...dbModified, ...currentChanged])];
+  renderDetail(r, allChanged);
 }
 function renderDetailChanged(r) {
   // 使用数据库记录的修改字段永久标红
