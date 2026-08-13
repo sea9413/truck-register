@@ -23,6 +23,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .record-card .date { font-size: 13px; color: #888; }
 .record-card .plate { font-size: 16px; font-weight: 600; }
 .record-card .bottom { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: #666; }
+    .record-card .fee-line { font-size: 13px; color: #333; margin: 4px 0; font-weight: 500; }
 .record-card .goods-tag { background: #e8f0ff; color: #1a7af8; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
@@ -489,9 +490,14 @@ function renderList() {
     const hasWeight = r.weight && r.weight.trim();
     const badge = !hasWeight ? '<span class="badge-pending">待补过磅</span>' : '';
     const goods = r.goods || '待填';
+    const freightStr = r.freight ? '运费：' + r.freight + '元' : '';
+    const weighFeeStr = r.weigh_fee ? '过磅费：' + r.weigh_fee + '元' : '';
+    const feeStr = freightStr || weighFeeStr ? '<div class="fee-line">' + [freightStr, weighFeeStr].filter(Boolean).join(' ') + '</div>' : '';
+    const toStr = r.to_location ? '<span>→ ' + r.to_location + '</span>' : '';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate">' + plate + '</span></div>' +
-      '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badge + (r.from_location ? '<span>装：' + r.from_location + '</span>' : '') + '</div>' +
+      feeStr +
+      '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badge + (r.from_location ? '<span>装：' + r.from_location + '</span>' : '') + toStr + '</div>' +
       '</div>';
   }).join('');
 }
