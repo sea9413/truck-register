@@ -147,10 +147,10 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
   <div class="list-page" id="listPage">
     <div class="header">
       <h1>🚛 装货登记</h1>
-      <span class="count" id="recordCount">加载中…</span>
+      <span class="count" id="recordCount">加载中...</span>
     </div>
     <button class="add-btn" onclick="showForm()">+ 新增登记</button>
-    <div id="recordList"><div class="loading">连接数据库…</div></div>
+    <div id="recordList"><div class="loading">连接数据库...</div></div>
   </div>
 
   <!-- ===== 详情页 ===== -->
@@ -177,12 +177,12 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <div class="edit-form">
         <div class="two-col">
           <div class="form-group">
-            <label>过磅重量（公斤）</label>
-            <input type="number" id="eWeight" placeholder="如：20000">
+            <label>过磅重量(公斤)</label>
+            <input type="number" id="eWeight" placeholder="如:20000">
           </div>
           <div class="form-group">
-            <label>过磅费（元）</label>
-            <input type="number" id="eWeighFee" placeholder="如：50">
+            <label>过磅费(元)</label>
+            <input type="number" id="eWeighFee" placeholder="如:50">
           </div>
         </div>
         <div class="edit-btn-row">
@@ -202,7 +202,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
     <div class="form-section">
       <div class="section-title">📋 粘贴识别区 <span class="tag">自动填入</span></div>
-      <textarea class="paste-area" id="pasteArea" placeholder="把司机发来的信息整段粘贴到这里…" oninput="checkPaste()"></textarea>
+      <textarea class="paste-area" id="pasteArea" placeholder="把司机发来的信息整段粘贴到这里..." oninput="checkPaste()"></textarea>
       <button class="recognize-btn" id="recognizeBtn" onclick="doRecognize()" disabled>🔍 识别</button>
       <div class="recognize-result" id="recognizeResult"></div>
     </div>
@@ -216,20 +216,20 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
       <div class="field-label">车牌号码</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fPlateMain" placeholder="主车：粤******">
-        <input type="text" id="fPlateTrailer" placeholder="挂车：粤****挂">
+        <input type="text" id="fPlateMain" placeholder="主车:粤******">
+        <input type="text" id="fPlateTrailer" placeholder="挂车:粤****挂">
       </div>
 
       <div class="field-label">司机姓名</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fName" placeholder="姓名：未输入">
-        <input type="tel" id="fPhone" placeholder="手机：188****8888">
+        <input type="text" id="fName" placeholder="姓名:未输入">
+        <input type="tel" id="fPhone" placeholder="手机:188****8888">
       </div>
 
-      <div class="addr-label">装货地 ————— 收货地</div>
+      <div class="addr-label">装货地 ----- 收货地</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fFrom" placeholder="装货地：">
-        <input type="text" id="fTo" placeholder="收货地：">
+        <input type="text" id="fFrom" placeholder="装货地:">
+        <input type="text" id="fTo" placeholder="收货地:">
       </div>
 
       <div class="form-group" style="margin-bottom:10px">
@@ -243,14 +243,14 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         </div>
       </div>
 
-      <div class="field-label">运输费（元）</div>
+      <div class="field-label">运输费(元)</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="number" id="fFreight" placeholder="运费（元）">
-        <input type="number" id="fWeighFee" placeholder="过磅费（元）">
+        <input type="number" id="fFreight" placeholder="运费(元)">
+        <input type="number" id="fWeighFee" placeholder="过磅费(元)">
       </div>
 
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:0">
-        <input type="number" id="fWeight" placeholder="过磅（公斤）" style="flex:1" oninput="updateTon()">
+        <input type="number" id="fWeight" placeholder="过磅(公斤)" style="flex:1" oninput="updateTon()">
         <span id="tonDisplay" style="font-size:16px;color:#333;white-space:nowrap;font-weight:500"></span>
       </div>
       <input type="text" id="fIdCard" readonly style="display:none">
@@ -278,7 +278,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <input type="tel" id="mPhone" placeholder="手机号">
       </div>
       <input type="text" id="mIdCard" placeholder="身份证号">
-      <div class="field-label">装货地 — 收货地</div>
+      <div class="field-label">装货地 - 收货地</div>
       <div class="two-col">
         <input type="text" id="mFrom" placeholder="装货地">
         <input type="text" id="mTo" placeholder="收货地">
@@ -290,12 +290,12 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <div class="goods-btn" onclick="selectModalGoods(this, '其他')">其他</div>
       </div>
       <input type="text" id="mGoodsOther" placeholder="其他货物名称" style="display:none">
-      <div class="field-label">运费（元）</div>
+      <div class="field-label">运费(元)</div>
       <div class="two-col">
         <input type="number" id="mFreight" placeholder="运费">
         <input type="number" id="mWeighFee" placeholder="过磅费">
       </div>
-      <div class="field-label">过磅重量（公斤）</div>
+      <div class="field-label">过磅重量(公斤)</div>
       <input type="number" id="mWeight" placeholder="过磅重量">
     </div>
     <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">💾 保存修改</button>
@@ -312,8 +312,8 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 <div class="confirm-overlay" id="deleteConfirm">
   <div class="confirm-box">
     <div class="confirm-icon" id="deleteIcon">⚠️</div>
-    <div class="confirm-title" id="deleteTitle">确定要删除这条记录吗？</div>
-    <div class="confirm-desc" id="deleteDesc">删除后数据无法恢复，请谨慎操作。</div>
+    <div class="confirm-title" id="deleteTitle">确定要删除这条记录吗?</div>
+    <div class="confirm-desc" id="deleteDesc">删除后数据无法恢复,请谨慎操作。</div>
     <button class="confirm-btn primary" id="deleteBtn1" onclick="doDeleteStep1()">确定删除</button>
     <button class="confirm-btn secondary" id="deleteBtn2" onclick="hideDeleteConfirm()">取消</button>
   </div>
@@ -376,29 +376,34 @@ function checkPaste() {
 function recognize(rawText) {
   const text = rawText.replace(/\r\n/g, '\n').trim();
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
+  const provinceRe = '[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉贵粤青藏川宁琼台港澳闽]';
+  const plateOneRe = provinceRe + '[A-Z][A-Z0-9]{4,6}';
   let result = { date: formatDate(new Date()), plateMain: '', plateTrailer: '', name: '', phone: '', idCard: '', from: '', to: '', goods: '', goodsRaw: '', freight: '' };
+
+  const allText = text;
 
   // 日期
   for (const line of lines) {
     const m = line.match(/^(\d{1,2})[月\-\.](\d{1,2})/);
-    if (m) { const y = new Date().getFullYear(); result.date = `${y}-${m[1].padStart(2,'0')}-${m[2].padStart(2,'0')}`; break; }
+    if (m) { const y = new Date().getFullYear(); result.date = y + '-' + m[1].padStart(2,'0') + '-' + m[2].padStart(2,'0'); break; }
     const m2 = line.match(/^(\d{4})[年\-\.](\d{1,2})[月\-\.](\d{1,2})/);
-    if (m2) { result.date = `${m2[1]}-${m2[2].padStart(2,'0')}-${m2[3].padStart(2,'0')}`; break; }
+    if (m2) { result.date = m2[1] + '-' + m2[2].padStart(2,'0') + '-' + m2[3].padStart(2,'0'); break; }
   }
 
-  const allText = text;
-
   // 身份证
-  const idWithLabel = allText.match(/身份证[：:\s]*([1-9]\d{5}(?:\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dx]|[3][01]\d{14}[\dx]))/i);
+  const idWithLabel = allText.match(/身份证[::\s]*([1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dx])/i);
   if (idWithLabel) result.idCard = idWithLabel[1].toUpperCase();
   else { const idAll = allText.match(/([1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dx])/i); if (idAll) result.idCard = idAll[1].toUpperCase(); }
 
   // 手机号
-  const phoneWithLabel = allText.match(/电话[：:\s]*(\d{11})/);
+  const phoneWithLabel = allText.match(/电话[::\s]*(\d{11})/);
   if (phoneWithLabel) result.phone = phoneWithLabel[1];
-  else { const phoneAll = allText.match(/(?:^|[^\d])(\d{11})(?=[^\d]|$)/); if (phoneAll) result.phone = phoneAll[1]; }
+  else {
+    const phoneAll = allText.match(/(?:^|[^\d])(\d{11})(?=[^\d]|$)/);
+    if (phoneAll) result.phone = phoneAll[1];
+  }
 
-  // 货物（先识别，防止误识别为姓名）
+  // 货物
   for (const line of lines) {
     if (line.includes('盘扣')) { result.goods = '盘扣'; break; }
     if (line.includes('套扣')) { result.goods = '套扣'; break; }
@@ -409,30 +414,97 @@ function recognize(rawText) {
     if (goodsLine) { if (goodsLine.includes('盘扣')) result.goods = '盘扣'; else if (goodsLine.includes('套扣')) result.goods = '套扣'; }
   }
 
-  // 姓名（必须在货物之后，忽略盘扣/套扣）
-  const nameWithLabel = allText.match(/姓名[：:\s]*([\u4e00-\u9fa5]{2,4})/);
-  if (nameWithLabel) result.name = nameWithLabel[1];
-  else {
-    for (let i = 0; i < lines.length; i++) {
-      const l = lines[i];
-      if (/^[\u4e00-\u9fa5]{2,4}$/.test(l) && l !== '盘扣' && l !== '套扣' && l !== '其他') { result.name = l; break; }
+  // 姓名(多种模式)
+  const excludeNames = ['盘扣','套扣','其他','平板车','牵引车','货车','地址','盘扣车辆','套扣车辆'];
+  // 1. 标签式:姓名:xxx / 司机:xxx / 司机:xxx / 司机,xxx / 司机 xxx
+  const nameWithLabel = allText.match(/(?:姓名|司机)[：：，:\s]*([^\d\s，,、。：:货地址]{2,4})/);
+  if (nameWithLabel && !excludeNames.includes(nameWithLabel[1])) result.name = nameWithLabel[1].trim();
+  // 2. 单行混排:xxx,姓名,身份证
+  if (!result.name) {
+    const m = allText.match(/[，,]\s*([\u4e00-\u9fa5]{2,4})\s*[，,]\s*身份证/);
+    if (m && !excludeNames.includes(m[1])) result.name = m[1];
+  }
+  // 3. 单行混排:身份证前接姓名
+  if (!result.name && result.idCard) {
+    const idPos = allText.indexOf(result.idCard);
+    if (idPos > 0) {
+      const beforeId = allText.substring(Math.max(0, idPos - 20), idPos);
+      const m = beforeId.match(/([\u4e00-\u9fa5]{2,4})[，,]\s*$/);
+      if (m && !excludeNames.includes(m[1])) result.name = m[1];
+    }
+  }
+  // 4. 独立行
+  if (!result.name) {
+    for (const l of lines) {
+      if (/^[\u4e00-\u9fa5]{2,4}$/.test(l) && !excludeNames.includes(l)) {
+        result.name = l;
+        break;
+      }
     }
   }
 
   // 运费
-  const freightWithLabel = allText.match(/运费[：:\s]*(\d+)/);
+  const freightWithLabel = allText.match(/运费[::\s]*(\d+)/);
   if (freightWithLabel) result.freight = freightWithLabel[1];
-  else { const freightNear = allText.match(/运费[\u4e00-\u9fa5]*(\d+)/); if (freightNear) result.freight = freightNear[1]; }
-
-  // 车牌
-  const plateCombo = allText.match(/车牌[：:\s]*([\u4e00-\u9fa5·][A-Z][A-Z0-9]{5,6})\s*\+\s*([\u4e00-\u9fa5·][A-Z][A-Z0-9]{4,6}挂)/);
-  if (plateCombo) { result.plateMain = plateCombo[1]; result.plateTrailer = plateCombo[2]; }
   else {
-    const platePattern = /[\u4e00-\u9fa5·]([A-Z])[A-Z0-9]{4,6}(?:挂)?(?=[^\u4e00-\u9fa5·]|$)/g;
-    let plates = [], match;
-    while ((match = platePattern.exec(allText)) !== null) { let p = match[0]; if (!['平板车','牵引车','挂车车牌'].includes(p.replace(/^[\u4e00-\u9fa5·]/,''))) plates.push(p); }
-    if (plates.length === 0) { const rawPlates = allText.match(/(?:^|[\s，,])([京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉贵粤青藏川宁琼台港奥][A-Z][A-Z0-9]{4,6}(?:挂)?)(?:[\s，,]|$)/g); if (rawPlates) for (const rp of rawPlates) { const p = rp.replace(/^[\s，,]+/, '').replace(/[\s，,]+$/, '').trim(); if (p && p.length >= 6 && p.length <= 10) plates.push(p); } }
-    if (plates.length >= 1) { const main = plates.filter(p => !p.endsWith('挂')); const trailer = plates.filter(p => p.endsWith('挂')); result.plateMain = main[0] || plates[0]; if (trailer.length > 0) result.plateTrailer = trailer[0]; else if (plates.length >= 2) result.plateTrailer = plates[1]; }
+    const freightNear = allText.match(/运费[\u4e00-\u9fa5]*(\d+)/);
+    if (freightNear) result.freight = freightNear[1];
+    else {
+      const m = allText.match(/实付[\u4e00-\u9fa5]*(\d+)/);
+      if (m) result.freight = m[1];
+    }
+  }
+
+  // 车牌(多种模式)
+  // 1. 标签+双车牌:车牌:粤Kxxx+粤Kyyyy挂 / 车牌:粤Kxxx 粤Kyyyy挂
+  let m = allText.match(new RegExp('车牌[:,\\s]*(' + plateOneRe + ')\\s*[+ \\t]\\s*(' + plateOneRe + ')\\s*挂'));
+  if (m) { result.plateMain = m[1]; result.plateTrailer = m[2] + '挂'; }
+  // 2. 标签+单车牌:车牌:粤Kxxx / 车号粤Kxxx(标签后任意标点/空格)
+  if (!result.plateMain) {
+    m = allText.match(new RegExp('车牌[::\\s,]*(' + plateOneRe + ')'));
+    if (m) result.plateMain = m[1];
+    else {
+      m = allText.match(new RegExp('车号[::\\s]*(' + plateOneRe + ')'));
+      if (m) result.plateMain = m[1];
+    }
+  }
+  // 3. 挂车标签(处理空格,如「挂车号皖 L1B70挂」)
+  if (!result.plateTrailer) {
+    m = allText.match(new RegExp('(?:挂车|挂车号)[：:\\s,]*(' + provinceRe + ')\\s*([A-Z][A-Z0-9]{4,6})\\s*挂'));
+    if (m) result.plateTrailer = m[1] + m[2] + '挂';
+  }
+  // 4. 通用提取:所有车牌及挂车
+  if (!result.plateMain || !result.plateTrailer) {
+    const allPlates = [];
+    const plateRegex = new RegExp(plateOneRe + '挂?', 'g');
+    let pm;
+    while ((pm = plateRegex.exec(allText)) !== null) {
+      allPlates.push({ text: pm[0], pos: pm.index });
+    }
+    const trailers = allPlates.filter(p => p.text.endsWith('挂'));
+    const mains = allPlates.filter(p => !p.text.endsWith('挂'));
+    if (!result.plateMain && mains.length > 0) result.plateMain = mains[0].text;
+    if (!result.plateTrailer) {
+      if (trailers.length > 0) result.plateTrailer = trailers[0].text;
+      else if (mains.length >= 2) result.plateTrailer = mains[1].text;
+    }
+  }
+  // 5. 单行混排兜底
+  if (!result.plateMain && result.idCard) {
+    const idPos = allText.indexOf(result.idCard);
+    if (idPos > 0) {
+      const beforeId = allText.substring(0, idPos);
+      const plates = beforeId.match(new RegExp(plateOneRe, 'g'));
+      if (plates && plates.length > 0) {
+        result.plateMain = plates[0];
+        if (plates.length >= 2) result.plateTrailer = plates[1] + (plates[1].endsWith('挂') ? '' : '');
+      }
+    }
+  }
+
+  // 修复挂车"挂"字
+  if (result.plateTrailer && !result.plateTrailer.endsWith('挂')) {
+    result.plateTrailer = result.plateTrailer + '挂';
   }
 
   // 地址
@@ -449,7 +521,6 @@ function recognize(rawText) {
   return result;
 }
 
-// 过磅公斤→吨换算
 function updateTon() {
   const v = document.getElementById('fWeight').value;
   const el = document.getElementById('tonDisplay');
@@ -486,9 +557,9 @@ function doRecognize() {
   const unfilled = [], filled = [];
   const push = (label, val) => val ? filled.push(label + ' ' + val) : unfilled.push(label);
   push('日期', r.date); push('主车', r.plateMain); push('挂车', r.plateTrailer); push('姓名', r.name); push('手机', r.phone); push('身份证', r.idCard); push('运费', r.freight ? r.freight + '元' : ''); push('装货地', r.from); push('收货地', r.to); push('货物', r.goods);
-  resultEl.innerHTML = '<strong>已识别：</strong>' + filled.join(' | ') + (unfilled.length ? '<br><span class="unfilled">未识别：' + unfilled.join('、') + '（请手动填写）</span>' : '');
+  resultEl.innerHTML = '<strong>已识别:</strong>' + filled.join(' | ') + (unfilled.length ? '<br><span class="unfilled">未识别:' + unfilled.join('、') + '(请手动填写)</span>' : '');
   resultEl.style.display = 'block';
-  toast('识别完成，请核对后提交', true);
+  toast('识别完成,请核对后提交', true);
 }
 
 function selectGoods(el, type) {
@@ -527,24 +598,24 @@ async function doSubmit() {
     notice: generateNotice(r)
   };
   const { error } = await supabaseClient.from('records').insert([record]);
-  if (error) { toast('提交失败：' + error.message, false, true); return; }
+  if (error) { toast('提交失败:' + error.message, false, true); return; }
   toast('已登记 ✓', true);
   setTimeout(() => { loadRecords(); showList(); }, 600);
 }
 
 function generateNotice(r) {
   const plateStr = r.plateTrailer ? r.plateMain + '+' + r.plateTrailer : r.plateMain;
-  const nameStr = r.name ? ' | 姓名：' + r.name : '';
-  const phoneStr = r.phone ? ' | 手机：' + r.phone : '';
+  const nameStr = r.name ? ' | 姓名:' + r.name : '';
+  const phoneStr = r.phone ? ' | 手机:' + r.phone : '';
   const weightStr = r.weight ? r.weight + '公斤' : '待填';
   const feeStr = r.weighFee ? r.weighFee + '元' : '待填';
-  const route = r.from && r.to ? '装：' + r.from + ' → 收：' + r.to : (r.from ? '装货地：' + r.from : (r.to ? '收货地：' + r.to : ''));
-  return '🚛 已登记 | ' + r.date + ' | 车牌：' + plateStr + nameStr + phoneStr + ' | ' + route + ' | 货物：' + r.goods + ' | 运费：' + r.freight + '元 | 过磅：' + weightStr + ' | 过磅费：' + feeStr;
+  const route = r.from && r.to ? '装:' + r.from + ' → 收:' + r.to : (r.from ? '装货地:' + r.from : (r.to ? '收货地:' + r.to : ''));
+  return '🚛 已登记 | ' + r.date + ' | 车牌:' + plateStr + nameStr + phoneStr + ' | ' + route + ' | 货物:' + r.goods + ' | 运费:' + r.freight + '元 | 过磅:' + weightStr + ' | 过磅费:' + feeStr;
 }
 
 async function loadRecords() {
   const { data, error } = await supabaseClient.from('records').select('*').order('created_at', { ascending: false });
-  if (error) { document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>连接失败，请刷新</div>'; return; }
+  if (error) { document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>连接失败,请刷新</div>'; return; }
   currentRecords = data || [];
   renderList();
 }
@@ -558,14 +629,14 @@ function renderList() {
     const hasWeight = r.weight && r.weight.trim();
     const badge = !hasWeight ? '<span class="badge-pending">待补过磅</span>' : '';
     const goods = r.goods || '待填';
-    const freightStr = r.freight ? '运费：' + r.freight + '元' : '';
-    const weighFeeStr = r.weigh_fee ? '过磅费：' + r.weigh_fee + '元' : '';
+    const freightStr = r.freight ? '运费:' + r.freight + '元' : '';
+    const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
     const feeStr = freightStr || weighFeeStr ? '<div class="fee-line">' + [freightStr, weighFeeStr].filter(Boolean).join(' ') + '</div>' : '';
     const toStr = r.to_location ? '<span>→ ' + r.to_location + '</span>' : '';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate">' + plate + '</span></div>' +
       feeStr +
-      '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badge + (r.from_location ? '<span>装：' + r.from_location + '</span>' : '') + toStr + '</div>' +
+      '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badge + (r.from_location ? '<span>装:' + r.from_location + '</span>' : '') + toStr + '</div>' +
       '</div>';
   }).join('');
 }
@@ -584,7 +655,7 @@ function renderDetail(r) {
   const fields = [
     ['日期', formatDateCN(r.date), true],
     ['主车车牌', r.plate_main, true],
-    ['挂车车牌', r.plate_trailer || '—', false],
+    ['挂车车牌', r.plate_trailer || '-', false],
     ['姓名', r.name || '未填', false],
     ['手机号', r.phone || '未填', false],
     ['身份证号', r.id_card || '未填', false],
@@ -704,7 +775,7 @@ async function saveFullEdit() {
     freight: newData.freight, weight: newData.weight, weighFee: newData.weigh_fee
   });
   const { error } = await supabaseClient.from('records').update(newData).eq('id', currentDetail.id);
-  if (error) { toast('保存失败：' + error.message, false, true); return; }
+  if (error) { toast('保存失败:' + error.message, false, true); return; }
   // 刷新当前记录
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
   if (data) {
@@ -715,7 +786,7 @@ async function saveFullEdit() {
   loadRecords();
   // 顶部提示
   if (changedFields.length > 0) {
-    const msg = '已修改 ' + changedFields.length + ' 项：' + changedFields.map(f => f.label).join('、');
+    const msg = '已修改 ' + changedFields.length + ' 项:' + changedFields.map(f => f.label).join('、');
     showModifyBanner(msg, changedFields);
   } else {
     toast('未修改任何字段', true);
@@ -784,7 +855,7 @@ async function saveEdit() {
     weight: weight, weigh_fee: weigh_fee,
     notice: generateNotice(r)
   }).eq('id', currentDetail.id);
-  if (error) { toast('保存失败：' + error.message, false, true); return; }
+  if (error) { toast('保存失败:' + error.message, false, true); return; }
   toast('已保存 ✓', true);
   // 刷新当前记录
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
@@ -793,12 +864,12 @@ async function saveEdit() {
   hideEdit();
 }
 
-// ===== 删除（两步确认）=====
+// ===== 删除(两步确认)=====
 function confirmDelete() {
   deleteStep = 1;
   document.getElementById('deleteIcon').textContent = '⚠️';
-  document.getElementById('deleteTitle').textContent = '确定要删除这条记录吗？';
-  document.getElementById('deleteDesc').textContent = '删除后数据无法恢复，请谨慎操作。';
+  document.getElementById('deleteTitle').textContent = '确定要删除这条记录吗?';
+  document.getElementById('deleteDesc').textContent = '删除后数据无法恢复,请谨慎操作。';
   document.getElementById('deleteBtn1').textContent = '确定删除';
   document.getElementById('deleteBtn1').className = 'confirm-btn primary';
   document.getElementById('deleteConfirm').classList.add('show');
@@ -806,12 +877,12 @@ function confirmDelete() {
 
 function doDeleteStep1() {
   if (deleteStep === 1) {
-    // 第二步：更强烈的警告
+    // 第二步:更强烈的警告
     deleteStep = 2;
     document.getElementById('deleteIcon').textContent = '🚫';
-    document.getElementById('deleteTitle').textContent = '再次确认删除！';
-    document.getElementById('deleteDesc').textContent = '这是最后一次确认，删除后数据永久消失，无法找回！';
-    document.getElementById('deleteBtn1').textContent = '确认删除（不可撤销）';
+    document.getElementById('deleteTitle').textContent = '再次确认删除!';
+    document.getElementById('deleteDesc').textContent = '这是最后一次确认,删除后数据永久消失,无法找回!';
+    document.getElementById('deleteBtn1').textContent = '确认删除(不可撤销)';
     document.getElementById('deleteBtn1').className = 'confirm-btn primary step2';
   } else if (deleteStep === 2) {
     doDelete();
@@ -822,7 +893,7 @@ async function doDelete() {
   if (!currentDetail) return;
   hideDeleteConfirm();
   const { error } = await supabaseClient.from('records').delete().eq('id', currentDetail.id);
-  if (error) { toast('删除失败：' + error.message, false, true); return; }
+  if (error) { toast('删除失败:' + error.message, false, true); return; }
   toast('已删除', true);
   setTimeout(() => showList(), 600);
 }
@@ -845,8 +916,8 @@ function copyDetailNotice() {
 }
 
 function copyText(text) {
-  if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => toast('已复制，去微信群粘贴发送', true)); }
-  else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('已复制，去微信群粘贴发送', true); }
+  if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => toast('已复制,去微信群粘贴发送', true)); }
+  else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('已复制,去微信群粘贴发送', true); }
 }
 
 function formatDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
