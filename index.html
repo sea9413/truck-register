@@ -28,6 +28,14 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .record-card .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-modified { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .summary-bar { background: #e8f5e9; color: #2e7d32; padding: 10px 16px; margin: 0 16px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; text-align: center; }
+.filter-bar { margin: 0 16px 12px; background: white; border-radius: 10px; padding: 10px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+.filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.filter-row:last-child { margin-bottom: 0; }
+.filter-bar input[type=date], .filter-bar input[type=text] { flex: 1; min-width: 0; border: 1px solid #ddd; border-radius: 8px; padding: 8px; font-size: 14px; }
+.filter-sep { color: #888; font-size: 13px; }
+.filter-bar button { border: none; border-radius: 8px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.filter-btn-reset { background: #f0f0f0; color: #666; }
+.filter-btn-export { background: #1a7af8; color: white; }
 .record-card .is_paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
 .record-card .is_paid-check input { width: 16px; height: 16px; cursor: pointer; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
@@ -157,6 +165,18 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <span class="count" id="recordCount">加载中...</span>
     </div>
     <div class="summary-bar" id="summaryBar" style="display:none"></div>
+    <div class="filter-bar">
+      <div class="filter-row">
+        <input type="date" id="filterStart" onchange="applyFilter()">
+        <span class="filter-sep">至</span>
+        <input type="date" id="filterEnd" onchange="applyFilter()">
+      </div>
+      <div class="filter-row">
+        <input type="text" id="filterKeyword" placeholder="搜车牌/姓名/地点" oninput="applyFilter()">
+        <button class="filter-btn-reset" onclick="resetFilter()">重置</button>
+        <button class="filter-btn-export" onclick="exportCSV()">导出</button>
+      </div>
+    </div>
     <button class="add-btn" onclick="showForm()">+ 新增登记</button>
     <div id="recordList"><div class="loading">连接数据库...</div></div>
   </div>
@@ -347,6 +367,9 @@ const { createClient } = supabase;
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentRecords = [];
+let filterStartDate = '';
+let filterEndDate = '';
+let filterKeyword = '';
 let currentDetail = null;
 let selectedGoods = '';
 let deleteStep = 0; // 0=未确认 1=第一步确认 2=第二步确认
@@ -638,20 +661,39 @@ async function loadRecords() {
   renderList();
 }
 
+function getFilteredRecords() {
+  let list = currentRecords;
+  if (filterStartDate) list = list.filter(r => (r.date || '') >= filterStartDate);
+  if (filterEndDate) list = list.filter(r => (r.date || '') <= filterEndDate);
+  if (filterKeyword) {
+    const kw = filterKeyword.toLowerCase();
+    list = list.filter(r =>
+      (r.plate_main && r.plate_main.toLowerCase().includes(kw)) ||
+      (r.plate_trailer && r.plate_trailer.toLowerCase().includes(kw)) ||
+      (r.name && r.name.toLowerCase().includes(kw)) ||
+      (r.from_location && r.from_location.toLowerCase().includes(kw)) ||
+      (r.to_location && r.to_location.toLowerCase().includes(kw))
+    );
+  }
+  return list;
+}
+
 function renderList() {
-  document.getElementById('recordCount').textContent = currentRecords.length + ' 条';
+  const display = getFilteredRecords();
+  document.getElementById('recordCount').textContent = display.length + ' 条';
   // 计算汇总
-  const totalFreight = currentRecords.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
-  const totalPaid = currentRecords.reduce((sum, r) => sum + ((r.is_paid === true) ? (parseFloat(r.freight) || 0) : 0), 0);
-  const totalWeighFee = currentRecords.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
+  const totalFreight = display.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
+  const totalPaid = display.reduce((sum, r) => sum + ((r.is_paid === true) ? (parseFloat(r.freight) || 0) : 0), 0);
+  const totalWeighFee = display.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
   const summaryEl = document.getElementById('summaryBar');
   if (summaryEl) {
     summaryEl.innerHTML = '已支付/运费合计:' + totalPaid.toFixed(0) + '/' + totalFreight.toFixed(0) + '元 | 过磅费合计:' + totalWeighFee.toFixed(0) + '元';
-    summaryEl.style.display = currentRecords.length > 0 ? 'block' : 'none';
+    summaryEl.style.display = display.length > 0 ? 'block' : 'none';
   }
   const el = document.getElementById('recordList');
   if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>还没有登记记录<br>点上方按钮开始</div>'; return; }
-  el.innerHTML = currentRecords.map(r => {
+  if (display.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>没有符合条件的记录<br>试试调整筛选条件</div>'; return; }
+  el.innerHTML = display.map(r => {
     const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
     const hasWeight = r.weight && r.weight.trim();
     const hasWeighFee = r.weigh_fee && r.weigh_fee.trim();
@@ -673,6 +715,48 @@ function renderList() {
       '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badgeStr + (r.from_location ? '<span>装:' + r.from_location + '</span>' : '') + toStr + '</div>' +
       '</div>';
   }).join('');
+}
+
+function applyFilter() {
+  filterStartDate = document.getElementById('filterStart').value;
+  filterEndDate = document.getElementById('filterEnd').value;
+  filterKeyword = document.getElementById('filterKeyword').value.trim();
+  renderList();
+}
+
+function resetFilter() {
+  document.getElementById('filterStart').value = '';
+  document.getElementById('filterEnd').value = '';
+  document.getElementById('filterKeyword').value = '';
+  filterStartDate = '';
+  filterEndDate = '';
+  filterKeyword = '';
+  renderList();
+}
+
+function exportCSV() {
+  const list = getFilteredRecords();
+  if (list.length === 0) { toast('没有可导出的记录', false, true); return; }
+  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','已支付','修改次数'];
+  const rows = list.map(r => [
+    r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
+    r.id_card || '', r.from_location || '', r.to_location || '', r.goods || '', r.freight || '',
+    r.weigh_fee || '', r.weight || '', (r.is_paid === true) ? '是' : '否', r.modified_count || 0
+  ]);
+  let csv = '\uFEFF' + headers.join(',') + '\n';
+  rows.forEach(row => {
+    csv += row.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '装货登记_' + formatDate(new Date()) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('已导出 ' + list.length + ' 条记录', true);
 }
 
 let cancelPaidStep = 0;
@@ -1050,7 +1134,7 @@ loadRecords();
 // 初始化
 loadRecords();
 </script>
-<div class="version-footer">装货登记 v1.0.1 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.1.0 | 开发者: sea9413</div>
 </body>
 </html>
 
