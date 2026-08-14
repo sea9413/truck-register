@@ -28,8 +28,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .record-card .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-modified { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .summary-bar { background: #e8f5e9; color: #2e7d32; padding: 10px 16px; margin: 0 16px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; text-align: center; }
-.record-card .paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
-.record-card .paid-check input { width: 16px; height: 16px; cursor: pointer; }
+.record-card .is_paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
+.record-card .is_paid-check input { width: 16px; height: 16px; cursor: pointer; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
@@ -631,7 +631,7 @@ function renderList() {
   document.getElementById('recordCount').textContent = currentRecords.length + ' 条';
   // 计算汇总
   const totalFreight = currentRecords.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
-  const totalPaid = currentRecords.reduce((sum, r) => sum + ((r.paid === true) ? (parseFloat(r.freight) || 0) : 0), 0);
+  const totalPaid = currentRecords.reduce((sum, r) => sum + ((r.is_paid === true) ? (parseFloat(r.freight) || 0) : 0), 0);
   const totalWeighFee = currentRecords.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
   const summaryEl = document.getElementById('summaryBar');
   if (summaryEl) {
@@ -654,8 +654,8 @@ function renderList() {
     const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
     const feeStr = freightStr || weighFeeStr ? '<div class="fee-line">' + [freightStr, weighFeeStr].filter(Boolean).join(' ') + '</div>' : '';
     const toStr = r.to_location ? '<span>→ ' + r.to_location + '</span>' : '';
-    const isPaid = (r.paid === true);
-    const paidCheck = '<label class="paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
+    const isPaid = (r.is_paid === true);
+    const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate">' + plate + '</span>' + paidCheck + '</div>' +
       feeStr +
@@ -666,10 +666,10 @@ function renderList() {
 
 async function togglePaid(id, newPaid) {
   try {
-    const { error } = await supabaseClient.from('records').update({ paid: newPaid }).eq('id', id);
+    const { error } = await supabaseClient.from('records').update({ is_paid: newPaid }).eq('id', id);
     if (error) {
-      // 如果 paid 字段不存在，静默失败，只在前端显示状态
-      if (error.message && error.message.includes('paid')) {
+      // 如果 is_paid 字段不存在，静默失败，只在前端显示状态
+      if (error.message && error.message.includes('is_paid')) {
         toast('支付功能暂不可用，请联系管理员', false, true);
         return;
       }
@@ -995,3 +995,5 @@ loadRecords();
 <div class="version-footer">装货登记 v1.0 | 开发者: sea9413</div>
 </body>
 </html>
+
+
