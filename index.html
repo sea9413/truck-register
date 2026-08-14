@@ -36,6 +36,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .filter-bar button { border: none; border-radius: 8px; padding: 8px 14px; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .filter-btn-reset { background: #f0f0f0; color: #666; }
 .filter-btn-export { background: #1a7af8; color: white; }
+.filter-btn-import { background: #ff9800; color: white; }
+.filter-btn-template { background: #f0f0f0; color: #666; }
 .record-card .is_paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
 .record-card .is_paid-check input { width: 16px; height: 16px; cursor: pointer; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
@@ -176,7 +178,12 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <button class="filter-btn-reset" onclick="resetFilter()">重置</button>
         <button class="filter-btn-export" onclick="exportCSV()">导出</button>
       </div>
+      <div class="filter-row">
+        <button class="filter-btn-import" onclick="document.getElementById('importFile').click()">📥 导入历史</button>
+        <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
+      </div>
     </div>
+    <input type="file" id="importFile" accept=".csv" style="display:none" onchange="handleImportFile(event)">
     <button class="add-btn" onclick="showForm()">+ 新增登记</button>
     <div id="recordList"><div class="loading">连接数据库...</div></div>
   </div>
@@ -757,6 +764,104 @@ function exportCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('已导出 ' + list.length + ' 条记录', true);
+}
+
+function parseCSV(text) {
+  text = text.replace(/^﻿/, '');
+  const rows = [];
+  let row = [], field = '', inQ = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQ) {
+      if (c === '"') {
+        if (text[i+1] === '"') { field += '"'; i++; } else { inQ = false; }
+      } else { field += c; }
+    } else {
+      if (c === '"') { inQ = true; }
+      else if (c === ',') { row.push(field); field = ''; }
+      else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+      else if (c === '\r') { /* skip */ }
+      else { field += c; }
+    }
+  }
+  if (field !== '' || row.length > 0) { row.push(field); rows.push(row); }
+  return rows;
+}
+
+function downloadTemplate() {
+  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','已支付','修改次数'];
+  const csv = '﻿' + headers.join(',') + '\n';
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '装货登记_导入模板.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('已下载空白模板', true);
+}
+
+async function handleImportFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev) => {
+    try {
+      const rows = parseCSV(ev.target.result);
+      if (rows.length < 2) { toast('文件没有数据行', false, true); e.target.value = ''; return; }
+      const header = rows[0].map(h => h.trim());
+      const idx = {};
+      header.forEach((h, i) => idx[h] = i);
+      const get = (name, r) => (idx[name] !== undefined && r[idx[name]] != null) ? String(r[idx[name]]).trim() : '';
+      const records = [];
+      let skipped = 0;
+      for (let i = 1; i < rows.length; i++) {
+        const r = rows[i];
+        const date = get('日期', r);
+        const plate = get('主车', r);
+        if (!date || !plate) { skipped++; continue; }
+        const isPaidRaw = get('已支付', r);
+        const isPaid = (isPaidRaw === '是' || isPaidRaw === 'true' || isPaidRaw === '1');
+        const mc = parseInt(get('修改次数', r)) || 0;
+        const rec = {
+          date: date,
+          plate_main: plate,
+          plate_trailer: get('挂车', r) || null,
+          name: get('姓名', r) || null,
+          phone: get('手机号', r) || null,
+          id_card: get('身份证号', r) || null,
+          from_location: get('装货地', r) || null,
+          to_location: get('收货地', r) || null,
+          goods: get('货物', r) || null,
+          freight: get('运费', r) || null,
+          weigh_fee: get('过磅费', r) || null,
+          weight: get('过磅重量', r) || null,
+          is_paid: isPaid,
+          modified_fields: '[]',
+          modified_count: mc
+        };
+        const camel = { date: rec.date, plateMain: rec.plate_main, plateTrailer: rec.plate_trailer, name: rec.name, phone: rec.phone, weight: rec.weight, weighFee: rec.weigh_fee, from: rec.from_location, to: rec.to_location, goods: rec.goods, freight: rec.freight };
+        rec.notice = generateNotice(camel);
+        records.push(rec);
+      }
+      if (records.length === 0) { toast('没有可导入的有效记录（需有日期和主车）', false, true); e.target.value = ''; return; }
+      toast('正在导入 ' + records.length + ' 条...', true);
+      const BATCH = 100;
+      for (let i = 0; i < records.length; i += BATCH) {
+        const batch = records.slice(i, i + BATCH);
+        const { error } = await supabaseClient.from('records').insert(batch);
+        if (error) { toast('导入失败:' + error.message, false, true); e.target.value = ''; return; }
+      }
+      toast('成功导入 ' + records.length + ' 条' + (skipped ? '（跳过 ' + skipped + ' 行空数据）' : ''), true);
+      loadRecords();
+    } catch (err) {
+      toast('导入出错:' + err.message, false, true);
+    }
+    e.target.value = '';
+  };
+  reader.readAsText(file, 'UTF-8');
 }
 
 let cancelPaidStep = 0;
