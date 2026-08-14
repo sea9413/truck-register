@@ -27,7 +27,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .record-card .goods-tag { background: #e8f0ff; color: #1a7af8; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-modified { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-.summary-bar { background: #e8f5e9; color: #2e7d32; padding: 10px 16px; margin: 0 16px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; text-align: center; }
+.summary-bar { background: #e8f5e9; color: #2e7d32; padding: 10px 16px; margin: 0 16px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; text-align: center; }
+.record-card .paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
+.record-card .paid-check input { width: 16px; height: 16px; cursor: pointer; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 
@@ -629,10 +631,11 @@ function renderList() {
   document.getElementById('recordCount').textContent = currentRecords.length + ' 条';
   // 计算汇总
   const totalFreight = currentRecords.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
+  const totalPaid = currentRecords.reduce((sum, r) => sum + (r.paid ? (parseFloat(r.freight) || 0) : 0), 0);
   const totalWeighFee = currentRecords.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
   const summaryEl = document.getElementById('summaryBar');
   if (summaryEl) {
-    summaryEl.innerHTML = '运费合计:' + totalFreight.toFixed(0) + '元 | 过磅费合计:' + totalWeighFee.toFixed(0) + '元';
+    summaryEl.innerHTML = '已支付/运费合计:' + totalPaid.toFixed(0) + '/' + totalFreight.toFixed(0) + '元 | 过磅费合计:' + totalWeighFee.toFixed(0) + '元';
     summaryEl.style.display = currentRecords.length > 0 ? 'block' : 'none';
   }
   const el = document.getElementById('recordList');
@@ -651,12 +654,19 @@ function renderList() {
     const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
     const feeStr = freightStr || weighFeeStr ? '<div class="fee-line">' + [freightStr, weighFeeStr].filter(Boolean).join(' ') + '</div>' : '';
     const toStr = r.to_location ? '<span>→ ' + r.to_location + '</span>' : '';
+    const paidCheck = '<label class="paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (r.paid ? 'false' : 'true') + ')"><input type="checkbox" ' + (r.paid ? 'checked' : '') + '>已支付</label>';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
-      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate">' + plate + '</span></div>' +
+      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate">' + plate + '</span>' + paidCheck + '</div>' +
       feeStr +
       '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badgeStr + (r.from_location ? '<span>装:' + r.from_location + '</span>' : '') + toStr + '</div>' +
       '</div>';
   }).join('');
+}
+
+async function togglePaid(id, newPaid) {
+  const { error } = await supabaseClient.from('records').update({ paid: newPaid }).eq('id', id);
+  if (error) { toast('更新失败:' + error.message, false, true); return; }
+  loadRecords();
 }
 
 function showRecordDetail(id) {
