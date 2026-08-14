@@ -828,16 +828,23 @@ function showModifyBanner(msg, changedFields) {
   // 永久显示，不自动隐藏
 }
 
+function parseModifiedFields(r) {
+  // 数据库 modified_fields 可能是 JSON 字符串或数组
+  const mf = r.modified_fields;
+  if (!mf) return [];
+  if (Array.isArray(mf)) return mf;
+  try { return JSON.parse(mf); } catch(e) { return []; }
+}
 function renderDetailWithChanges(r, changedFields) {
   // 合并本次修改和数据库已记录的修改
-  const dbModified = r.modified_fields || [];
+  const dbModified = parseModifiedFields(r);
   const currentChanged = changedFields.map(f => f.key);
   const allChanged = [...new Set([...dbModified, ...currentChanged])];
   renderDetail(r, allChanged);
 }
 function renderDetailChanged(r) {
   // 使用数据库记录的修改字段永久标红
-  renderDetail(r, r.modified_fields || []);
+  renderDetail(r, parseModifiedFields(r));
 }
 
 // ===== 编辑/补填 =====
@@ -862,12 +869,7 @@ async function saveEdit() {
   if (!currentDetail) return;
   const weight = document.getElementById('eWeight').value.trim();
   const weigh_fee = document.getElementById('eWeighFee').value.trim();
-  // 记录修改
-  const changedFields = [];
-  if ((weight || '') !== (currentDetail.weight || '')) changedFields.push('weight');
-  if ((weigh_fee || '') !== (currentDetail.weigh_fee || '')) changedFields.push('weigh_fee');
-  const existingModified = currentDetail.modified_fields || [];
-  const allModified = [...new Set([...existingModified, ...changedFields])];
+  // 补填不记录修改状态
   // 同步更新通知文字
   const r = {
     date: currentDetail.date, plateMain: currentDetail.plate_main, plateTrailer: currentDetail.plate_trailer,
@@ -877,9 +879,7 @@ async function saveEdit() {
   };
   const { error } = await supabaseClient.from('records').update({
     weight: weight, weigh_fee: weigh_fee,
-    notice: generateNotice(r),
-    modified_fields: allModified,
-    modified_count: (currentDetail.modified_count || 0) + changedFields.length
+    notice: generateNotice(r)
   }).eq('id', currentDetail.id);
   if (error) { toast('保存失败:' + error.message, false, true); return; }
   toast('已保存 ✓', true);
