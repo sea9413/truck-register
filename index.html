@@ -38,10 +38,22 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .filter-btn-export { background: #1a7af8; color: white; }
 .filter-btn-import { background: #ff9800; color: white; }
 .filter-btn-template { background: #f0f0f0; color: #666; }
+.location-selector { display: flex; background: #f0f0f0; border-radius: 8px; overflow: hidden; }
+.loc-btn { border: none; background: none; padding: 7px 12px; font-size: 13px; cursor: pointer; color: #666; border-radius: 0; font-weight: 600; }
+.loc-btn.active { background: #1a7af8; color: white; }
 .record-card .is_paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
 .record-card .is_paid-check input { width: 16px; height: 16px; cursor: pointer; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
+.month-group { margin-bottom: 4px; }
+.month-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #f5f5f5; border-radius: 8px; cursor: pointer; font-size: 14px; color: #444; user-select: none; }
+.month-header:hover { background: #eee; }
+.month-toggle { font-size: 12px; color: #888; transition: transform 0.2s; }
+.month-header.collapsed .month-toggle { transform: rotate(-90deg); }
+.month-count { font-size: 12px; color: #888; }
+.month-records { overflow: hidden; }
+.month-records.collapsed { display: none; }
+.month-records .record-card:first-child { border-top-left-radius: 0; border-top-right-radius: 0; }
 
 .detail-page { display: none; }
 .detail-header { background: white; padding: 14px 20px; border-bottom: 1px solid #eee; display: flex; align-items: center; justify-content: space-between; }
@@ -179,6 +191,11 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <button class="filter-btn-export" onclick="exportCSV()">导出</button>
       </div>
       <div class="filter-row">
+        <div class="location-selector">
+          <button class="loc-btn active" id="locAll" onclick="setLocationFilter('all')">全部</button>
+          <button class="loc-btn" id="locFrom" onclick="setLocationFilter('from')">装货地</button>
+          <button class="loc-btn" id="locTo" onclick="setLocationFilter('to')">收货地</button>
+        </div>
         <button class="filter-btn-import" onclick="document.getElementById('importFile').click()">📥 导入历史</button>
         <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
       </div>
@@ -375,8 +392,10 @@ const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let currentRecords = [];
 let filterStartDate = '';
+let collapsedMonths = {}; // { '2026-08': true }
 let filterEndDate = '';
 let filterKeyword = '';
+let locationFilter = 'all'; // 'all' | 'from' | 'to'
 let currentDetail = null;
 let selectedGoods = '';
 let deleteStep = 0; // 0=未确认 1=第一步确认 2=第二步确认
@@ -682,6 +701,10 @@ function getFilteredRecords() {
       (r.to_location && r.to_location.toLowerCase().includes(kw))
     );
   }
+  if (locationFilter !== 'all') {
+    if (locationFilter === 'from') list = list.filter(r => r.from_location && r.from_location.trim());
+    if (locationFilter === 'to') list = list.filter(r => r.to_location && r.to_location.trim());
+  }
   return list;
 }
 
@@ -700,7 +723,15 @@ function renderList() {
   const el = document.getElementById('recordList');
   if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>还没有登记记录<br>点上方按钮开始</div>'; return; }
   if (display.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>没有符合条件的记录<br>试试调整筛选条件</div>'; return; }
-  el.innerHTML = display.map(r => {
+  // 按年月分组（YYYY-MM）
+  const groups = {};
+  display.forEach(r => {
+    const ym = (r.date || '').substring(0, 7);
+    if (!groups[ym]) groups[ym] = [];
+    groups[ym].push(r);
+  });
+  const sortedKeys = Object.keys(groups).sort().reverse(); // 最新月在先
+  const cardHtml = r => {
     const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
     const hasWeight = r.weight && r.weight.trim();
     const hasWeighFee = r.weigh_fee && r.weigh_fee.trim();
@@ -721,13 +752,44 @@ function renderList() {
       feeStr +
       '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badgeStr + (r.from_location ? '<span>装:' + r.from_location + '</span>' : '') + toStr + '</div>' +
       '</div>';
+  };
+  const monthLabel = ym => {
+    const [y, m] = ym.split('-');
+    return y + '年' + parseInt(m) + '月';
+  };
+  el.innerHTML = sortedKeys.map(ym => {
+    const rows = groups[ym];
+    const mfreight = rows.reduce((s,r) => s+(parseFloat(r.freight)||0), 0);
+    const collapsed = collapsedMonths[ym] ? ' collapsed' : '';
+    return '<div class="month-group">' +
+      '<div class="month-header' + collapsed + '" onclick="toggleMonth(\'' + ym + '\')">' +
+      '<span><span class="month-toggle">▼</span> ' + monthLabel(ym) + ' <span class="month-count">' + rows.length + '条 · 运费' + mfreight.toFixed(0) + '元</span></span>' +
+      '</div>' +
+      '<div class="month-records' + collapsed + '">' + rows.map(cardHtml).join('') + '</div>' +
+      '</div>';
   }).join('');
+}
+
+function toggleMonth(ym) {
+  collapsedMonths[ym] = !collapsedMonths[ym];
+  const hdr = document.querySelector('.month-header[onclick="toggleMonth(\'' + ym + '\')"]');
+  const recs = document.querySelector('.month-records[onclick="toggleMonth(\'' + ym + '\')"]');
+  if (hdr) hdr.classList.toggle('collapsed', collapsedMonths[ym]);
+  if (recs) recs.classList.toggle('collapsed', collapsedMonths[ym]);
 }
 
 function applyFilter() {
   filterStartDate = document.getElementById('filterStart').value;
   filterEndDate = document.getElementById('filterEnd').value;
   filterKeyword = document.getElementById('filterKeyword').value.trim();
+  renderList();
+}
+
+function setLocationFilter(mode) {
+  locationFilter = mode;
+  document.querySelectorAll('.loc-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById(mode === 'all' ? 'locAll' : mode === 'from' ? 'locFrom' : 'locTo');
+  if (el) el.classList.add('active');
   renderList();
 }
 
@@ -738,6 +800,7 @@ function resetFilter() {
   filterStartDate = '';
   filterEndDate = '';
   filterKeyword = '';
+  setLocationFilter('all');
   renderList();
 }
 
