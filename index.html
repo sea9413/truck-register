@@ -77,6 +77,7 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .confirm-btn.primary { background: #e74c3c; color: white; }
 .confirm-btn.primary.step2 { background: #c0392b; }
 .confirm-btn.secondary { background: white; color: #666; border: 1px solid #ddd; margin-bottom: 0; }
+.confirm-btn.danger { background: #e74c3c; color: white; }
 
 /* Form page */
 .form-page { display: none; }
@@ -323,6 +324,16 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
     <div class="confirm-desc" id="deleteDesc">删除后数据无法恢复,请谨慎操作。</div>
     <button class="confirm-btn primary" id="deleteBtn1" onclick="doDeleteStep1()">确定删除</button>
     <button class="confirm-btn secondary" id="deleteBtn2" onclick="hideDeleteConfirm()">取消</button>
+  </div>
+</div>
+
+<div class="confirm-overlay" id="cancelPaidConfirm">
+  <div class="confirm-box">
+    <div class="confirm-icon" id="cancelPaidIcon">⚠️</div>
+    <div class="confirm-title" id="cancelPaidTitle">确定要取消已支付状态吗?</div>
+    <div class="confirm-desc" id="cancelPaidDesc">车牌 <span id="cancelPaidPlate" style="font-weight:600;color:#333"></span> 的已支付状态将被取消，该记录的运费将不再计入已支付合计。</div>
+    <button class="confirm-btn primary" id="cancelPaidBtn1" onclick="doCancelPaidStep1()">确定取消</button>
+    <button class="confirm-btn secondary" id="cancelPaidBtn2" onclick="hideCancelPaidConfirm()">保留已支付</button>
   </div>
 </div>
 
@@ -664,11 +675,27 @@ function renderList() {
   }).join('');
 }
 
+let cancelPaidStep = 0;
+let cancelPaidId = null;
+let cancelPaidNewValue = null;
+
 async function togglePaid(id, newPaid) {
+  // 如果是取消勾选（newPaid=false），需要两步确认
+  if (newPaid === false) {
+    if (cancelPaidStep === 0 || cancelPaidId !== id) {
+      // 第一步确认
+      cancelPaidStep = 1;
+      cancelPaidId = id;
+      cancelPaidNewValue = newPaid;
+      showCancelPaidConfirm(id);
+      return;
+    }
+  }
+  
+  // 执行更新
   try {
     const { error } = await supabaseClient.from('records').update({ is_paid: newPaid }).eq('id', id);
     if (error) {
-      // 如果 is_paid 字段不存在，静默失败，只在前端显示状态
       if (error.message && error.message.includes('is_paid')) {
         toast('支付功能暂不可用，请联系管理员', false, true);
         return;
@@ -676,9 +703,40 @@ async function togglePaid(id, newPaid) {
       toast('更新失败:' + error.message, false, true);
       return;
     }
+    cancelPaidStep = 0;
+    cancelPaidId = null;
+    hideCancelPaidConfirm();
     loadRecords();
   } catch (e) {
     toast('更新失败，请刷新页面重试', false, true);
+  }
+}
+
+function showCancelPaidConfirm(id) {
+  const r = currentRecords.find(x => x.id === id);
+  const plate = r ? (r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main) : '';
+  document.getElementById('cancelPaidPlate').textContent = plate;
+  document.getElementById('cancelPaidConfirm').classList.add('show');
+}
+
+function hideCancelPaidConfirm() {
+  document.getElementById('cancelPaidConfirm').classList.remove('show');
+  cancelPaidStep = 0;
+  cancelPaidId = null;
+}
+
+function doCancelPaidStep1() {
+  if (cancelPaidStep === 1) {
+    // 第二步：更强烈的警告
+    cancelPaidStep = 2;
+    document.getElementById('cancelPaidIcon').textContent = '🚫';
+    document.getElementById('cancelPaidTitle').textContent = '再次确认取消已支付!';
+    document.getElementById('cancelPaidDesc').textContent = '这是最后一次确认，取消后该记录的已支付状态将被清除，运费将不再计入已支付合计!';
+    document.getElementById('cancelPaidBtn1').textContent = '确认取消（不可撤销）';
+    document.getElementById('cancelPaidBtn1').className = 'confirm-btn danger';
+  } else if (cancelPaidStep === 2) {
+    // 真正执行
+    togglePaid(cancelPaidId, cancelPaidNewValue);
   }
 }
 
