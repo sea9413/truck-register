@@ -631,7 +631,7 @@ function renderList() {
   document.getElementById('recordCount').textContent = currentRecords.length + ' 条';
   // 计算汇总
   const totalFreight = currentRecords.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
-  const totalPaid = currentRecords.reduce((sum, r) => sum + (r.paid ? (parseFloat(r.freight) || 0) : 0), 0);
+  const totalPaid = currentRecords.reduce((sum, r) => sum + ((r.paid === true) ? (parseFloat(r.freight) || 0) : 0), 0);
   const totalWeighFee = currentRecords.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
   const summaryEl = document.getElementById('summaryBar');
   if (summaryEl) {
@@ -654,7 +654,8 @@ function renderList() {
     const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
     const feeStr = freightStr || weighFeeStr ? '<div class="fee-line">' + [freightStr, weighFeeStr].filter(Boolean).join(' ') + '</div>' : '';
     const toStr = r.to_location ? '<span>→ ' + r.to_location + '</span>' : '';
-    const paidCheck = '<label class="paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (r.paid ? 'false' : 'true') + ')"><input type="checkbox" ' + (r.paid ? 'checked' : '') + '>已支付</label>';
+    const isPaid = (r.paid === true);
+    const paidCheck = '<label class="paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate">' + plate + '</span>' + paidCheck + '</div>' +
       feeStr +
@@ -664,9 +665,21 @@ function renderList() {
 }
 
 async function togglePaid(id, newPaid) {
-  const { error } = await supabaseClient.from('records').update({ paid: newPaid }).eq('id', id);
-  if (error) { toast('更新失败:' + error.message, false, true); return; }
-  loadRecords();
+  try {
+    const { error } = await supabaseClient.from('records').update({ paid: newPaid }).eq('id', id);
+    if (error) {
+      // 如果 paid 字段不存在，静默失败，只在前端显示状态
+      if (error.message && error.message.includes('paid')) {
+        toast('支付功能暂不可用，请联系管理员', false, true);
+        return;
+      }
+      toast('更新失败:' + error.message, false, true);
+      return;
+    }
+    loadRecords();
+  } catch (e) {
+    toast('更新失败，请刷新页面重试', false, true);
+  }
 }
 
 function showRecordDetail(id) {
