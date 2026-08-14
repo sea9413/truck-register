@@ -38,6 +38,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .filter-btn-export { background: #1a7af8; color: white; }
 .filter-btn-import { background: #ff9800; color: white; }
 .filter-btn-template { background: #f0f0f0; color: #666; }
+.location-selector { display: flex; background: #f0f0f0; border-radius: 8px; overflow: hidden; }
+.loc-btn { border: none; background: none; padding: 7px 12px; font-size: 13px; cursor: pointer; color: #666; border-radius: 0; font-weight: 600; }
+.loc-btn.active { background: #1a7af8; color: white; }
 .record-card .is_paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
 .record-card .is_paid-check input { width: 16px; height: 16px; cursor: pointer; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
@@ -188,6 +191,11 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <button class="filter-btn-export" onclick="exportCSV()">导出</button>
       </div>
       <div class="filter-row">
+        <div class="location-selector">
+          <button class="loc-btn active" id="locAll" onclick="setLocationFilter('all')">全部</button>
+          <button class="loc-btn" id="locFrom" onclick="setLocationFilter('from')">装货地</button>
+          <button class="loc-btn" id="locTo" onclick="setLocationFilter('to')">收货地</button>
+        </div>
         <button class="filter-btn-import" onclick="document.getElementById('importFile').click()">📥 导入历史</button>
         <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
       </div>
@@ -387,6 +395,7 @@ let filterStartDate = '';
 let collapsedMonths = {}; // { '2026-08': true }
 let filterEndDate = '';
 let filterKeyword = '';
+let locationFilter = 'all'; // 'all' | 'from' | 'to'
 let currentDetail = null;
 let selectedGoods = '';
 let deleteStep = 0; // 0=未确认 1=第一步确认 2=第二步确认
@@ -692,6 +701,10 @@ function getFilteredRecords() {
       (r.to_location && r.to_location.toLowerCase().includes(kw))
     );
   }
+  if (locationFilter !== 'all') {
+    if (locationFilter === 'from') list = list.filter(r => r.from_location && r.from_location.trim());
+    if (locationFilter === 'to') list = list.filter(r => r.to_location && r.to_location.trim());
+  }
   return list;
 }
 
@@ -772,6 +785,14 @@ function applyFilter() {
   renderList();
 }
 
+function setLocationFilter(mode) {
+  locationFilter = mode;
+  document.querySelectorAll('.loc-btn').forEach(b => b.classList.remove('active'));
+  const el = document.getElementById(mode === 'all' ? 'locAll' : mode === 'from' ? 'locFrom' : 'locTo');
+  if (el) el.classList.add('active');
+  renderList();
+}
+
 function resetFilter() {
   document.getElementById('filterStart').value = '';
   document.getElementById('filterEnd').value = '';
@@ -779,6 +800,7 @@ function resetFilter() {
   filterStartDate = '';
   filterEndDate = '';
   filterKeyword = '';
+  setLocationFilter('all');
   renderList();
 }
 
