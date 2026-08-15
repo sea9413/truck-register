@@ -777,10 +777,10 @@ function renderList() {
     const freightStr = r.freight ? '运费:' + r.freight + '元' : '';
     const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
     const weightStr = r.weight ? '重量:' + (parseFloat(r.weight) / 1000).toFixed(3) + '吨' : '';
+    const isPaid = (r.is_paid === true);
     const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
     const feeStr = freightStr || weighFeeStr || weightStr ? '<div class="fee-line">' + [freightStr, weighFeeStr, weightStr].filter(Boolean).join(' ') + paidCheck + '</div>' : '<div class="fee-line">' + paidCheck + '</div>';
     const toStr = r.to_location ? '<span>→ ' + r.to_location + '</span>' : '';
-    const isPaid = (r.is_paid === true);
     const routeStr = (r.from_location || r.to_location) ? '<div class="route-line">装:' + (r.from_location || '待填') + ' → ' + (r.to_location || '待填') + '</div>' : '';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
