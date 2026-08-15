@@ -923,11 +923,23 @@ async function handleImportFile(e) {
       const get = (name, r) => (idx[name] !== undefined && r[idx[name]] != null) ? String(r[idx[name]]).trim() : '';
       const records = [];
       let skipped = 0;
+      let duplicate = 0;
+      // 去重:先拉取已有记录的(日期+主车+重量)键
+      let existingKeys = new Set();
+      try {
+        const { data, error } = await supabaseClient.from('records').select('date, plate_main, weight');
+        if (!error && data) existingKeys = new Set(data.map(x => (x.date || '') + '|' + (x.plate_main || '') + '|' + (x.weight || '')));
+      } catch (err) { console.error('拉取已有记录失败:', err); }
+      const seenKeys = new Set();
       for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
         const date = get('日期', r);
         const plate = get('主车', r);
         if (!date || !plate) { skipped++; continue; }
+        const weightVal = get('过磅重量', r);
+        const dupKey = (date || '') + '|' + (plate || '') + '|' + (weightVal || '');
+        if (existingKeys.has(dupKey) || seenKeys.has(dupKey)) { duplicate++; continue; }
+        seenKeys.add(dupKey);
         const isPaidRaw = get('已支付', r);
         const isPaid = (isPaidRaw === '是' || isPaidRaw === 'true' || isPaidRaw === '1');
         const mc = parseInt(get('修改次数', r)) || 0;
@@ -952,7 +964,7 @@ async function handleImportFile(e) {
         rec.notice = generateNotice(camel);
         records.push(rec);
       }
-      if (records.length === 0) { toast('没有可导入的有效记录（需有日期和主车）', false, true); e.target.value = ''; return; }
+      if (records.length === 0) { toast(duplicate > 0 ? '全部 ' + duplicate + ' 条都是重复记录，未导入' : '没有可导入的有效记录（需有日期和主车）', false, true); e.target.value = ''; return; }
       toast('正在导入 ' + records.length + ' 条...', true);
       const BATCH = 100;
       for (let i = 0; i < records.length; i += BATCH) {
@@ -960,7 +972,7 @@ async function handleImportFile(e) {
         const { error } = await supabaseClient.from('records').insert(batch);
         if (error) { toast('导入失败:' + error.message, false, true); e.target.value = ''; return; }
       }
-      toast('成功导入 ' + records.length + ' 条' + (skipped ? '（跳过 ' + skipped + ' 行空数据）' : ''), true);
+      toast('成功导入 ' + records.length + ' 条' + (duplicate > 0 ? '（跳过 ' + duplicate + ' 条重复）' : '') + (skipped > 0 ? '（跳过 ' + skipped + ' 行空数据）' : ''), true);
       loadRecords();
     } catch (err) {
       toast('导入出错:' + err.message, false, true);
@@ -1345,7 +1357,7 @@ initSupabase();
 // 初始化（保留以防）
 initSupabase();
 </script>
-<div class="version-footer">装货登记 v1.1.7 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.1.8 | 开发者: sea9413</div>
 </body>
 </html>
 
