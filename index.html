@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>装货登记</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="document.getElementById('recordList').innerHTML='<div class=empty><div class=empty-icon>❌</div>Supabase 脚本加载失败</div>'"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #333; font-size: 15px; }
@@ -388,11 +388,28 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 <div class="toast" id="toast"></div>
 
 <script>
-// Supabase 配置
+// Supabase 配置（等 supabase 全局变量就绪后初始化）
 const SUPABASE_URL = 'https://gdyiottosunwjothghaz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OMPVS-R2K3r9o8vx0VCx1A_SAd4iomg';
-const { createClient } = supabase;
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+function initSupabase() {
+  if (typeof supabase === 'undefined') {
+    console.warn('supabase 全局变量还未就绪，等待中...');
+    setTimeout(initSupabase, 100);
+    return;
+  }
+  try {
+    supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    console.log('Supabase 初始化完成');
+    if (typeof loadRecords === 'function') loadRecords();
+  } catch (e) {
+    console.error('Supabase 初始化失败:', e);
+    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>Supabase初始化失败:<br>' + e.message + '</div>';
+  }
+}
+
+// 作为全局变量供后续函数使用
+var supabaseClient;
 
 let currentRecords = [];
 let filterStartDate = '';
@@ -685,10 +702,19 @@ function generateNotice(r) {
 }
 
 async function loadRecords() {
-  const { data, error } = await supabaseClient.from('records').select('*').order('created_at', { ascending: false });
-  if (error) { document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>连接失败,请刷新</div>'; return; }
-  currentRecords = data || [];
-  renderList();
+  try {
+    const { data, error } = await supabaseClient.from('records').select('*').order('created_at', { ascending: false });
+    if (error) {
+      console.error('加载记录出错:', error);
+      document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>加载失败:<br>' + (error.message || JSON.stringify(error)) + '</div>';
+      return;
+    }
+    currentRecords = data || [];
+    renderList();
+  } catch (e) {
+    console.error('loadRecords异常:', e);
+    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>加载异常:<br>' + e.message + '</div>';
+  }
 }
 
 function getFilteredRecords() {
@@ -1309,11 +1335,11 @@ function toast(msg, green, red) {
 }
 
 // 初始化
-loadRecords();
-// 初始化
-loadRecords();
+initSupabase();
+// 初始化（保留以防）
+initSupabase();
 </script>
-<div class="version-footer">装货登记 v1.1.5 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.1.6 | 开发者: sea9413</div>
 </body>
 </html>
 
