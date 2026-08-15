@@ -25,7 +25,9 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .record-card .plate-trailer { font-size: 13px; color: #888; white-space: nowrap; }
 .record-card .bottom { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: #666; }
 .record-card .route-line { font-size: 13px; color: #555; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #eee; }
-    .record-card .fee-line { font-size: 13px; color: #333; margin: 4px 0; font-weight: 500; }
+    .record-card .fee-line { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: #333; margin: 4px 0; font-weight: 500; }
+.record-card .fee-line span { margin-right: 12px; }
+.record-card .fee-line .is_paid-check { margin-left: auto; }
 .record-card .goods-tag { background: #e8f0ff; color: #1a7af8; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-modified { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
@@ -748,13 +750,13 @@ function renderList() {
     const goods = r.goods || '待填';
     const freightStr = r.freight ? '运费:' + r.freight + '元' : '';
     const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
-    const feeStr = freightStr || weighFeeStr ? '<div class="fee-line">' + [freightStr, weighFeeStr].filter(Boolean).join(' ') + '</div>' : '';
+    const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
+    const feeStr = freightStr || weighFeeStr ? '<div class="fee-line">' + [freightStr, weighFeeStr].filter(Boolean).join(' ') + paidCheck + '</div>' : '<div class="fee-line">' + paidCheck + '</div>';
     const toStr = r.to_location ? '<span>→ ' + r.to_location + '</span>' : '';
     const isPaid = (r.is_paid === true);
-    const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
     const routeStr = (r.from_location || r.to_location) ? '<div class="route-line">装:' + (r.from_location || '待填') + ' → ' + (r.to_location || '待填') + '</div>' : '';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
-      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span>' + paidCheck + '</div>' +
+      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
       feeStr +
       '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badgeStr + '</div>' +
       routeStr +
@@ -1310,7 +1312,7 @@ loadRecords();
 // 初始化
 loadRecords();
 </script>
-<div class="version-footer">装货登记 v1.1.3 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.1.4 | 开发者: sea9413</div>
 </body>
 </html>
 
