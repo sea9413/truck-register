@@ -735,6 +735,12 @@ function getFilteredRecords() {
     if (locationFilter === 'from') list = list.filter(r => r.from_location && r.from_location.trim());
     if (locationFilter === 'to') list = list.filter(r => r.to_location && r.to_location.trim());
   }
+  // 排序:装货日期降序(最新装货在上),同日登记时刻降序(最后登记的在最上)
+  list = list.slice().sort((a, b) => {
+    const dateCmp = (b.date || '').localeCompare(a.date || '');
+    if (dateCmp !== 0) return dateCmp;
+    return (b.created_at || '').localeCompare(a.created_at || '');
+  });
   return list;
 }
 
@@ -1339,7 +1345,7 @@ initSupabase();
 // 初始化（保留以防）
 initSupabase();
 </script>
-<div class="version-footer">装货登记 v1.1.6 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.1.7 | 开发者: sea9413</div>
 </body>
 </html>
 
