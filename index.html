@@ -19,15 +19,16 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .add-btn:disabled { background: #ccc; }
 .record-card { background: white; border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); cursor: pointer; transition: transform 0.15s; }
 .record-card:active { transform: scale(0.98); }
-.record-card .top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.record-card .date { font-size: 13px; color: #888; }
-.record-card .plate { font-size: 16px; font-weight: 600; }
+.record-card .top { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 6px; }
+.record-card .date { font-size: 14px; color: #333; font-weight: 700; white-space: nowrap; }
+.record-card .plate-main { font-size: 18px; font-weight: 700; color: #222; white-space: nowrap; }
+.record-card .plate-trailer { font-size: 13px; color: #888; white-space: nowrap; }
 .record-card .bottom { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; color: #666; }
     .record-card .fee-line { font-size: 13px; color: #333; margin: 4px 0; font-weight: 500; }
 .record-card .goods-tag { background: #e8f0ff; color: #1a7af8; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-pending { background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
 .record-card .badge-modified { background: #ffebee; color: #c62828; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
-.summary-bar { background: #e8f5e9; color: #2e7d32; padding: 10px 16px; margin: 0 16px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; text-align: center; }
+.summary-bar { background: #e8f5e9; color: #2e7d32; padding: 10px 16px; margin: 0 16px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; text-align: center; position: sticky; top: 56px; z-index: 10; }
 .filter-bar { margin: 0 16px 12px; background: white; border-radius: 10px; padding: 10px 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .filter-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
 .filter-row:last-child { margin-bottom: 0; }
@@ -38,15 +39,13 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .filter-btn-export { background: #1a7af8; color: white; }
 .filter-btn-import { background: #ff9800; color: white; }
 .filter-btn-template { background: #f0f0f0; color: #666; }
-.location-selector { display: flex; background: #f0f0f0; border-radius: 8px; overflow: hidden; }
-.loc-btn { border: none; background: none; padding: 7px 12px; font-size: 13px; cursor: pointer; color: #666; border-radius: 0; font-weight: 600; }
-.loc-btn.active { background: #1a7af8; color: white; }
+.location-selector select { border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; font-size: 14px; background: white; cursor: pointer; min-width: 100px; flex-shrink: 0; }
 .record-card .is_paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
 .record-card .is_paid-check input { width: 16px; height: 16px; cursor: pointer; }
 .empty { text-align: center; padding: 60px 20px; color: #aaa; font-size: 15px; }
 .empty-icon { font-size: 48px; margin-bottom: 12px; }
 .month-group { margin-bottom: 4px; }
-.month-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 16px; background: #f5f5f5; border-radius: 8px; cursor: pointer; font-size: 14px; color: #444; user-select: none; }
+.month-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f5f5f5; border-radius: 8px; cursor: pointer; font-size: 15px; color: #444; user-select: none; -webkit-tap-highlight-color: rgba(0,0,0,0.05); min-height: 44px; }
 .month-header:hover { background: #eee; }
 .month-toggle { font-size: 12px; color: #888; transition: transform 0.2s; }
 .month-header.collapsed .month-toggle { transform: rotate(-90deg); }
@@ -192,9 +191,11 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       </div>
       <div class="filter-row">
         <div class="location-selector">
-          <button class="loc-btn active" id="locAll" onclick="setLocationFilter('all')">全部</button>
-          <button class="loc-btn" id="locFrom" onclick="setLocationFilter('from')">装货地</button>
-          <button class="loc-btn" id="locTo" onclick="setLocationFilter('to')">收货地</button>
+          <select id="locationFilter" onchange="setLocationFilter(this.value)">
+            <option value="all">全部地点</option>
+            <option value="from">仅装货地</option>
+            <option value="to">仅收货地</option>
+          </select>
         </div>
         <button class="filter-btn-import" onclick="document.getElementById('importFile').click()">📥 导入历史</button>
         <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
@@ -733,6 +734,9 @@ function renderList() {
   const sortedKeys = Object.keys(groups).sort().reverse(); // 最新月在先
   const cardHtml = r => {
     const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
+    const plateHtml = r.plate_trailer
+      ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+挂' + r.plate_trailer + '</span>'
+      : '<span class="plate-main">' + r.plate_main + '</span>';
     const hasWeight = r.weight && r.weight.trim();
     const hasWeighFee = r.weigh_fee && r.weigh_fee.trim();
     const badges = [];
@@ -748,7 +752,7 @@ function renderList() {
     const isPaid = (r.is_paid === true);
     const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
-      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate">' + plate + '</span>' + paidCheck + '</div>' +
+      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span>' + paidCheck + '</div>' +
       feeStr +
       '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + badgeStr + (r.from_location ? '<span>装:' + r.from_location + '</span>' : '') + toStr + '</div>' +
       '</div>';
@@ -762,18 +766,18 @@ function renderList() {
     const mfreight = rows.reduce((s,r) => s+(parseFloat(r.freight)||0), 0);
     const collapsed = collapsedMonths[ym] ? ' collapsed' : '';
     return '<div class="month-group">' +
-      '<div class="month-header' + collapsed + '" onclick="toggleMonth(\'' + ym + '\')">' +
+      '<div class="month-header' + collapsed + '" data-ym="' + ym + '" onclick="toggleMonth(\'' + ym + '\')">' +
       '<span><span class="month-toggle">▼</span> ' + monthLabel(ym) + ' <span class="month-count">' + rows.length + '条 · 运费' + mfreight.toFixed(0) + '元</span></span>' +
       '</div>' +
-      '<div class="month-records' + collapsed + '">' + rows.map(cardHtml).join('') + '</div>' +
+      '<div class="month-records' + collapsed + '" data-ym="' + ym + '">' + rows.map(cardHtml).join('') + '</div>' +
       '</div>';
   }).join('');
 }
 
 function toggleMonth(ym) {
   collapsedMonths[ym] = !collapsedMonths[ym];
-  const hdr = document.querySelector('.month-header[onclick="toggleMonth(\'' + ym + '\')"]');
-  const recs = document.querySelector('.month-records[onclick="toggleMonth(\'' + ym + '\')"]');
+  const hdr = document.querySelector('.month-header[data-ym="' + ym + '"]');
+  const recs = document.querySelector('.month-records[data-ym="' + ym + '"]');
   if (hdr) hdr.classList.toggle('collapsed', collapsedMonths[ym]);
   if (recs) recs.classList.toggle('collapsed', collapsedMonths[ym]);
 }
@@ -787,9 +791,8 @@ function applyFilter() {
 
 function setLocationFilter(mode) {
   locationFilter = mode;
-  document.querySelectorAll('.loc-btn').forEach(b => b.classList.remove('active'));
-  const el = document.getElementById(mode === 'all' ? 'locAll' : mode === 'from' ? 'locFrom' : 'locTo');
-  if (el) el.classList.add('active');
+  const sel = document.getElementById('locationFilter');
+  if (sel) sel.value = mode;
   renderList();
 }
 
@@ -797,6 +800,8 @@ function resetFilter() {
   document.getElementById('filterStart').value = '';
   document.getElementById('filterEnd').value = '';
   document.getElementById('filterKeyword').value = '';
+  const locSel = document.getElementById('locationFilter'); if (locSel) locSel.value = 'all';
+  locationFilter = 'all';
   filterStartDate = '';
   filterEndDate = '';
   filterKeyword = '';
@@ -1302,7 +1307,7 @@ loadRecords();
 // 初始化
 loadRecords();
 </script>
-<div class="version-footer">装货登记 v1.1.1 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.1.2 | 开发者: sea9413</div>
 </body>
 </html>
 
