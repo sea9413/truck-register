@@ -797,22 +797,25 @@ async function doSubmit() {
     name: r.name, phone: r.phone, id_card: r.idCard,
     from_location: r.from, to_location: r.to, goods: r.goods,
     freight: r.freight, weight: r.weight, weigh_fee: r.weighFee,
-    note: r.note || null,
     notice: generateNotice(r)
   };
-  // 如果选了退货/送货且数据库有该列才带上 delivery_type (避免 schema cache 报错)
+  // 以下是可选字段(可能在某些版本不存在,自动去重)
+  if (r.note) record.note = r.note;
   if (r.deliveryType) record.delivery_type = r.deliveryType;
-  const { error } = await supabaseClient.from('records').insert([record]);
-  if (error) {
-    // 如果是 delivery_type 列不存在,去掉该字段重试
-    if (record.delivery_type && /delivery_type/i.test(error.message)) {
-      delete record.delivery_type;
-      const retry = await supabaseClient.from('records').insert([record]);
-      if (retry.error) { toast('提交失败:' + retry.error.message, false, true); return; }
-    } else {
-      toast('提交失败:' + error.message, false, true); return;
-    }
+  // 提交(带最多2次重试:每次出现未知列错误都去掉该列)
+  let { error } = await supabaseClient.from('records').insert([record]);
+  let retryCount = 0;
+  while (error && /Could not find the '([\w_]+)' column/i.test(error.message) && retryCount < 3) {
+    const m = error.message.match(/Could not find the '([\w_]+)' column/i);
+    const colName = m[1];
+    if (record[colName] === undefined) break;  // 已经没了,跳出
+    delete record[colName];
+    console.warn('列 ' + colName + ' 不存在,已移除重试');
+    const retry = await supabaseClient.from('records').insert([record]);
+    error = retry.error;
+    retryCount++;
   }
+  if (error) { toast('提交失败:' + error.message, false, true); return; }
   toast('已登记 ✓', true);
   setTimeout(() => { loadRecords(); showList(); }, 600);
 }
@@ -1108,11 +1111,16 @@ async function handleImportFile(e) {
       for (let i = 0; i < records.length; i += BATCH) {
         const batch = records.slice(i, i + BATCH);
         let { error } = await supabaseClient.from('records').insert(batch);
-        // 如果是 delivery_type 列不存在,从所有记录中去掉该字段重试
-        if (error && /delivery_type/i.test(error.message)) {
-          for (const rec of batch) delete rec.delivery_type;
+        // 通用重试:列不存在则从所有记录中移除该列后重试(最多3次)
+        let retryCount = 0;
+        while (error && /Could not find the '([\w_]+)' column/i.test(error.message) && retryCount < 3) {
+          const m = error.message.match(/Could not find the '([\w_]+)' column/i);
+          const colName = m[1];
+          for (const rec of batch) delete rec[colName];
+          console.warn('导入:列 ' + colName + ' 不存在,已移除重试');
           const retry = await supabaseClient.from('records').insert(batch);
           error = retry.error;
+          retryCount++;
         }
         if (error) { toast('导入失败:' + error.message, false, true); e.target.value = ''; return; }
       }
