@@ -612,29 +612,100 @@ function recognize(rawText) {
   }
 
   // 地址
-  const singleLine = lines.find(l => /退回|送至|→/.test(l));
-  if (singleLine) { const parts = singleLine.split(/退回|送至|→/).map(s => s.trim()); if (parts.length >= 2) { result.from = parts[0]; result.to = parts[1]; } else if (parts.length === 1) result.to = parts[0]; }
-  if (!result.from || !result.to) { for (const line of lines) { if (/退回|送至|→/.test(line) && line.length > 3 && line.length < 50) { const parts = line.split(/退回|送至|→/).map(s => s.trim()); if (!result.from && parts[0]) result.from = parts[0]; if (!result.to && parts[1]) result.to = parts[1]; if (result.from && result.to) break; } } }
-  if (!result.from || !result.to) { const fullLine = allText.match(/([\u4e00-\u9fa5]{2,20})(?:退回|送至|→)([\u4e00-\u9fa5]{2,20})/); if (fullLine) { result.from = result.from || fullLine[1]; result.to = result.to || fullLine[2]; } }
+  // 优先级1: 多卸货点("卸：xxx"多次) → to取最后一个
+  const unloadRe = /^卸[\s:\：]*\s*/;
+  const goodsWordRe = /^(套扣|盘扣|货物|货)$/;
+  const unloadLines = lines.filter(l => unloadRe.test(l));
+  if (unloadLines.length >= 1) {
+    const unloads = unloadLines.map(l => l.replace(unloadRe, '').trim());
+    const backMatch = allText.match(/([\u4e00-\u9fa5]{2,20})退回/);
+    if (backMatch && !result.from) result.from = backMatch[1];
+    if (!result.to) result.to = unloads[unloads.length - 1];
+  }
+  // 优先级2: "退回/送至/→" 切分(排除货物词被误识别为收货地)
+  if (!result.from || !result.to) {
+    const singleLine = lines.find(l => /退回|送至|→/.test(l));
+    if (singleLine) {
+      const parts = singleLine.split(/退回|送至|→/).map(s => s.trim());
+      if (parts.length >= 2) {
+        if (!result.from && parts[0]) result.from = parts[0];
+        for (let i = 1; i < parts.length; i++) {
+          if (parts[i] && !goodsWordRe.test(parts[i]) && parts[i].length >= 2) {
+            if (!result.to) { result.to = parts[i]; break; }
+          }
+        }
+      } else if (parts.length === 1 && !goodsWordRe.test(parts[0])) {
+        if (!result.to) result.to = parts[0];
+      }
+    }
+  }
+  // 优先级3: 多行扫描"退回/送至/→" (排除货物词)
+  if (!result.from || !result.to) {
+    for (const line of lines) {
+      if (/退回|送至|→/.test(line) && line.length > 3 && line.length < 50) {
+        const parts = line.split(/退回|送至|→/).map(s => s.trim());
+        if (!result.from && parts[0]) result.from = parts[0];
+        if (!result.to && parts[1] && !goodsWordRe.test(parts[1]) && parts[1].length >= 2) result.to = parts[1];
+        if (result.from && result.to) break;
+      }
+    }
+  }
+  // 优先级4: "X装套扣/盘扣" → from, "送X" → to (以最后送达地为准)
+  // 注意: "这台车茂南图书馆装套扣" 这类句子里,先去掉"这台车"前缀再提取地名
+  if (!result.from) {
+    const m = allText.match(/(?:这台车|这车)([\u4e00-\u9fa5]{2,15})装(套扣|盘扣)/);
+    if (m && !goodsWordRe.test(m[1])) result.from = m[1];
+    if (!result.from) {
+      const m2 = allText.match(/([\u4e00-\u9fa5]{2,15})装(套扣|盘扣)/);
+      if (m2 && !goodsWordRe.test(m2[1]) && !/车/.test(m2[1])) result.from = m2[1];
+    }
+  }
+  if (!result.to) {
+    const m = allText.match(/送([\u4e00-\u9fa5]{2,15})/);
+    if (m && !goodsWordRe.test(m[1])) result.to = m[1];
+  }
+  // 优先级5: 全文匹配"X退回/送至Y"
+  if (!result.from || !result.to) {
+    const fullLine = allText.match(/([\u4e00-\u9fa5]{2,20})(?:退回|送至|→)([\u4e00-\u9fa5]{2,20})/);
+    if (fullLine) {
+      if (!result.from) result.from = fullLine[1];
+      if (!result.to && !goodsWordRe.test(fullLine[2])) result.to = fullLine[2];
+    }
+  }
 
   // 过磅重量
   const weightWithLabel = allText.match(/(?:过磅|磅单|重量)[^\d]*(\d+)/);
   if (weightWithLabel) result.weight = weightWithLabel[1];
   else { const w = allText.match(/(?:公斤|kg|KG)[^\d]*(\d+)/); if (w) result.weight = w[1]; }
 
-  // 备注:抽文本里包含“换货/转送/再送/回去/先送/后送/再走/到...换”等关键词的长句
+  // 备注:智能提取含关键词的描述句,并合并跨行的装-送-换描述
   const noteSentences = [];
+  const kwRe = /(换货|转送|再送|回去|先送|后送|再走|仓库换|换头|带装)/;
+  // 1. 关键词单行匹配
   for (const line of lines) {
-    if (line.length < 8) continue;  // 跳过太短的
-    if (/(换货|转送|再送|回去|先送|后送|再走|换.*送|仓库换|换头|带装)/.test(line)) {
-      noteSentences.push(line);
+    if (line.length >= 6 && kwRe.test(line)) {
+      if (!noteSentences.includes(line)) noteSentences.push(line);
     }
-    // 抽含多地点变动的长句(用逗号/句号分句后)
-    const subSentences = line.split(/[,，;;；。]/).map(s => s.trim()).filter(s => s.length >= 10);
-    for (const s of subSentences) {
-      if (/(到|至|送|去|转|换|在|从).*?(到|至|送|去)/.test(s) && !/(装货地|收货地)/.test(s)) {
-        if (!noteSentences.includes(s)) noteSentences.push(s);
-      }
+  }
+  // 2. "一装X卸" 整句(如"一装二卸")
+  const m1 = allText.match(/一装[一二三四五六七八九十\d+]+卸[^\n]*/);
+  if (m1 && !noteSentences.includes(m1[0].trim())) noteSentences.push(m1[0].trim());
+  // 3. 跨行合并叙述型装-送文本(如 "这台车茂南图书馆装套扣，回茂名仓库换货，\n送开平鹏峰")
+  // 如果能合并,就跳过原句重复添加
+  let merged = false;
+  for (let i = 0; i < lines.length - 1; i++) {
+    const cur = lines[i];
+    const nxt = lines[i+1];
+    if (cur.length < 8 || nxt.length < 2) continue;
+    const curIsNarrative = /(这台车|这车).*?(装.*?(套扣|盘扣)|退货|换货)/.test(cur);
+    const nxtHasGo = /^[送至去]/.test(nxt) || /^送[^\s]/.test(nxt);
+    if (curIsNarrative && (nxtHasGo || (result.to && nxt.includes(result.to)))) {
+      const combined = cur + (cur.endsWith('，') || cur.endsWith(',') ? '' : '，') + nxt;
+      if (!noteSentences.includes(combined)) noteSentences.push(combined);
+      // 从noteSentences移除原句
+      const idx = noteSentences.indexOf(cur);
+      if (idx >= 0) noteSentences.splice(idx, 1);
+      merged = true;
     }
   }
   if (noteSentences.length > 0) result.note = noteSentences.join('；');
