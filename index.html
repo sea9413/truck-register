@@ -797,12 +797,22 @@ async function doSubmit() {
     name: r.name, phone: r.phone, id_card: r.idCard,
     from_location: r.from, to_location: r.to, goods: r.goods,
     freight: r.freight, weight: r.weight, weigh_fee: r.weighFee,
-    delivery_type: r.deliveryType,
     note: r.note || null,
     notice: generateNotice(r)
   };
+  // 如果选了退货/送货且数据库有该列才带上 delivery_type (避免 schema cache 报错)
+  if (r.deliveryType) record.delivery_type = r.deliveryType;
   const { error } = await supabaseClient.from('records').insert([record]);
-  if (error) { toast('提交失败:' + error.message, false, true); return; }
+  if (error) {
+    // 如果是 delivery_type 列不存在,去掉该字段重试
+    if (record.delivery_type && /delivery_type/i.test(error.message)) {
+      delete record.delivery_type;
+      const retry = await supabaseClient.from('records').insert([record]);
+      if (retry.error) { toast('提交失败:' + retry.error.message, false, true); return; }
+    } else {
+      toast('提交失败:' + error.message, false, true); return;
+    }
+  }
   toast('已登记 ✓', true);
   setTimeout(() => { loadRecords(); showList(); }, 600);
 }
@@ -1081,12 +1091,13 @@ async function handleImportFile(e) {
           freight: get('运费', r) || null,
           weigh_fee: get('过磅费', r) || null,
           weight: get('过磅重量', r) || null,
-          delivery_type: (get('类型', r) === '退货') ? '退货' : '送货',
           note: get('备注', r) || null,
           is_paid: isPaid,
           modified_fields: '[]',
           modified_count: mc
         };
+        // 仅当列为退货时带上 delivery_type(避免 schema cache 报错)
+        if (get('类型', r) === '退货') rec.delivery_type = '退货';
         const camel = { date: rec.date, plateMain: rec.plate_main, plateTrailer: rec.plate_trailer, name: rec.name, phone: rec.phone, weight: rec.weight, weighFee: rec.weigh_fee, from: rec.from_location, to: rec.to_location, goods: rec.goods, freight: rec.freight };
         rec.notice = generateNotice(camel);
         records.push(rec);
@@ -1096,7 +1107,13 @@ async function handleImportFile(e) {
       const BATCH = 100;
       for (let i = 0; i < records.length; i += BATCH) {
         const batch = records.slice(i, i + BATCH);
-        const { error } = await supabaseClient.from('records').insert(batch);
+        let { error } = await supabaseClient.from('records').insert(batch);
+        // 如果是 delivery_type 列不存在,从所有记录中去掉该字段重试
+        if (error && /delivery_type/i.test(error.message)) {
+          for (const rec of batch) delete rec.delivery_type;
+          const retry = await supabaseClient.from('records').insert(batch);
+          error = retry.error;
+        }
         if (error) { toast('导入失败:' + error.message, false, true); e.target.value = ''; return; }
       }
       toast('成功导入 ' + records.length + ' 条' + (duplicate > 0 ? '（跳过 ' + duplicate + ' 条重复）' : '') + (skipped > 0 ? '（跳过 ' + skipped + ' 行空数据）' : ''), true);
