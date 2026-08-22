@@ -323,6 +323,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <input type="number" id="fWeight" placeholder="过磅(公斤)" style="flex:1" oninput="updateTon()">
         <span id="tonDisplay" style="font-size:16px;color:#333;white-space:nowrap;font-weight:500"></span>
       </div>
+      <textarea id="fNote" placeholder="备注：其他情况说明（如：茂南图书馆装套扣，回茂名仓库换货，送开平鹏峰）" style="width:100%;min-height:56px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:8px;resize:vertical;font-family:inherit"></textarea>
       <input type="text" id="fIdCard" readonly style="display:none">
     </div>
 
@@ -462,7 +463,7 @@ function resetForm() {
   document.getElementById('recognizeBtn').disabled = true;
   const today = new Date();
   document.getElementById('fDate').value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
-  ['fPlateMain','fPlateTrailer','fName','fPhone','fIdCard','fFrom','fTo','fFreight','fWeight','fWeighFee'].forEach(id => document.getElementById(id).value = '');
+  ['fPlateMain','fPlateTrailer','fName','fPhone','fIdCard','fFrom','fTo','fFreight','fWeight','fWeighFee','fNote'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('fIdCard').readOnly = true;
   document.querySelectorAll('.goods-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('otherWrap').classList.remove('show');
@@ -481,7 +482,7 @@ function recognize(rawText) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   const provinceRe = '[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉贵粤青藏川宁琼台港澳闽]';
   const plateOneRe = provinceRe + '[A-Z][A-Z0-9]{4,6}';
-  let result = { date: formatDate(new Date()), plateMain: '', plateTrailer: '', name: '', phone: '', idCard: '', from: '', to: '', goods: '', goodsRaw: '', freight: '' };
+  let result = { date: formatDate(new Date()), plateMain: '', plateTrailer: '', name: '', phone: '', idCard: '', from: '', to: '', goods: '', goodsRaw: '', freight: '', note: '' };
 
   const allText = text;
 
@@ -621,6 +622,23 @@ function recognize(rawText) {
   if (weightWithLabel) result.weight = weightWithLabel[1];
   else { const w = allText.match(/(?:公斤|kg|KG)[^\d]*(\d+)/); if (w) result.weight = w[1]; }
 
+  // 备注:抽文本里包含“换货/转送/再送/回去/先送/后送/再走/到...换”等关键词的长句
+  const noteSentences = [];
+  for (const line of lines) {
+    if (line.length < 8) continue;  // 跳过太短的
+    if (/(换货|转送|再送|回去|先送|后送|再走|换.*送|仓库换|换头|带装)/.test(line)) {
+      noteSentences.push(line);
+    }
+    // 抽含多地点变动的长句(用逗号/句号分句后)
+    const subSentences = line.split(/[,，;;；。]/).map(s => s.trim()).filter(s => s.length >= 10);
+    for (const s of subSentences) {
+      if (/(到|至|送|去|转|换|在|从).*?(到|至|送|去)/.test(s) && !/(装货地|收货地)/.test(s)) {
+        if (!noteSentences.includes(s)) noteSentences.push(s);
+      }
+    }
+  }
+  if (noteSentences.length > 0) result.note = noteSentences.join('；');
+
   return result;
 }
 
@@ -651,6 +669,7 @@ function doRecognize() {
   document.getElementById('fFreight').value = r.freight;
   document.getElementById('fWeight').value = r.weight || '';
   if (r.weight) updateTon();
+  document.getElementById('fNote').value = r.note || '';
   document.querySelectorAll('.goods-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('otherWrap').classList.remove('show');
   selectedGoods = '';
@@ -659,7 +678,7 @@ function doRecognize() {
   const resultEl = document.getElementById('recognizeResult');
   const unfilled = [], filled = [];
   const push = (label, val) => val ? filled.push(label + ' ' + val) : unfilled.push(label);
-  push('日期', r.date); push('主车', r.plateMain); push('挂车', r.plateTrailer); push('姓名', r.name); push('手机', r.phone); push('身份证', r.idCard); push('运费', r.freight ? r.freight + '元' : ''); push('装货地', r.from); push('收货地', r.to); push('货物', r.goods);
+  push('日期', r.date); push('主车', r.plateMain); push('挂车', r.plateTrailer); push('姓名', r.name); push('手机', r.phone); push('身份证', r.idCard); push('运费', r.freight ? r.freight + '元' : ''); push('装货地', r.from); push('收货地', r.to); push('货物', r.goods); push('备注', r.note);
   resultEl.innerHTML = '<strong>已识别:</strong>' + filled.join(' | ') + (unfilled.length ? '<br><span class="unfilled">未识别:' + unfilled.join('、') + '(请手动填写)</span>' : '');
   resultEl.style.display = 'block';
   toast('识别完成,请核对后提交', true);
@@ -699,13 +718,16 @@ async function doSubmit() {
     freight: document.getElementById('fFreight').value.trim(),
     weight: document.getElementById('fWeight').value.trim(),
     weighFee: document.getElementById('fWeighFee').value.trim(),
-    deliveryType: deliveryType
+    deliveryType: deliveryType,
+    note: document.getElementById('fNote').value.trim()
   };
   const record = {
     date: r.date, plate_main: r.plateMain, plate_trailer: r.plateTrailer,
     name: r.name, phone: r.phone, id_card: r.idCard,
     from_location: r.from, to_location: r.to, goods: r.goods,
     freight: r.freight, weight: r.weight, weigh_fee: r.weighFee,
+    delivery_type: r.deliveryType,
+    note: r.note || null,
     notice: generateNotice(r)
   };
   const { error } = await supabaseClient.from('records').insert([record]);
@@ -721,7 +743,7 @@ function generateNotice(r) {
   const weightStr = r.weight ? r.weight + '公斤' : '待填';
   const feeStr = r.weighFee ? r.weighFee + '元' : '待填';
   const route = r.from && r.to ? '装:' + r.from + ' → 收:' + r.to : (r.from ? '装货地:' + r.from : (r.to ? '收货地:' + r.to : ''));
-  return '🚛 已登记 | ' + r.date + ' | 车牌:' + plateStr + nameStr + phoneStr + ' | ' + route + ' | 货物:' + r.goods + ' | 运费:' + r.freight + '元 | 过磅:' + weightStr + ' | 过磅费:' + feeStr;
+  return '🚛 已登记 | ' + r.date + ' | 车牌:' + plateStr + nameStr + phoneStr + ' | ' + route + ' | 货物:' + r.goods + ' | 运费:' + r.freight + '元 | 过磅:' + weightStr + ' | 过磅费:' + feeStr + (r.note ? ' | 备注:' + r.note : '');
 }
 
 async function loadRecords() {
@@ -882,11 +904,11 @@ function resetFilter() {
 function exportCSV() {
   const list = getFilteredRecords();
   if (list.length === 0) { toast('没有可导出的记录', false, true); return; }
-  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','已支付','修改次数'];
+  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数'];
   const rows = list.map(r => [
     r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
     r.id_card || '', r.from_location || '', r.to_location || '', r.goods || '', r.freight || '',
-    r.weigh_fee || '', r.weight || '', r.delivery_type || '送货', (r.is_paid === true) ? '是' : '否', r.modified_count || 0
+    r.weigh_fee || '', r.weight || '', r.delivery_type || '送货', r.note || '', (r.is_paid === true) ? '是' : '否', r.modified_count || 0
   ]);
   let csv = '\uFEFF' + headers.join(',') + '\n';
   rows.forEach(row => {
@@ -927,7 +949,7 @@ function parseCSV(text) {
 }
 
 function downloadTemplate() {
-  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','已支付','修改次数'];
+  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数'];
   const csv = '﻿' + headers.join(',') + '\n';
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -989,6 +1011,7 @@ async function handleImportFile(e) {
           weigh_fee: get('过磅费', r) || null,
           weight: get('过磅重量', r) || null,
           delivery_type: (get('类型', r) === '退货') ? '退货' : '送货',
+          note: get('备注', r) || null,
           is_paid: isPaid,
           modified_fields: '[]',
           modified_count: mc
@@ -1133,7 +1156,8 @@ function renderDetail(r, changedKeys) {
     ['运费', r.freight ? r.freight + ' 元' : '未填', 'freight'],
     ['过磅重量', r.weight ? r.weight + ' 公斤' : '待补重量', 'weight'],
     ['过磅费', r.weigh_fee ? r.weigh_fee + ' 元' : '待补过磅费', 'weigh_fee'],
-    ['类型', r.delivery_type || '送货', 'delivery_type']
+    ['类型', r.delivery_type || '送货', 'delivery_type'],
+    ['备注', r.note || '-', 'note']
   ];
   const changedSet = new Set(changedKeys || []);
   document.getElementById('detailItems').innerHTML = fields.map(([label, val, key]) => {
@@ -1418,7 +1442,7 @@ initSupabase();
 // 初始化（保留以防）
 initSupabase();
 </script>
-<div class="version-footer">装货登记 v1.2.0 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.2.1 | 开发者: sea9413</div>
 </body>
 </html>
 
