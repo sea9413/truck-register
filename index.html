@@ -361,6 +361,12 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <div class="goods-btn" onclick="selectModalGoods(this, '其他')">其他</div>
       </div>
       <input type="text" id="mGoodsOther" placeholder="其他货物名称" style="display:none">
+      <div class="field-label">类型</div>
+      <div class="goods-btns" id="mTypeBtns">
+        <div class="goods-btn" onclick="selectModalType(this, '送货')">送货</div>
+        <div class="goods-btn" onclick="selectModalType(this, '退货')">退货</div>
+      </div>
+      <input type="hidden" id="mDeliveryType" value="">
       <div class="field-label">运费(元)</div>
       <div class="two-col">
         <input type="number" id="mFreight" placeholder="运费">
@@ -917,7 +923,7 @@ function renderList() {
     if ((r.modified_count || 0) > 0) badges.push('<span class="badge-modified">已修改</span>');
     const badgeStr = badges.join('');
     const goods = r.goods || '待填';
-    const typeTag = (r.delivery_type === '退货') ? '<span class="goods-tag" style="background:#ffebee;color:#c62828">退货</span>' : '';
+    const typeTag = (r.delivery_type === '退货') ? '<span class="goods-tag" style="background:#ffebee;color:#c62828">退货</span>' : '<span class="goods-tag" style="background:#e8f5e9;color:#2e7d32">送货</span>';
     const freightStr = r.freight ? '运费:' + r.freight + '元' : '';
     const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
     const weightStr = r.weight ? '重量:' + (parseFloat(r.weight) / 1000).toFixed(3) + '吨' : '';
@@ -1283,8 +1289,14 @@ function openFullEdit() {
   document.getElementById('mWeight').value = r.weight || '';
   // 货物按钮
   const goods = r.goods || '';
-  document.querySelectorAll('#fullEditModal .goods-btn').forEach(b => {
+  document.querySelectorAll('#fullEditModal .goods-btns:first-of-type .goods-btn').forEach(b => {
     b.classList.toggle('active', b.textContent.trim() === goods);
+  });
+  // 类型按钮(送货/退货)
+  const dtype = r.delivery_type || '送货';
+  document.getElementById('mDeliveryType').value = dtype;
+  document.querySelectorAll('#mTypeBtns .goods-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === dtype);
   });
   const otherInput = document.getElementById('mGoodsOther');
   if (goods && !['盘扣', '套扣'].includes(goods)) {
@@ -1299,14 +1311,15 @@ function openFullEdit() {
     plate_main: r.plate_main, plate_trailer: r.plate_trailer,
     name: r.name, phone: r.phone, from_location: r.from_location,
     to_location: r.to_location, goods: r.goods, freight: r.freight,
-    weigh_fee: r.weigh_fee, weight: r.weight, date: r.date
+    weigh_fee: r.weigh_fee, weight: r.weight, date: r.date,
+    delivery_type: r.delivery_type || '送货'
   };
 }
 
 let modalEditOriginal = {};
 
 function selectModalGoods(btn, name) {
-  document.querySelectorAll('#fullEditModal .goods-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#fullEditModal .goods-btns:first-of-type .goods-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const otherInput = document.getElementById('mGoodsOther');
   if (name === '其他') {
@@ -1315,6 +1328,12 @@ function selectModalGoods(btn, name) {
     otherInput.style.display = 'none';
     otherInput.value = '';
   }
+}
+
+function selectModalType(btn, type) {
+  document.querySelectorAll('#mTypeBtns .goods-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('mDeliveryType').value = type;
 }
 
 function closeFullEdit() {
@@ -1330,6 +1349,7 @@ async function saveFullEdit() {
     const other = document.getElementById('mGoodsOther').value.trim();
     goods = other || '其他';
   }
+  const deliveryType = document.getElementById('mDeliveryType').value || '送货';
   const newData = {
     date: document.getElementById('mDate').value,
     plate_main: document.getElementById('mPlateMain').value.trim(),
@@ -1342,7 +1362,8 @@ async function saveFullEdit() {
     goods: goods,
     freight: document.getElementById('mFreight').value.trim(),
     weigh_fee: document.getElementById('mWeighFee').value.trim(),
-    weight: document.getElementById('mWeight').value.trim()
+    weight: document.getElementById('mWeight').value.trim(),
+    delivery_type: deliveryType
   };
   // 找被修改的字段
   const changedFields = [];
@@ -1350,7 +1371,7 @@ async function saveFullEdit() {
     date: '日期', plate_main: '主车车牌', plate_trailer: '挂车车牌',
     name: '姓名', phone: '手机号', from_location: '装货地',
     to_location: '收货地', goods: '货物', freight: '运费',
-    weigh_fee: '过磅费', weight: '过磅重量'
+    weigh_fee: '过磅费', weight: '过磅重量', delivery_type: '类型'
   };
   Object.keys(fieldLabels).forEach(k => {
     const oldVal = (modalEditOriginal[k] || '').toString().trim();
@@ -1364,7 +1385,8 @@ async function saveFullEdit() {
     date: newData.date, plateMain: newData.plate_main, plateTrailer: newData.plate_trailer,
     name: newData.name, phone: newData.phone, idCard: newData.id_card,
     from: newData.from_location, to: newData.to_location, goods: newData.goods,
-    freight: newData.freight, weight: newData.weight, weighFee: newData.weigh_fee
+    freight: newData.freight, weight: newData.weight, weighFee: newData.weigh_fee,
+    deliveryType: newData.delivery_type, note: currentDetail.note
   });
   // 记录修改历史
   const existingModified = currentDetail.modified_fields || [];
