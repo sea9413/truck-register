@@ -1287,11 +1287,14 @@ function openFullEdit() {
   document.getElementById('mFreight').value = r.freight || '';
   document.getElementById('mWeighFee').value = r.weigh_fee || '';
   document.getElementById('mWeight').value = r.weight || '';
-  // 货物按钮
+  // 货物按钮 (用ID精确选择第一个goods-btns，避免和类型按钮混淆)
   const goods = r.goods || '';
-  document.querySelectorAll('#fullEditModal .goods-btns:first-of-type .goods-btn').forEach(b => {
-    b.classList.toggle('active', b.textContent.trim() === goods);
-  });
+  const goodsBtns = document.querySelector('#fullEditForm .goods-btns');
+  if (goodsBtns) {
+    goodsBtns.querySelectorAll('.goods-btn').forEach(b => {
+      b.classList.toggle('active', b.textContent.trim() === goods);
+    });
+  }
   // 类型按钮(送货/退货)
   const dtype = r.delivery_type || '送货';
   document.getElementById('mDeliveryType').value = dtype;
@@ -1319,7 +1322,8 @@ function openFullEdit() {
 let modalEditOriginal = {};
 
 function selectModalGoods(btn, name) {
-  document.querySelectorAll('#fullEditModal .goods-btns:first-of-type .goods-btn').forEach(b => b.classList.remove('active'));
+  const goodsBtns = document.querySelector('#fullEditForm .goods-btns');
+  if (goodsBtns) goodsBtns.querySelectorAll('.goods-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const otherInput = document.getElementById('mGoodsOther');
   if (name === '其他') {
@@ -1342,8 +1346,9 @@ function closeFullEdit() {
 
 async function saveFullEdit() {
   if (!currentDetail) return;
-  // 选中的货物
-  const activeGoods = document.querySelector('#fullEditModal .goods-btn.active');
+  // 选中的货物 (精确选择货物区域的active按钮，排除类型按钮)
+  const goodsBtnsContainer = document.querySelector('#fullEditForm .goods-btns');
+  const activeGoods = goodsBtnsContainer ? goodsBtnsContainer.querySelector('.goods-btn.active') : null;
   let goods = activeGoods ? activeGoods.textContent.trim() : '';
   if (goods === '其他') {
     const other = document.getElementById('mGoodsOther').value.trim();
