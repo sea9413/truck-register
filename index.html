@@ -186,6 +186,8 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 .detail-item .value.changed { color: #d32f2f; font-weight: 700; }
 /* 版本号 */
 .version-footer { text-align: center; padding: 20px; font-size: 12px; color: #999; margin-top: 10px; }
+.offline-badge { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; margin: 0 6px; animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 </style>
 </head>
 <body>
@@ -490,6 +492,11 @@ function initSupabase() {
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     console.log('Supabase 初始化完成');
     if (typeof loadRecords === 'function') loadRecords();
+    // 初始化时检查离线队列,在线则自动同步
+    updateOfflineBadge();
+    if (navigator.onLine && getOfflineQueue().length > 0) {
+      setTimeout(() => syncOfflineQueue(), 1000);
+    }
   } catch (e) {
     console.error('Supabase 初始化失败:', e);
     document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>Supabase初始化失败:<br>' + e.message + '</div>';
@@ -925,7 +932,15 @@ async function doSubmit() {
   // 以下是可选字段(可能在某些版本不存在,自动去重)
   if (r.note) record.note = r.note;
   if (r.deliveryType) record.delivery_type = r.deliveryType;
-  // 提交(带最多2次重试:每次出现未知列错误都去掉该列)
+  // 检测网络:在线则正常提交,离线则存本地队列
+  if (!navigator.onLine) {
+    saveOfflineRecord(record);
+    toast('📴 离线模式:已存本地,有网后自动同步', false);
+    resetForm();
+    setTimeout(() => { loadRecords(); showList(); }, 600);
+    return;
+  }
+  // 在线提交(带最多2次重试:每次出现未知列错误都去掉该列)
   let { error } = await supabaseClient.from('records').insert([record]);
   let retryCount = 0;
   while (error && /Could not find the '([\w_]+)' column/i.test(error.message) && retryCount < 3) {
@@ -938,10 +953,96 @@ async function doSubmit() {
     error = retry.error;
     retryCount++;
   }
-  if (error) { toast('提交失败:' + error.message, false, true); return; }
+  if (error) {
+    // 网络报错(可能是临时断网) → 也存本地
+    if (/fetch|network|timeout|ENOTFOUND|connection/i.test(error.message)) {
+      saveOfflineRecord(record);
+      toast('📴 网络异常:已存本地,有网后自动同步', false);
+      resetForm();
+      setTimeout(() => { loadRecords(); showList(); }, 600);
+      return;
+    }
+    toast('提交失败:' + error.message, false, true);
+    return;
+  }
   toast('已登记 ✓', true);
+  resetForm();
   setTimeout(() => { loadRecords(); showList(); }, 600);
 }
+
+// ===== 离线缓存 =====
+const OFFLINE_KEY = 'truck_offline_queue';
+function getOfflineQueue() {
+  try { return JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]'); } catch (e) { return []; }
+}
+function saveOfflineQueue(q) {
+  localStorage.setItem(OFFLINE_KEY, JSON.stringify(q));
+  updateOfflineBadge();
+}
+function saveOfflineRecord(record) {
+  const q = getOfflineQueue();
+  // 本地临时ID,用于同步后能识别
+  record._offline_id = 'offline_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
+  record._offline_time = new Date().toISOString();
+  q.push(record);
+  saveOfflineQueue(q);
+}
+// 同步离线队列(网络恢复时自动调用)
+async function syncOfflineQueue() {
+  let q = getOfflineQueue();
+  if (q.length === 0) { updateOfflineBadge(); return; }
+  if (!navigator.onLine) return;
+  let synced = 0, failed = 0;
+  const remain = [];
+  for (let i = 0; i < q.length; i++) {
+    const rec = q[i];
+    const cleanRec = { ...rec };
+    delete cleanRec._offline_id;
+    delete cleanRec._offline_time;
+    const { error } = await supabaseClient.from('records').insert([cleanRec]);
+    if (error) {
+      // 失败(除了列不存在的),留在队列
+      if (/Could not find the '([\w_]+)' column/i.test(error.message)) {
+        // 列不存在 → 删除该字段重试
+        const m = error.message.match(/Could not find the '([\w_]+)' column/i);
+        if (cleanRec[m[1]] !== undefined) {
+          delete cleanRec[m[1]];
+          const retry = await supabaseClient.from('records').insert([cleanRec]);
+          if (!retry.error) { synced++; continue; }
+        }
+      }
+      failed++;
+      remain.push(rec);
+    } else {
+      synced++;
+    }
+  }
+  saveOfflineQueue(remain);
+  if (synced > 0) toast('🔄 已同步 ' + synced + ' 条离线记录' + (failed > 0 ? ',还有 ' + failed + ' 条待同步' : ''), true);
+  else if (failed > 0) toast('同步失败,' + failed + ' 条待重试', false, true);
+  // 同步后刷新列表
+  if (synced > 0) loadRecords();
+}
+// 顶部离线状态徽章
+function updateOfflineBadge() {
+  const q = getOfflineQueue();
+  let badge = document.getElementById('offlineBadge');
+  if (!badge) return;
+  if (q.length > 0) {
+    badge.innerHTML = '<span class="offline-badge">📴 待同步 ' + q.length + '</span>';
+    badge.style.display = 'inline';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+// 监听网络状态变化
+window.addEventListener('online', () => {
+  toast('✅ 网络已恢复,开始同步离线数据', true);
+  syncOfflineQueue();
+});
+window.addEventListener('offline', () => {
+  toast('📴 网络已断开,新数据将存本地', false);
+});
 
 function generateNotice(r) {
   const plateStr = r.plateTrailer ? r.plateMain + '+' + r.plateTrailer : r.plateMain;
@@ -1792,7 +1893,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.5.2 | 开发者: sea9413 · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.6.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
