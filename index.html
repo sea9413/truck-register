@@ -234,7 +234,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <button class="filter-btn-import" onclick="document.getElementById('importFile').click()">📥 导入历史</button>
         <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
         <button class="filter-btn-recycle" id="recycleBtn" onclick="toggleRecycle()">🗑 回收站(0)</button>
-<button class="filter-btn-danger" id="clearBtn" onclick="clearAllRecords()">⚠️ 清空（仅测试用）</button>
+<button class="filter-btn-danger" id="clearBtn" onclick="clearAllRecords()">🔒 清空全部</button>
       </div>
     </div>
     <input type="file" id="importFile" accept=".csv" style="display:none" onchange="handleImportFile(event)">
@@ -1295,31 +1295,32 @@ async function handleImportFile(e) {
   reader.readAsText(file, 'UTF-8');
 }
 
-// ===== 清空全部（仅测试用，待稳定后删除） =====
-let clearAllStep = 0;
-function clearAllRecords() {
-  const btn = document.getElementById('clearBtn');
-  if (clearAllStep === 0) {
-    clearAllStep = 1;
-    btn.textContent = '⚠️ 再次点击确认删除！';
-    btn.classList.add('step2');
-    // 3秒后自动恢复第一步
-    setTimeout(() => { if (clearAllStep === 1) resetClearBtn(); }, 3000);
-  } else if (clearAllStep === 1) {
-    clearAllStep = 0;
-    resetClearBtn();
-    toast('正在清空...', true);
-    supabaseClient.from('records').delete().not('id', 'is', null).then(({ error }) => {
-      if (error) { toast('清空失败:' + error.message, false, true); return; }
-      toast('已清空全部记录', true);
-      currentRecords = []; renderList();
-    });
+// ===== 清空全部（独立密码保护，默认密码 clear9999） =====
+const CLEAR_PASSWORD_HASH = 'a00b9fa3bfc91d81481eba0e8119ce0bdd6be6aafb5eabc159de92753d9485e8';
+let clearPwdVerified = false;
+async function clearAllRecords() {
+  // 第一步: 验证独立密码
+  if (!clearPwdVerified) {
+    const pwd = prompt('清空全部数据需要输入独立密码(不是登录密码):');
+    if (!pwd) return;
+    const hash = await sha256(pwd);
+    if (hash !== CLEAR_PASSWORD_HASH) {
+      alert('密码错误!清空取消');
+      return;
+    }
+    clearPwdVerified = true;
   }
-}
-function resetClearBtn() {
-  clearAllStep = 0;
-  const btn = document.getElementById('clearBtn');
-  if (btn) { btn.textContent = '⚠️ 清空（仅测试用）'; btn.classList.remove('step2'); }
+  // 第二步: 二次确认(防误点)
+  if (!confirm('⚠️ 最后确认: 这将删除所有记录(含已支付/未支付/回收站),不可恢复!\n\n你确定要清空全部数据吗?')) {
+    return;
+  }
+  // 第三步: 执行
+  toast('正在清空...', true);
+  const { error } = await supabaseClient.from('records').delete().not('id', 'is', null);
+  if (error) { toast('清空失败:' + error.message, false, true); clearPwdVerified = false; return; }
+  toast('已清空全部记录', true);
+  currentRecords = []; renderList();
+  clearPwdVerified = false;
 }
 
 let cancelPaidStep = 0;
@@ -1791,7 +1792,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.5.1 | 开发者: sea9413 · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.5.2 | 开发者: sea9413 · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
