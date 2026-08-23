@@ -49,6 +49,15 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .filter-btn-recycle.active { background: #e65100; color: #fff; }
 .filter-btn-backup { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
 .recycle-card { border-left: 3px solid #ff9800; }
+.rec-field { display: inline-block; padding: 3px 8px; margin: 3px 4px 3px 0; border-radius: 6px; font-size: 13px; cursor: pointer; line-height: 1.4; }
+.rec-field.filled { background: #e8f5e9; color: #2e7d32; }
+.rec-field.empty { background: #f5f5f5; color: #999; }
+.rec-field:hover { opacity: 0.7; }
+.rec-row { line-height: 1.8; }
+.rec-candidates { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; }
+.rec-candidate { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 5px 12px; margin: 4px 4px 0 0; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }
+.rec-candidate.active { background: #e65100; color: white; border-color: #e65100; }
+.rec-candidate:hover { background: #ffe0b2; }
 @keyframes pulse-red { from { opacity: 0.7; } to { opacity: 1; } }
 .location-selector select { border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; font-size: 14px; background: white; cursor: pointer; min-width: 100px; flex-shrink: 0; }
 .record-card .is_paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
@@ -585,7 +594,7 @@ function recognize(rawText) {
   }
 
   // 姓名(多种模式)
-  const excludeNames = ['盘扣','套扣','其他','平板车','牵引车','货车','地址','盘扣车辆','套扣车辆'];
+  const excludeNames = ['盘扣','套扣','其他','平板车','牵引车','货车','地址','盘扣车辆','套扣车辆','没有','没有姓名','没有车牌','没有货','没有车','没有地址','没有费用','没有重量','没有运费','没有电话'];
   // 1. 标签式:姓名:xxx / 司机:xxx / 司机:xxx / 司机,xxx / 司机 xxx
   const nameWithLabel = allText.match(/(?:姓名|司机)[：：，:\s]*([^\d\s，,、。：:货地址]{2,4})/);
   if (nameWithLabel && !excludeNames.includes(nameWithLabel[1])) result.name = nameWithLabel[1].trim();
@@ -684,6 +693,7 @@ function recognize(rawText) {
   const unloadLines = lines.filter(l => unloadRe.test(l));
   if (unloadLines.length >= 1) {
     const unloads = unloadLines.map(l => l.replace(unloadRe, '').trim());
+    result.toCandidates = unloads.filter(u => u.length >= 2); // 收集所有多卸货点候选,供前端按钮选择
     const backMatch = allText.match(/([\u4e00-\u9fa5]{2,20})退回/);
     if (backMatch && !result.from) result.from = backMatch[1];
     if (!result.to) result.to = unloads[unloads.length - 1];
@@ -776,6 +786,9 @@ function recognize(rawText) {
   }
   if (noteSentences.length > 0) result.note = noteSentences.join('；');
 
+  // 核心字段全空 → 整段识别失败,用于弹窗提示
+  result.allEmpty = !result.plateMain && !result.name && !result.from && !result.to && !result.goods && !result.freight;
+
   return result;
 }
 
@@ -813,12 +826,56 @@ function doRecognize() {
   if (r.goods === '盘扣' || r.goods === '套扣') { document.querySelectorAll('.goods-btn').forEach(b => { if (b.textContent.trim() === r.goods) b.classList.add('active'); }); selectedGoods = r.goods; }
   else if (r.goods && r.goods !== '其他') { selectedGoods = r.goodsRaw || '其他'; document.querySelectorAll('.goods-btn').forEach(b => { if (b.textContent.trim() === '其他') b.classList.add('active'); }); document.getElementById('otherWrap').classList.add('show'); document.getElementById('fGoodsOther').value = r.goods; }
   const resultEl = document.getElementById('recognizeResult');
-  const unfilled = [], filled = [];
-  const push = (label, val) => val ? filled.push(label + ' ' + val) : unfilled.push(label);
-  push('日期', r.date); push('主车', r.plateMain); push('挂车', r.plateTrailer); push('姓名', r.name); push('手机', r.phone); push('身份证', r.idCard); push('运费', r.freight ? r.freight + '元' : ''); push('装货地', r.from); push('收货地', r.to); push('货物', r.goods); push('备注', r.note);
-  resultEl.innerHTML = '<strong>已识别:</strong>' + filled.join(' | ') + (unfilled.length ? '<br><span class="unfilled">未识别:' + unfilled.join('、') + '(请手动填写)</span>' : '');
+  // 绿勾/灰横摘要:点未识别字段可跳转到对应输入框
+  const fieldList = [
+    {label:'日期', val:r.date, key:'fDate'}, {label:'主车', val:r.plateMain, key:'fPlateMain'},
+    {label:'挂车', val:r.plateTrailer, key:'fPlateTrailer'}, {label:'姓名', val:r.name, key:'fName'},
+    {label:'手机', val:r.phone, key:'fPhone'}, {label:'身份证', val:r.idCard, key:'fIdCard'},
+    {label:'运费', val:r.freight ? r.freight + '元' : '', key:'fFreight'},
+    {label:'装货地', val:r.from, key:'fFrom'}, {label:'收货地', val:r.to, key:'fTo'},
+    {label:'货物', val:r.goods, key:'goods'}, {label:'备注', val:r.note, key:'fNote'}
+  ];
+  const filled = fieldList.filter(f => f.val);
+  const empty = fieldList.filter(f => !f.val);
+  const fieldChip = (f, isFilled) => '<span class="rec-field ' + (isFilled ? 'filled' : 'empty') + '" onclick="focusField(\'' + f.key + '\')">' + f.label + (f.val ? ' ' + f.val : '') + '</span>';
+  const filledHtml = filled.length ? '<span style="color:#2e7d32">✅</span>' + filled.map(f => fieldChip(f, true)).join('') : '<span style="color:#999">⭕ 全部未识别</span>';
+  const emptyHtml = empty.length ? '<div class="rec-row"><span style="color:#999">⭕</span>' + empty.map(f => fieldChip(f, false)).join('') + '</div>' : '';
+  // 多卸货点候选按钮
+  let toCandidatesHtml = '';
+  if (r.toCandidates && r.toCandidates.length >= 2) {
+    toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">📍 多收货地候选(点选切换):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" onclick="pickToCandidate(\'' + c.replace(/'/g, "\\'") + '\')">' + c + '</button>').join('') + '</div>';
+  }
+  resultEl.innerHTML = '<div class="rec-summary"><div class="rec-row">' + filledHtml + '</div>' + emptyHtml + toCandidatesHtml + '</div>';
   resultEl.style.display = 'block';
+  // 整段没识别 → 弹窗提示(兜底)
+  if (r.allEmpty) {
+    setTimeout(() => {
+      if (confirm('这段文本没有识别出任何关键字段,可能是格式不一样。\n\n点"确定"重新粘贴文本,点"取消"继续手动填写。')) {
+        document.getElementById('pasteArea').focus();
+      }
+    }, 200);
+  }
   toast('识别完成,请核对后提交', true);
+}
+
+// 点未识别字段 → 跳到对应输入框
+function focusField(id) {
+  let el = document.getElementById(id);
+  // 货物按钮组特殊处理
+  if (id === 'goods') {
+    el = document.getElementById('goodsBtns');
+  }
+  if (el) {
+    el.scrollIntoView({behavior:'smooth', block:'center'});
+    if (typeof el.focus === 'function') setTimeout(() => el.focus(), 300);
+  }
+}
+
+// 多收货地候选按钮:点哪个填哪个
+function pickToCandidate(addr) {
+  document.getElementById('fTo').value = addr;
+  document.querySelectorAll('.rec-candidate').forEach(b => b.classList.toggle('active', b.textContent === addr));
+  toast('已填收货地:' + addr, true);
 }
 
 function selectType(el, type) {
