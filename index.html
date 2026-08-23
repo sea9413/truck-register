@@ -45,6 +45,10 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .filter-btn-template { background: #f0f0f0; color: #666; }
 .filter-btn-danger { background: #e74c3c; color: white; font-size: 13px; padding: 8px 10px; border: none; border-radius: 8px; cursor: pointer; }
 .filter-btn-danger.step2 { background: #c0392b; animation: pulse-red 0.5s infinite alternate; }
+.filter-btn-recycle { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; }
+.filter-btn-recycle.active { background: #e65100; color: #fff; }
+.filter-btn-backup { background: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+.recycle-card { border-left: 3px solid #ff9800; }
 @keyframes pulse-red { from { opacity: 0.7; } to { opacity: 1; } }
 .location-selector select { border: 1px solid #ddd; border-radius: 8px; padding: 8px 12px; font-size: 14px; background: white; cursor: pointer; min-width: 100px; flex-shrink: 0; }
 .record-card .is_paid-check { display: flex; align-items: center; gap: 6px; margin-left: auto; font-size: 12px; color: #666; }
@@ -208,6 +212,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <input type="text" id="filterKeyword" placeholder="搜车牌/姓名/地点" oninput="applyFilter()">
         <button class="filter-btn-reset" onclick="resetFilter()">重置</button>
         <button class="filter-btn-export" onclick="exportCSV()">导出</button>
+        <button class="filter-btn-backup" onclick="exportAllCSV()">💾 备份全部</button>
       </div>
       <div class="filter-row">
         <div class="location-selector">
@@ -219,6 +224,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         </div>
         <button class="filter-btn-import" onclick="document.getElementById('importFile').click()">📥 导入历史</button>
         <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
+        <button class="filter-btn-recycle" id="recycleBtn" onclick="toggleRecycle()">🗑 回收站(0)</button>
 <button class="filter-btn-danger" id="clearBtn" onclick="clearAllRecords()">⚠️ 清空（仅测试用）</button>
       </div>
     </div>
@@ -290,7 +296,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
       <div class="field-label">车牌号码</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fPlateMain" placeholder="主车:粤******">
+        <input type="text" id="fPlateMain" placeholder="主车:粤******" oninput="debounceAutoFill()">
         <input type="text" id="fPlateTrailer" placeholder="挂车:粤****挂">
       </div>
 
@@ -492,6 +498,8 @@ let filterKeyword = '';
 let locationFilter = 'all'; // 'all' | 'from' | 'to'
 let currentDetail = null;
 let deliveryType = '送货'; // 默认送货
+let showRecycle = false; // 回收站视图开关
+let autoFillTimer = null; // 司机自动填充防抖
 let selectedGoods = '';
 let deleteStep = 0; // 0=未确认 1=第一步确认 2=第二步确认
 
@@ -897,6 +905,7 @@ async function loadRecords() {
       return;
     }
     currentRecords = data || [];
+    updateRecycleBtn();
     renderList();
   } catch (e) {
     console.error('loadRecords异常:', e);
@@ -905,7 +914,17 @@ async function loadRecords() {
 }
 
 function getFilteredRecords() {
-  let list = currentRecords;
+  // 回收站模式:只显示已删除的记录
+  if (showRecycle) {
+    let del = (currentRecords || []).filter(r => r.deleted === true);
+    if (filterKeyword) {
+      const kw = filterKeyword.toLowerCase();
+      del = del.filter(r => (r.plate_main && r.plate_main.toLowerCase().includes(kw)) || (r.name && r.name.toLowerCase().includes(kw)));
+    }
+    del = del.slice().sort((a, b) => (b.deleted_at || '').localeCompare(a.deleted_at || ''));
+    return del;
+  }
+  let list = (currentRecords || []).filter(r => !r.deleted);
   if (filterStartDate) list = list.filter(r => (r.date || '') >= filterStartDate);
   if (filterEndDate) list = list.filter(r => (r.date || '') <= filterEndDate);
   if (filterKeyword) {
@@ -932,6 +951,7 @@ function getFilteredRecords() {
 }
 
 function renderList() {
+  if (showRecycle) { renderRecycle(); return; }
   const display = getFilteredRecords();
   document.getElementById('recordCount').textContent = display.length + ' 条';
   // 计算汇总
@@ -1066,6 +1086,32 @@ function exportCSV() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   toast('已导出 ' + list.length + ' 条记录', true);
+}
+
+// 备份全部:导出 currentRecords 全部(含回收站),用于本地存档
+function exportAllCSV() {
+  const list = (currentRecords || []).slice();
+  if (list.length === 0) { toast('没有可导出的记录', false, true); return; }
+  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数','已删除'];
+  const rows = list.map(r => [
+    r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
+    r.id_card || '', r.from_location || '', r.to_location || '', r.goods || '', r.freight || '',
+    r.weigh_fee || '', r.weight || '', r.delivery_type || '送货', r.note || '', (r.is_paid === true) ? '是' : '否', r.modified_count || 0, (r.deleted === true) ? '是' : '否'
+  ]);
+  let csv = '\uFEFF' + headers.join(',') + '\n';
+  rows.forEach(row => {
+    csv += row.map(v => '"' + String(v).replace(/"/g, '""') + '"').join(',') + '\n';
+  });
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '装货登记_全量备份_' + formatDate(new Date()) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('已备份全部 ' + list.length + ' 条记录', true);
 }
 
 function parseCSV(text) {
@@ -1545,7 +1591,7 @@ function confirmDelete() {
   deleteStep = 1;
   document.getElementById('deleteIcon').textContent = '⚠️';
   document.getElementById('deleteTitle').textContent = '确定要删除这条记录吗?';
-  document.getElementById('deleteDesc').textContent = '删除后数据无法恢复,请谨慎操作。';
+  document.getElementById('deleteDesc').textContent = '将移入回收站,可在回收站恢复。';
   document.getElementById('deleteBtn1').textContent = '确定删除';
   document.getElementById('deleteBtn1').className = 'confirm-btn primary';
   document.getElementById('deleteConfirm').classList.add('show');
@@ -1557,7 +1603,7 @@ function doDeleteStep1() {
     deleteStep = 2;
     document.getElementById('deleteIcon').textContent = '🚫';
     document.getElementById('deleteTitle').textContent = '再次确认删除!';
-    document.getElementById('deleteDesc').textContent = '这是最后一次确认,删除后数据永久消失,无法找回!';
+    document.getElementById('deleteDesc').textContent = '将移入回收站,之后可在回收站恢复,确认吗?';
     document.getElementById('deleteBtn1').textContent = '确认删除(不可撤销)';
     document.getElementById('deleteBtn1').className = 'confirm-btn primary step2';
   } else if (deleteStep === 2) {
@@ -1568,15 +1614,84 @@ function doDeleteStep1() {
 async function doDelete() {
   if (!currentDetail) return;
   hideDeleteConfirm();
-  const { error } = await supabaseClient.from('records').delete().eq('id', currentDetail.id);
-  if (error) { toast('删除失败:' + error.message, false, true); return; }
-  toast('已删除', true);
+  // 软删除:标记为已删除,移入回收站(可恢复)
+  const { error } = await supabaseClient.from('records').update({ deleted: true, deleted_at: new Date().toISOString() }).eq('id', currentDetail.id);
+  if (error) { toast('删除失败:' + error.message + '（如提示缺deleted列,请先在Supabase加列）', false, true); return; }
+  toast('已移入回收站', true);
   setTimeout(() => showList(), 600);
 }
 
 function hideDeleteConfirm() {
   document.getElementById('deleteConfirm').classList.remove('show');
   deleteStep = 0;
+}
+
+// ===== 回收站(软删除恢复)=====
+function renderRecycle() {
+  const list = getFilteredRecords(); // showRecycle 时返回已删列表
+  const el = document.getElementById('recordList');
+  const cnt = document.getElementById('recordCount');
+  if (cnt) cnt.textContent = list.length + ' 条(回收站)';
+  const s1 = document.getElementById('summaryBar'); if (s1) s1.style.display = 'none';
+  const s2 = document.getElementById('summaryBar2'); if (s2) s2.style.display = 'none';
+  if (list.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🗑</div>回收站是空的<br>已删除的记录会在这里保留,可恢复</div>'; return; }
+  el.innerHTML = list.map(r => {
+    const plateHtml = r.plate_trailer
+      ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+挂' + r.plate_trailer + '</span>'
+      : '<span class="plate-main">' + r.plate_main + '</span>';
+    return '<div class="record-card recycle-card">' +
+      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
+      '<div class="bottom"><span class="goods-tag">' + (r.goods || '待填') + '</span><span style="color:#999;font-size:12px;margin-left:8px">删于 ' + (r.deleted_at ? r.deleted_at.substring(0,10) : '未知') + '</span></div>' +
+      '<div style="margin-top:8px"><button class="filter-btn-export" onclick="event.stopPropagation();restoreRecord(\'' + r.id + '\')">♻️ 恢复</button></div>' +
+      '</div>';
+  }).join('');
+}
+
+function toggleRecycle() {
+  showRecycle = !showRecycle;
+  const btn = document.getElementById('recycleBtn');
+  if (btn) btn.classList.toggle('active', showRecycle);
+  renderList();
+}
+
+function updateRecycleBtn() {
+  const btn = document.getElementById('recycleBtn');
+  if (!btn) return;
+  const n = (currentRecords || []).filter(r => r.deleted === true).length;
+  btn.textContent = '🗑 回收站(' + n + ')';
+}
+
+async function restoreRecord(id) {
+  const { error } = await supabaseClient.from('records').update({ deleted: false, deleted_at: null }).eq('id', id);
+  if (error) { toast('恢复失败:' + error.message, false, true); return; }
+  toast('已恢复', true);
+  updateRecycleBtn();
+  renderList();
+}
+
+// ===== 司机信息自动填充(同车牌带出历史司机)=====
+function debounceAutoFill() {
+  if (autoFillTimer) clearTimeout(autoFillTimer);
+  autoFillTimer = setTimeout(autoFillDriver, 600);
+}
+
+function autoFillDriver() {
+  const plateEl = document.getElementById('fPlateMain');
+  if (!plateEl) return;
+  const plate = (plateEl.value || '').trim().toUpperCase();
+  if (plate.length < 5) return; // 车牌太短不识别
+  const matches = (currentRecords || [])
+    .filter(r => !r.deleted && r.plate_main && r.plate_main.replace(/\s/g,'').toUpperCase() === plate.replace(/\s/g,'').toUpperCase())
+    .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
+  if (matches.length === 0) return;
+  const last = matches[0];
+  const nameEl = document.getElementById('fName');
+  const phoneEl = document.getElementById('fPhone');
+  const idEl = document.getElementById('fIdCard');
+  // 只在为空时自动填,避免覆盖手动输入
+  if (nameEl && !nameEl.value.trim() && last.name) nameEl.value = last.name;
+  if (phoneEl && !phoneEl.value.trim() && last.phone) phoneEl.value = last.phone;
+  if (idEl && !idEl.value.trim() && last.id_card) idEl.value = last.id_card;
 }
 
 function copyDetailNotice() {
@@ -1617,7 +1732,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.2.1 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.4.0 | 开发者: sea9413</div>
 </body>
 </html>
 
