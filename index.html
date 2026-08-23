@@ -443,7 +443,7 @@ const SUPABASE_KEY = 'sb_publishable_OMPVS-R2K3r9o8vx0VCx1A_SAd4iomg';
 // ===== 访问密码门 =====
 // 密码 "123456" 的 SHA-256 哈希 (可随时改 passwordHash 换密码)
 const PASSWORD_HASH = '398a15bc9bdc4db26d1d21dda9bf0e6e018ae388020e0e1398f5ecc9789c18e0';
-const GATE_KEY = 'truck_gate_ok';
+const GATE_KEY = 'truck_gate_ok_v2';
 
 async function sha256(text) {
   const buf = new TextEncoder().encode(text);
@@ -1719,11 +1719,13 @@ function updateRecycleBtn() {
 }
 
 async function restoreRecord(id) {
-  const { error } = await supabaseClient.from('records').update({ deleted: false, deleted_at: null }).eq('id', id);
-  if (error) { toast('恢复失败:' + error.message, false, true); return; }
+  const { data, error } = await supabaseClient.from('records').update({ deleted: false, deleted_at: null }).eq('id', id).select();
+  if (error) { toast('恢复失败:' + error.message + '（如提示缺deleted列,请先在Supabase加列）', false, true); return; }
+  if (!data || data.length === 0) { toast('恢复失败:记录不存在或未被修改', false, true); return; }
   toast('已恢复', true);
   updateRecycleBtn();
   renderList();
+  loadRecords();
 }
 
 // ===== 司机信息自动填充(同车牌带出历史司机)=====
@@ -1789,7 +1791,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.4.0 | 开发者: sea9413</div>
+<div class="version-footer">装货登记 v1.5.1 | 开发者: sea9413 · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
