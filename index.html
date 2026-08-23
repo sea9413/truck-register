@@ -177,6 +177,18 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 </head>
 <body>
 
+<!-- ===== 访问密码门 ===== -->
+<div class="confirm-overlay" id="gateModal" style="z-index:9999">
+  <div class="confirm-box" style="max-width:340px;text-align:center;padding:30px 24px">
+    <div style="font-size:48px;margin-bottom:8px">🔒</div>
+    <div class="confirm-title" style="margin-bottom:8px">装货登记</div>
+    <div style="color:#666;font-size:13px;margin-bottom:20px">请输入访问密码</div>
+    <input type="password" id="gatePassword" placeholder="密码" style="width:100%;padding:12px;font-size:16px;border:2px solid #ddd;border-radius:8px;text-align:center;letter-spacing:2px" onkeydown="if(event.key==='Enter')checkGate()">
+    <div id="gateError" style="color:#c0392b;font-size:13px;margin-top:10px;min-height:18px"></div>
+    <button class="save-btn" onclick="checkGate()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:8px;cursor:pointer">进入</button>
+  </div>
+</div>
+
 <div class="container">
   <!-- ===== 列表页 ===== -->
   <div class="list-page" id="listPage">
@@ -412,6 +424,46 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 // Supabase 配置（等 supabase 全局变量就绪后初始化）
 const SUPABASE_URL = 'https://gdyiottosunwjothghaz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OMPVS-R2K3r9o8vx0VCx1A_SAd4iomg';
+
+// ===== 访问密码门 =====
+// 密码 "123456" 的 SHA-256 哈希 (可随时改 passwordHash 换密码)
+const PASSWORD_HASH = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
+const GATE_KEY = 'truck_gate_ok';
+
+async function sha256(text) {
+  const buf = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function checkGate() {
+  const pwd = document.getElementById('gatePassword').value;
+  if (!pwd) return;
+  const hash = await sha256(pwd);
+  if (hash === PASSWORD_HASH) {
+    localStorage.setItem(GATE_KEY, '1');
+    document.getElementById('gateModal').classList.remove('show');
+    document.getElementById('gatePassword').value = '';
+    document.getElementById('gateError').textContent = '';
+    if (typeof initSupabase === 'function') initSupabase();
+  } else {
+    document.getElementById('gateError').textContent = '密码错误';
+    document.getElementById('gatePassword').value = '';
+    document.getElementById('gatePassword').focus();
+  }
+}
+
+// 如果已验证过密码（30天内），自动跳过密码门
+(function autoCheckGate() {
+  if (localStorage.getItem(GATE_KEY) === '1') {
+    document.getElementById('gateModal').classList.remove('show');
+  } else {
+    document.getElementById('gateModal').classList.add('show');
+    setTimeout(() => document.getElementById('gatePassword').focus(), 100);
+    // 拦截原来的自动初始化
+    window._gatePassed = false;
+  }
+})();
 
 function initSupabase() {
   if (typeof supabase === 'undefined') {
@@ -1560,10 +1612,10 @@ function toast(msg, green, red) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// 初始化
-initSupabase();
-// 初始化（保留以防）
-initSupabase();
+// 初始化 (仅在密码验证后或已验证过才初始化)
+if (localStorage.getItem(GATE_KEY) === '1') {
+  initSupabase();
+}
 </script>
 <div class="version-footer">装货登记 v1.2.1 | 开发者: sea9413</div>
 </body>
