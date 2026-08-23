@@ -220,7 +220,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <input type="date" id="filterEnd" onchange="applyFilter()">
       </div>
       <div class="filter-row">
-        <input type="text" id="filterKeyword" placeholder="搜车牌/姓名/地点" oninput="applyFilter()">
+        <input type="text" id="filterKeyword" placeholder="搜地点/车牌/姓名" oninput="applyFilter()">
         <button class="filter-btn-reset" onclick="resetFilter()">重置</button>
         <button class="filter-btn-export" onclick="exportCSV()">导出</button>
         <button class="filter-btn-backup" onclick="exportAllCSV()">💾 备份全部</button>
@@ -1043,6 +1043,82 @@ window.addEventListener('online', () => {
 window.addEventListener('offline', () => {
   toast('📴 网络已断开,新数据将存本地', false);
 });
+
+// ===== 使用说明 =====
+function showHelp() {
+  const html = `
+<div style="max-width:560px;max-height:75vh;overflow-y:auto;padding:4px 8px;line-height:1.7;font-size:14px;color:#333;text-align:left">
+  <h3 style="margin:0 0 8px;color:#1565c0">📖 装货登记使用说明</h3>
+  <p style="color:#888;font-size:12px;margin:0 0 12px">本工具用来在手机上快速登记货车装货信息,数据云端同步,多机共享。</p>
+  <h4 style="margin:12px 0 4px;color:#1565c0">一、登记新记录</h4>
+  <ol style="margin:0 0 8px;padding-left:22px">
+    <li>点底部「<b>+ 新增登记</b>」</li>
+    <li>从微信复制司机发来的装货信息(可含车牌、姓名、装货地、收货地、运费等)</li>
+    <li>点「<b>🔍 一键识别</b>」按钮,工具会自动填入能识别的字段</li>
+    <li>补全必填项:<b>主车车牌</b> + <b>装货地</b> + <b>日期</b> + <b>货物</b> + <b>运费</b></li>
+    <li>点「<b>提交登记</b>」,列表自动刷新</li>
+  </ol>
+  <h4 style="margin:12px 0 4px;color:#1565c0">二、生成通知文字发群</h4>
+  <ol style="margin:0 0 8px;padding-left:22px">
+    <li>点开任意一条记录的<b>详情页</b></li>
+    <li>点「<b>📋 复制通知</b>」</li>
+    <li>切换到微信群,长按输入框「粘贴」发送</li>
+  </ol>
+  <h4 style="margin:12px 0 4px;color:#1565c0">三、查看与筛选</h4>
+  <ul style="margin:0 0 8px;padding-left:22px">
+    <li><b>按日期范围</b>:选开始/结束日期</li>
+    <li><b>搜地点/车牌/姓名</b>:在搜索框输入关键字(同时匹配货车从、收货地、车牌、姓名)</li>
+    <li><b>地点筛选</b>:下拉选择“全部地点/装货地/收货地”</li>
+    <li>点「<b>重置</b>」清除所有筛选条件</li>
+  </ul>
+  <h4 style="margin:12px 0 4px;color:#1565c0">四、补填/修改/删除</h4>
+  <ul style="margin:0 0 8px;padding-left:22px">
+    <li><b>补填过磅</b>:详情页点「✏️ 补填」补重量/过磅费</li>
+    <li><b>修改</b>:详情页点「📝 修改」可改任意字段,改过的字段会<b>标红加粗</b></li>
+    <li><b>删除</b>:详情页点「🗑 删除」移到回收站(可恢复)</li>
+    <li><b>回收站</b>:列表页点「🗑 回收站(N)」查看已删记录,点「♻️ 恢复」还原</li>
+  </ul>
+  <h4 style="margin:12px 0 4px;color:#1565c0">五、已支付状态</h4>
+  <p>详情页勾「☐ 已支付」表示运费已结清。取消勾选需要<b>两次确认</b>(防误点)。</p>
+  <h4 style="margin:12px 0 4px;color:#1565c0">六、导入与导出</h4>
+  <ul style="margin:0 0 8px;padding-left:22px">
+    <li><b>备份全部</b>:一键导出所有记录为 Excel CSV(中文不乱码)</li>
+    <li><b>下载模板</b>:下载空模板,填完从「导入历史」上传(按列名匹配,列顺序可打乱)</li>
+    <li>导入时如发现<b>日期+主车车牌+重量</b>三者重复,会自动跳过</li>
+  </ul>
+  <h4 style="margin:12px 0 4px;color:#1565c0">七、离线使用</h4>
+  <p>工地没网也能用!<br>
+    🔴 断网时提交 → 提示「📴 离线模式」,数据存本机<br>
+    🟢 恢复网络 → 自动同步,提示「🔄 已同步 N 条」<br>
+    同步状态看页面底部<b>橙色「📴 待同步 N」</b>徽章</p>
+  <h4 style="margin:12px 0 4px;color:#1565c0">八、密码说明</h4>
+  <ul style="margin:0 0 8px;padding-left:22px">
+    <li><b>登录密码</b>:打开页面要输,30 天免输</li>
+    <li><b>清空密码</b>:清空全部数据时单独要,独立于登录密码</li>
+    <li>点页面底部「<b>重新登录</b>」可退出当前账号</li>
+  </ul>
+  <h4 style="margin:12px 0 4px;color:#1565c0">九、常见问题</h4>
+  <p><b>Q: 识别没填上字段?</b><br>
+    A: 司机信息格式太特殊,手动补填即可,不影响其他字段保存。</p>
+  <p><b>Q: 同一司机第二次来怎么自动带出姓名手机?</b><br>
+    A: 输入主车车牌后 0.5 秒,工具会从历史记录里查同车牌最近一条,自动填上姓名/手机/身份证。</p>
+  <p><b>Q: 误删了怎么找回?</b><br>
+    A: 列表页「🗑 回收站」里点「♻️ 恢复」,记录会回到列表。</p>
+  <p><b>Q: 卸载浏览器会丢数据吗?</b><br>
+    A: 云端数据不丢,只丢未同步的离线队列。尽量联网后再卸载。</p>
+  <p style="margin-top:16px;color:#888;font-size:12px">📞 需要帮?问开发者。</p>
+</div>`;
+  // 复用现成的 confirm-overlay 机制
+  let overlay = document.getElementById('helpOverlay');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'helpOverlay';
+    overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;position:relative"><button onclick="document.getElementById(&quot;helpOverlay&quot;).style.display=&quot;none&quot;" style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;color:#999">×</button>' + html + '</div>';
+  overlay.style.display = 'flex';
+}
 
 function generateNotice(r) {
   const plateStr = r.plateTrailer ? r.plateMain + '+' + r.plateTrailer : r.plateMain;
@@ -1893,7 +1969,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.6.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.6.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
