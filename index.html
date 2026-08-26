@@ -1199,6 +1199,18 @@ function parseDateTs(s) {
   return 0;
 }
 
+// 把任意日期格式归一为 YYYY-MM（用于月份分组）
+function parseYm(s) {
+  if (!s) return '9999-12'; // 空日期放到最后
+  const m = String(s).match(/(\d{4})[-年](\d{1,2})/);
+  if (m) {
+    const y = m[1];
+    const mo = String(parseInt(m[2], 10)).padStart(2, '0'); // 7 -> 07
+    return y + '-' + mo;
+  }
+  return '9999-12';
+}
+
 function renderList() {
   if (showRecycle) { renderRecycle(); return; }
   const display = getFilteredRecords();
@@ -1223,14 +1235,20 @@ function renderList() {
   const el = document.getElementById('recordList');
   if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>还没有登记记录<br>点上方按钮开始</div>'; return; }
   if (display.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>没有符合条件的记录<br>试试调整筛选条件</div>'; return; }
-  // 按年月分组（YYYY-MM）
+  // 按年月分组（统一成 YYYY-MM，避免中文格式和字符串比较错位）
   const groups = {};
   display.forEach(r => {
-    const ym = (r.date || '').substring(0, 7);
+    const ym = parseYm(r.date); // 统一为 2025-07 这种标准格式
     if (!groups[ym]) groups[ym] = [];
     groups[ym].push(r);
   });
-  const sortedKeys = Object.keys(groups).sort().reverse(); // 最新月在先
+  // 按年月数值排序（最新月在先），避免 5月 vs 11月 vs 12月 字典序错位
+  const sortedKeys = Object.keys(groups).sort((a, b) => {
+    const [ay, am] = a.split('-').map(Number);
+    const [by, bm] = b.split('-').map(Number);
+    if (by !== ay) return by - ay;
+    return bm - am;
+  });
   const cardHtml = r => {
     const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
     const plateHtml = r.plate_trailer
@@ -2060,7 +2078,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.6.4 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.6.5 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
