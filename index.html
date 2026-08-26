@@ -228,10 +228,11 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       </div>
       <div class="filter-row">
         <div class="location-selector">
-          <select id="locationFilter" onchange="setLocationFilter(this.value)">
-            <option value="all">全部地点</option>
-            <option value="from">仅装货地</option>
-            <option value="to">仅收货地</option>
+          <select id="locationFilter" onchange="setLocationFilter(this.value)" title="按类型筛选记录">
+            <option value="all">送货+退货</option>
+            <option value="delivery">送货</option>
+            <option value="return">退货</option>
+            <option value="nostat">不统计</option>
           </select>
         </div>
         <button class="filter-btn-import" onclick="document.getElementById('importFile').click()" title="支持 .csv / .xlsx / .xls">📥 导入历史</button>
@@ -329,6 +330,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <div class="goods-btns" id="typeBtns">
           <div class="goods-btn active" onclick="selectType(this, '送货')">送货</div>
           <div class="goods-btn" onclick="selectType(this, '退货')">退货</div>
+          <div class="goods-btn" onclick="selectType(this, '不统计')">不统计</div>
         </div>
       </div>
 
@@ -395,6 +397,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <div class="goods-btns" id="mTypeBtns">
         <div class="goods-btn" onclick="selectModalType(this, '送货')">送货</div>
         <div class="goods-btn" onclick="selectModalType(this, '退货')">退货</div>
+        <div class="goods-btn" onclick="selectModalType(this, '不统计')">不统计</div>
       </div>
       <input type="hidden" id="mDeliveryType" value="">
       <div class="field-label">运费(元)</div>
@@ -1177,8 +1180,10 @@ function getFilteredRecords() {
     );
   }
   if (locationFilter !== 'all') {
-    if (locationFilter === 'from') list = list.filter(r => r.from_location && r.from_location.trim());
-    if (locationFilter === 'to') list = list.filter(r => r.to_location && r.to_location.trim());
+    // 类型筛选: 'all'=送货+退货 'delivery'=送货 'return'=退货 'nostat'=不统计
+    if (locationFilter === 'delivery') list = list.filter(r => (r.delivery_type || '送货') === '送货');
+    else if (locationFilter === 'return') list = list.filter(r => r.delivery_type === '退货');
+    else if (locationFilter === 'nostat') list = list.filter(r => r.delivery_type === '不统计');
   }
   // 排序:装货日期降序(最新装货在上),同日登记时刻降序(最后登记的在最上)
   list = list.slice().sort((a, b) => {
@@ -1219,9 +1224,10 @@ function renderList() {
   const totalFreight = display.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
   const totalPaid = display.reduce((sum, r) => sum + ((r.is_paid === true) ? (parseFloat(r.freight) || 0) : 0), 0);
   const totalWeighFee = display.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
-  // 送货/退货重量汇总（公斤→吨）
-  const totalDeliveryWeight = display.filter(r => r.delivery_type !== '退货').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+  // 送货/退货重量汇总（公斤→吨）。“不统计”类型不计入送/退货重量
+  const totalDeliveryWeight = display.filter(r => (r.delivery_type || '送货') === '送货').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
   const totalReturnWeight = display.filter(r => r.delivery_type === '退货').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+  const totalNostatWeight = display.filter(r => r.delivery_type === '不统计').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
   const summaryEl = document.getElementById('summaryBar');
   if (summaryEl) {
     summaryEl.innerHTML = '已支付/运费合计:' + totalPaid.toFixed(0) + '/' + totalFreight.toFixed(0) + '元 | 过磅费合计:' + totalWeighFee.toFixed(0) + '元';
@@ -1229,7 +1235,8 @@ function renderList() {
   }
   const summaryEl2 = document.getElementById('summaryBar2');
   if (summaryEl2) {
-    summaryEl2.innerHTML = '送货重量:' + (totalDeliveryWeight/1000).toFixed(3) + '吨 | 退货重量:' + (totalReturnWeight/1000).toFixed(3) + '吨';
+    const nostatPart = totalNostatWeight > 0 ? ' | 不统计重量:' + (totalNostatWeight/1000).toFixed(3) + '吨' : '';
+    summaryEl2.innerHTML = '送货重量:' + (totalDeliveryWeight/1000).toFixed(3) + '吨 | 退货重量:' + (totalReturnWeight/1000).toFixed(3) + '吨' + nostatPart;
     summaryEl2.style.display = display.length > 0 ? 'block' : 'none';
   }
   const el = document.getElementById('recordList');
@@ -1262,7 +1269,10 @@ function renderList() {
     if ((r.modified_count || 0) > 0) badges.push('<span class="badge-modified">已修改</span>');
     const badgeStr = badges.join('');
     const goods = r.goods || '待填';
-    const typeTag = (r.delivery_type === '退货') ? '<span class="goods-tag" style="background:#ffebee;color:#c62828">退货</span>' : '<span class="goods-tag" style="background:#e8f5e9;color:#2e7d32">送货</span>';
+    let typeTag;
+    if (r.delivery_type === '退货') typeTag = '<span class="goods-tag" style="background:#ffebee;color:#c62828">退货</span>';
+    else if (r.delivery_type === '不统计') typeTag = '<span class="goods-tag" style="background:#eceff1;color:#607d8b">不统计</span>';
+    else typeTag = '<span class="goods-tag" style="background:#e8f5e9;color:#2e7d32">送货</span>';
     const freightStr = r.freight ? '运费:' + r.freight + '元' : '';
     const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
     const weightStr = r.weight ? '重量:' + (parseFloat(r.weight) / 1000).toFixed(3) + '吨' : '';
@@ -1552,8 +1562,10 @@ async function processImportedRows(rows) {
           modified_fields: '[]',
           modified_count: mc
         };
-        // 仅当列为退货时带上 delivery_type(避免 schema cache 报错)
-        if (get('类型', r) === '退货') rec.delivery_type = '退货';
+        // 仅当类型为退货/不统计时带上 delivery_type(避免 schema cache 报错)
+        const tval = get('类型', r);
+        if (tval === '退货') rec.delivery_type = '退货';
+        else if (tval === '不统计') rec.delivery_type = '不统计';
         const camel = { date: rec.date, plateMain: rec.plate_main, plateTrailer: rec.plate_trailer, name: rec.name, phone: rec.phone, weight: rec.weight, weighFee: rec.weigh_fee, from: rec.from_location, to: rec.to_location, goods: rec.goods, freight: rec.freight };
         rec.notice = generateNotice(camel);
         records.push(rec);
@@ -2078,7 +2090,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.6.5 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.6.6 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
