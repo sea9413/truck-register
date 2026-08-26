@@ -1348,6 +1348,19 @@ function exportAllCSV() {
   toast('已备份全部 ' + list.length + ' 条记录', true);
 }
 
+// 检测中文文本是否乱码(连续问号或乱码字符过多)
+function looksLikeGarbled(text) {
+  if (!text) return false;
+  // 取前 500 字符,统计 U+FFFD 乱码字符
+  const sample = text.substring(0, 500);
+  let bad = 0;
+  for (let i = 0; i < sample.length; i++) {
+    const code = sample.charCodeAt(i);
+    if (code === 0xFFFD) bad++;
+  }
+  return bad > 3;  // 3 个以上乱码就认为编码不对
+}
+
 function parseCSV(text) {
   text = text.replace(/^﻿/, '');
   const rows = [];
@@ -1391,7 +1404,31 @@ async function handleImportFile(e) {
   const reader = new FileReader();
   reader.onload = async (ev) => {
     try {
-      const rows = parseCSV(ev.target.result);
+      // 自动检测编码: UTF-8 解码后如果乱码多,重试用 GBK
+      let text = ev.target.result;
+      if (looksLikeGarbled(text)) {
+        try {
+          // 重读文件原始字节,尝试 GBK
+          const buf = await file.arrayBuffer();
+          let retry = null;
+          try {
+            retry = new TextDecoder('gbk').decode(buf);
+          } catch (eGbk) {
+            try {
+              retry = new TextDecoder('gb18030').decode(buf);
+            } catch (eGb18030) {
+              console.warn('浏览器不支持 GBK 解码');
+            }
+          }
+          if (retry && !looksLikeGarbled(retry)) {
+            text = retry;
+            console.log('已自动识别为 GBK 编码');
+          }
+        } catch (e2) {
+          console.warn('GBK 重试失败:', e2);
+        }
+      }
+      const rows = parseCSV(text);
       if (rows.length < 2) { toast('文件没有数据行', false, true); e.target.value = ''; return; }
       const header = rows[0].map(h => h.trim());
       const idx = {};
