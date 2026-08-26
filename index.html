@@ -235,6 +235,14 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
             <option value="nostat">不统计</option>
           </select>
         </div>
+        <div class="location-selector">
+          <select id="goodsFilter" onchange="setGoodsFilter(this.value)" title="按货物筛选记录">
+            <option value="all">全部货物</option>
+            <option value="盘扣">盘扣</option>
+            <option value="套扣">套扣</option>
+            <option value="其他">其他</option>
+          </select>
+        </div>
         <button class="filter-btn-import" onclick="document.getElementById('importFile').click()" title="支持 .csv / .xlsx / .xls">📥 导入历史</button>
         <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
         <button class="filter-btn-recycle" id="recycleBtn" onclick="toggleRecycle()">🗑 回收站(0)</button>
@@ -516,6 +524,7 @@ let collapsedMonths = {}; // { '2026-08': true }
 let filterEndDate = '';
 let filterKeyword = '';
 let locationFilter = 'all'; // 'all' | 'from' | 'to'
+let goodsFilter = 'all'; // 'all' | '盘扣' | '套扣' | '其他'
 let currentDetail = null;
 let deliveryType = '送货'; // 默认送货
 let showRecycle = false; // 回收站视图开关
@@ -1185,6 +1194,12 @@ function getFilteredRecords() {
     else if (locationFilter === 'return') list = list.filter(r => r.delivery_type === '退货');
     else if (locationFilter === 'nostat') list = list.filter(r => r.delivery_type === '不统计');
   }
+  if (goodsFilter !== 'all') {
+    // 货物筛选: 'all'/'盘扣'/'套扣'/'其他' (其他 = 不是盘扣且不是套扣)
+    if (goodsFilter === '盘扣') list = list.filter(r => r.goods === '盘扣');
+    else if (goodsFilter === '套扣') list = list.filter(r => r.goods === '套扣');
+    else if (goodsFilter === '其他') list = list.filter(r => r.goods && r.goods !== '盘扣' && r.goods !== '套扣');
+  }
   // 排序:装货日期降序(最新装货在上),同日登记时刻降序(最后登记的在最上)
   list = list.slice().sort((a, b) => {
     // 用 Date 时间戳比较,避免 2026-8-13 vs 2026-8-2 这种无前导零的字符串比较错位
@@ -1327,12 +1342,21 @@ function setLocationFilter(mode) {
   renderList();
 }
 
+function setGoodsFilter(mode) {
+  goodsFilter = mode;
+  const sel = document.getElementById('goodsFilter');
+  if (sel) sel.value = mode;
+  renderList();
+}
+
 function resetFilter() {
   document.getElementById('filterStart').value = '';
   document.getElementById('filterEnd').value = '';
   document.getElementById('filterKeyword').value = '';
   const locSel = document.getElementById('locationFilter'); if (locSel) locSel.value = 'all';
+  const goodsSel = document.getElementById('goodsFilter'); if (goodsSel) goodsSel.value = 'all';
   locationFilter = 'all';
+  goodsFilter = 'all';
   filterStartDate = '';
   filterEndDate = '';
   filterKeyword = '';
@@ -2090,7 +2114,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.6.6 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.6.7 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
