@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>装货登记</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="document.getElementById('recordList').innerHTML='<div class=empty><div class=empty-icon>❌</div>Supabase 脚本加载失败</div>'"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
 body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #f5f5f5; color: #333; font-size: 15px; }
@@ -233,13 +234,13 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
             <option value="to">仅收货地</option>
           </select>
         </div>
-        <button class="filter-btn-import" onclick="document.getElementById('importFile').click()">📥 导入历史</button>
+        <button class="filter-btn-import" onclick="document.getElementById('importFile').click()" title="支持 .csv / .xlsx / .xls">📥 导入历史</button>
         <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
         <button class="filter-btn-recycle" id="recycleBtn" onclick="toggleRecycle()">🗑 回收站(0)</button>
 <button class="filter-btn-danger" id="clearBtn" onclick="clearAllRecords()">🔒 清空全部</button>
       </div>
     </div>
-    <input type="file" id="importFile" accept=".csv" style="display:none" onchange="handleImportFile(event)">
+    <input type="file" id="importFile" accept=".csv,.xlsx,.xls,.xlsm" style="display:none" onchange="handleImportFile(event)">
     <button class="add-btn" onclick="showForm()">+ 新增登记</button>
     <div id="recordList"><div class="loading">连接数据库...</div></div>
   </div>
@@ -1083,7 +1084,11 @@ function showHelp() {
   <h4 style="margin:12px 0 4px;color:#1565c0">六、导入与导出</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
     <li><b>备份全部</b>:一键导出所有记录为 Excel CSV(中文不乱码)</li>
-    <li><b>下载模板</b>:下载空模板,填完从「导入历史」上传(按列名匹配,列顺序可打乱)</li>
+    <li><b>下载模板</b>:下载空模板(CSV),填完从「导入历史」上传</li>
+    <li><b>支持的格式</b>:.csv / .xlsx / .xls 均可直接拖入(Excel 文件无需另存为 CSV)</li>
+    <li>编码自动识别: UTF-8(推荐) / GBK(Excel 中文版另存常见)均可</li>
+    <li>按<b>列名</b>匹配(不是列顺序),列名用「日期/主车/挂车/姓名/手机号/身份证号/装货地/收货地/货物/运费/过磅费/过磅重量/类型/备注/已支付/修改次数」</li>
+    <li>Excel 日期支持 2025-5-29 / 2025/5/29 / 2025年5月29日 多种写法,自动统一</li>
     <li>导入时如发现<b>日期+主车车牌+重量</b>三者重复,会自动跳过</li>
   </ul>
   <h4 style="margin:12px 0 4px;color:#1565c0">七、离线使用</h4>
@@ -1401,14 +1406,18 @@ function downloadTemplate() {
 async function handleImportFile(e) {
   const file = e.target.files[0];
   if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async (ev) => {
-    try {
+  const fileName = (file.name || '').toLowerCase();
+  const isExcel = /\.(xlsx|xls|xlsm)$/.test(fileName);
+  try {
+    let rows;
+    if (isExcel) {
+      rows = await parseExcelFile(file);
+    } else {
+      const text = await file.text();
       // 自动检测编码: UTF-8 解码后如果乱码多,重试用 GBK
-      let text = ev.target.result;
-      if (looksLikeGarbled(text)) {
+      let decoded = text;
+      if (looksLikeGarbled(decoded)) {
         try {
-          // 重读文件原始字节,尝试 GBK
           const buf = await file.arrayBuffer();
           let retry = null;
           try {
@@ -1421,15 +1430,56 @@ async function handleImportFile(e) {
             }
           }
           if (retry && !looksLikeGarbled(retry)) {
-            text = retry;
+            decoded = retry;
             console.log('已自动识别为 GBK 编码');
           }
         } catch (e2) {
           console.warn('GBK 重试失败:', e2);
         }
       }
-      const rows = parseCSV(text);
-      if (rows.length < 2) { toast('文件没有数据行', false, true); e.target.value = ''; return; }
+      rows = parseCSV(decoded);
+    }
+    await processImportedRows(rows);
+  } catch (err) {
+    console.error('导入失败:', err);
+    toast('导入失败: ' + (err.message || err), false, true);
+  } finally {
+    e.target.value = '';
+  }
+}
+
+// 解析 Excel 文件 (使用 SheetJS)
+async function parseExcelFile(file) {
+  if (typeof XLSX === 'undefined') {
+    throw new Error('Excel 解析库未加载,请刷新页面或改用 CSV');
+  }
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: 'array' });
+  const ws = wb.Sheets[wb.SheetNames[0]];
+  // raw:false 让所有单元格转成字符串(日期变 2025/5/29 形式,数字变文本),便于统一处理
+  const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
+  return data;
+}
+
+// 规范化日期: 支持 2025-5-29 / 2025/5/29 / 2025.5.29 / 2025年5月29日 / Date对象
+function normalizeDate(s) {
+  if (s == null) return '';
+  s = String(s).trim();
+  let m = s.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return m[1] + '-' + parseInt(m[2]) + '-' + parseInt(m[3]);
+  m = s.match(/(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})/);
+  if (m) return m[1] + '-' + parseInt(m[2]) + '-' + parseInt(m[3]);
+  m = s.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  if (m) return m[1] + '-' + parseInt(m[2]) + '-' + parseInt(m[3]);
+  try {
+    const d = new Date(s);
+    if (!isNaN(d.getTime())) return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate();
+  } catch (e) {}
+  return s;
+}
+
+async function processImportedRows(rows) {
+      if (rows.length < 2) { toast('文件没有数据行', false, true); return; }
       const header = rows[0].map(h => h.trim());
       const idx = {};
       header.forEach((h, i) => idx[h] = i);
@@ -1446,7 +1496,7 @@ async function handleImportFile(e) {
       const seenKeys = new Set();
       for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
-        const date = get('日期', r);
+        const date = normalizeDate(get('日期', r));
         const plate = get('主车', r);
         if (!date || !plate) { skipped++; continue; }
         const weightVal = get('过磅重量', r);
@@ -1480,7 +1530,7 @@ async function handleImportFile(e) {
         rec.notice = generateNotice(camel);
         records.push(rec);
       }
-      if (records.length === 0) { toast(duplicate > 0 ? '全部 ' + duplicate + ' 条都是重复记录，未导入' : '没有可导入的有效记录（需有日期和主车）', false, true); e.target.value = ''; return; }
+      if (records.length === 0) { toast(duplicate > 0 ? '全部 ' + duplicate + ' 条都是重复记录，未导入' : '没有可导入的有效记录（需有日期和主车）', false, true); return; }
       toast('正在导入 ' + records.length + ' 条...', true);
       const BATCH = 100;
       for (let i = 0; i < records.length; i += BATCH) {
@@ -1497,16 +1547,10 @@ async function handleImportFile(e) {
           error = retry.error;
           retryCount++;
         }
-        if (error) { toast('导入失败:' + error.message, false, true); e.target.value = ''; return; }
+        if (error) { toast('导入失败:' + error.message, false, true); return; }
       }
       toast('成功导入 ' + records.length + ' 条' + (duplicate > 0 ? '（跳过 ' + duplicate + ' 条重复）' : '') + (skipped > 0 ? '（跳过 ' + skipped + ' 行空数据）' : ''), true);
       loadRecords();
-    } catch (err) {
-      toast('导入出错:' + err.message, false, true);
-    }
-    e.target.value = '';
-  };
-  reader.readAsText(file, 'UTF-8');
 }
 
 // ===== 清空全部（独立密码保护，默认密码 clear9999） =====
@@ -2006,7 +2050,7 @@ if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">装货登记 v1.6.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.6.3 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
