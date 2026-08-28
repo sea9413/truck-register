@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>装货登记</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="document.getElementById('recordList').innerHTML='<div class=empty><div class=empty-icon>?</div>Supabase 脚本加载失败</div>'"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="document.getElementById('recordList').innerHTML='<div class=empty><div class=empty-icon>❌</div>Supabase 脚本加载失败</div>'"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -196,7 +196,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 <!-- ===== 访问密码门 ===== -->
 <div class="confirm-overlay" id="gateModal" style="z-index:9999">
   <div class="confirm-box" style="max-width:340px;text-align:center;padding:30px 24px">
-    <div style="font-size:48px;margin-bottom:8px">??</div>
+    <div style="font-size:48px;margin-bottom:8px">🔒</div>
     <div class="confirm-title" style="margin-bottom:8px">装货登记</div>
     <div style="color:#666;font-size:13px;margin-bottom:20px">请输入访问密码</div>
     <input type="password" id="gatePassword" placeholder="密码" style="width:100%;padding:12px;font-size:16px;border:2px solid #ddd;border-radius:8px;text-align:center;letter-spacing:2px" onkeydown="if(event.key==='Enter')checkGate()">
@@ -209,7 +209,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
   <!-- ===== 列表页 ===== -->
   <div class="list-page" id="listPage">
     <div class="header">
-      <h1>?? 装货登记</h1>
+      <h1>🚛 装货登记</h1>
       <span class="count" id="recordCount">加载中...</span>
     </div>
     <div class="summary-bar" id="summaryBar" style="display:none"></div>
@@ -224,7 +224,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <input type="text" id="filterKeyword" placeholder="搜地点/车牌/姓名" oninput="applyFilter()">
         <button class="filter-btn-reset" onclick="resetFilter()">重置</button>
         <button class="filter-btn-export" onclick="exportCSV()">导出</button>
-        <button class="filter-btn-backup" onclick="exportAllCSV()">?? 备份全部</button>
+        <button class="filter-btn-backup" onclick="exportAllCSV()">💾 备份全部</button>
       </div>
       <div class="filter-row">
         <div class="location-selector">
@@ -243,10 +243,10 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
             <option value="其他">其他</option>
           </select>
         </div>
-        <button class="filter-btn-import" onclick="document.getElementById('importFile').click()" title="支持 .csv / .xlsx / .xls">?? 导入历史</button>
-        <button class="filter-btn-template" onclick="downloadTemplate()">?? 下载模板</button>
-        <button class="filter-btn-recycle" id="recycleBtn" onclick="toggleRecycle()">?? 回收站(0)</button>
-<button class="filter-btn-danger" id="clearBtn" onclick="clearAllRecords()">?? 清空全部</button>
+        <button class="filter-btn-import" onclick="document.getElementById('importFile').click()" title="支持 .csv / .xlsx / .xls">📥 导入历史</button>
+        <button class="filter-btn-template" onclick="downloadTemplate()">📄 下载模板</button>
+        <button class="filter-btn-recycle" id="recycleBtn" onclick="toggleRecycle()">🗑 回收站(0)</button>
+<button class="filter-btn-danger" id="clearBtn" onclick="clearAllRecords()">🔒 清空全部</button>
       </div>
     </div>
     <input type="file" id="importFile" accept=".csv,.xlsx,.xls,.xlsm" style="display:none" onchange="handleImportFile(event)">
@@ -262,19 +262,19 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <span style="font-weight:600">记录详情</span>
       </div>
       <div class="detail-actions">
-        <button class="action-btn edit-btn" onclick="openFullEdit()">?? 修改</button>
-        <button class="action-btn edit-btn" id="editToggleBtn" onclick="toggleEdit()">?? 补填</button>
-        <button class="action-btn delete-btn" onclick="confirmDelete()">??? 删除</button>
+        <button class="action-btn edit-btn" onclick="openFullEdit()">📝 修改</button>
+        <button class="action-btn edit-btn" id="editToggleBtn" onclick="toggleEdit()">✏️ 补填</button>
+        <button class="action-btn delete-btn" onclick="confirmDelete()">🗑️ 删除</button>
       </div>
     </div>
     <div class="detail-items" id="detailItems"></div>
     <div class="btn-row">
-      <button class="copy-notice-btn" id="detailCopyBtn" onclick="copyDetailNotice()">?? 复制通知文字</button>
+      <button class="copy-notice-btn" id="detailCopyBtn" onclick="copyDetailNotice()">📋 复制通知文字</button>
     </div>
 
     <!-- 补填编辑区 -->
     <div class="edit-section" id="editSection">
-      <div class="edit-section-title">?? 补填 / 修改 <span class="tag">仅可修改过磅信息</span></div>
+      <div class="edit-section-title">✏️ 补填 / 修改 <span class="tag">仅可修改过磅信息</span></div>
       <div class="edit-form">
         <div class="two-col">
           <div class="form-group">
@@ -302,14 +302,14 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
     </div>
 
     <div class="form-section">
-      <div class="section-title">?? 粘贴识别区 <span class="tag">自动填入</span></div>
+      <div class="section-title">📋 粘贴识别区 <span class="tag">自动填入</span></div>
       <textarea class="paste-area" id="pasteArea" placeholder="把司机发来的信息整段粘贴到这里..." oninput="checkPaste()"></textarea>
-      <button class="recognize-btn" id="recognizeBtn" onclick="doRecognize()" disabled>?? 识别</button>
+      <button class="recognize-btn" id="recognizeBtn" onclick="doRecognize()" disabled>🔍 识别</button>
       <div class="recognize-result" id="recognizeResult"></div>
     </div>
 
     <div class="form-section">
-      <div class="section-title">?? 核对与补填</div>
+      <div class="section-title">📝 核对与补填</div>
 
       <div class="form-group" style="margin-bottom:10px">
         <input type="date" id="fDate" style="text-align:center;font-size:15px;padding:10px">
@@ -374,7 +374,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 <!-- ===== 完整修改弹窗 ===== -->
 <div class="confirm-overlay" id="fullEditModal">
   <div class="confirm-box" style="max-width:90%; width:500px; max-height:90vh; overflow-y:auto; text-align:left">
-    <div class="confirm-title">?? 修改记录</div>
+    <div class="confirm-title">📝 修改记录</div>
     <div id="fullEditForm">
       <div class="field-label">日期</div>
       <input type="date" id="mDate">
@@ -416,7 +416,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <div class="field-label">过磅重量(公斤)</div>
       <input type="number" id="mWeight" placeholder="过磅重量">
     </div>
-    <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">?? 保存修改</button>
+    <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">💾 保存修改</button>
     <button class="cancel-btn" onclick="closeFullEdit()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">取消</button>
   </div>
 </div>
@@ -429,7 +429,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 <!-- ===== 删除确认弹窗 ===== -->
 <div class="confirm-overlay" id="deleteConfirm">
   <div class="confirm-box">
-    <div class="confirm-icon" id="deleteIcon">??</div>
+    <div class="confirm-icon" id="deleteIcon">⚠️</div>
     <div class="confirm-title" id="deleteTitle">确定要删除这条记录吗?</div>
     <div class="confirm-desc" id="deleteDesc">删除后数据无法恢复,请谨慎操作。</div>
     <button class="confirm-btn primary" id="deleteBtn1" onclick="doDeleteStep1()">确定删除</button>
@@ -439,7 +439,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
 <div class="confirm-overlay" id="cancelPaidConfirm">
   <div class="confirm-box">
-    <div class="confirm-icon" id="cancelPaidIcon">??</div>
+    <div class="confirm-icon" id="cancelPaidIcon">⚠️</div>
     <div class="confirm-title" id="cancelPaidTitle">确定要取消已支付状态吗?</div>
     <div class="confirm-desc" id="cancelPaidDesc">车牌 <span id="cancelPaidPlate" style="font-weight:600;color:#333"></span> 的已支付状态将被取消，该记录的运费将不再计入已支付合计。</div>
     <button class="confirm-btn primary" id="cancelPaidBtn1" onclick="doCancelPaidStep1()">确定取消</button>
@@ -511,7 +511,7 @@ function initSupabase() {
     }
   } catch (e) {
     console.error('Supabase 初始化失败:', e);
-    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">?</div>Supabase初始化失败:<br>' + e.message + '</div>';
+    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>Supabase初始化失败:<br>' + e.message + '</div>';
   }
 }
 
@@ -858,12 +858,12 @@ function doRecognize() {
   const filled = fieldList.filter(f => f.val);
   const empty = fieldList.filter(f => !f.val);
   const fieldChip = (f, isFilled) => '<span class="rec-field ' + (isFilled ? 'filled' : 'empty') + '" onclick="focusField(\'' + f.key + '\')">' + f.label + (f.val ? ' ' + f.val : '') + '</span>';
-  const filledHtml = filled.length ? '<span style="color:#2e7d32">?</span>' + filled.map(f => fieldChip(f, true)).join('') : '<span style="color:#999">? 全部未识别</span>';
-  const emptyHtml = empty.length ? '<div class="rec-row"><span style="color:#999">?</span>' + empty.map(f => fieldChip(f, false)).join('') + '</div>' : '';
+  const filledHtml = filled.length ? '<span style="color:#2e7d32">✅</span>' + filled.map(f => fieldChip(f, true)).join('') : '<span style="color:#999">⭕ 全部未识别</span>';
+  const emptyHtml = empty.length ? '<div class="rec-row"><span style="color:#999">⭕</span>' + empty.map(f => fieldChip(f, false)).join('') + '</div>' : '';
   // 多卸货点候选按钮
   let toCandidatesHtml = '';
   if (r.toCandidates && r.toCandidates.length >= 2) {
-    toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">?? 多收货地候选(点选切换):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" onclick="pickToCandidate(\'' + c.replace(/'/g, "\\'") + '\')">' + c + '</button>').join('') + '</div>';
+    toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">📍 多收货地候选(点选切换):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" onclick="pickToCandidate(\'' + c.replace(/'/g, "\\'") + '\')">' + c + '</button>').join('') + '</div>';
   }
   resultEl.innerHTML = '<div class="rec-summary"><div class="rec-row">' + filledHtml + '</div>' + emptyHtml + toCandidatesHtml + '</div>';
   resultEl.style.display = 'block';
@@ -948,7 +948,7 @@ async function doSubmit() {
   // 检测网络:在线则正常提交,离线则存本地队列
   if (!navigator.onLine) {
     saveOfflineRecord(record);
-    toast('?? 离线模式:已存本地,有网后自动同步', false);
+    toast('📴 离线模式:已存本地,有网后自动同步', false);
     resetForm();
     setTimeout(() => { loadRecords(); showList(); }, 600);
     return;
@@ -970,7 +970,7 @@ async function doSubmit() {
     // 网络报错(可能是临时断网) → 也存本地
     if (/fetch|network|timeout|ENOTFOUND|connection/i.test(error.message)) {
       saveOfflineRecord(record);
-      toast('?? 网络异常:已存本地,有网后自动同步', false);
+      toast('📴 网络异常:已存本地,有网后自动同步', false);
       resetForm();
       setTimeout(() => { loadRecords(); showList(); }, 600);
       return;
@@ -978,7 +978,7 @@ async function doSubmit() {
     toast('提交失败:' + error.message, false, true);
     return;
   }
-  toast('已登记 ?', true);
+  toast('已登记 ✓', true);
   resetForm();
   setTimeout(() => { loadRecords(); showList(); }, 600);
 }
@@ -1031,7 +1031,7 @@ async function syncOfflineQueue() {
     }
   }
   saveOfflineQueue(remain);
-  if (synced > 0) toast('?? 已同步 ' + synced + ' 条离线记录' + (failed > 0 ? ',还有 ' + failed + ' 条待同步' : ''), true);
+  if (synced > 0) toast('🔄 已同步 ' + synced + ' 条离线记录' + (failed > 0 ? ',还有 ' + failed + ' 条待同步' : ''), true);
   else if (failed > 0) toast('同步失败,' + failed + ' 条待重试', false, true);
   // 同步后刷新列表
   if (synced > 0) loadRecords();
@@ -1042,7 +1042,7 @@ function updateOfflineBadge() {
   let badge = document.getElementById('offlineBadge');
   if (!badge) return;
   if (q.length > 0) {
-    badge.innerHTML = '<span class="offline-badge">?? 待同步 ' + q.length + '</span>';
+    badge.innerHTML = '<span class="offline-badge">📴 待同步 ' + q.length + '</span>';
     badge.style.display = 'inline';
   } else {
     badge.style.display = 'none';
@@ -1050,31 +1050,31 @@ function updateOfflineBadge() {
 }
 // 监听网络状态变化
 window.addEventListener('online', () => {
-  toast('? 网络已恢复,开始同步离线数据', true);
+  toast('✅ 网络已恢复,开始同步离线数据', true);
   syncOfflineQueue();
 });
 window.addEventListener('offline', () => {
-  toast('?? 网络已断开,新数据将存本地', false);
+  toast('📴 网络已断开,新数据将存本地', false);
 });
 
 // ===== 使用说明 =====
 function showHelp() {
   const html = `
 <div style="max-width:560px;max-height:75vh;overflow-y:auto;padding:4px 8px;line-height:1.7;font-size:14px;color:#333;text-align:left">
-  <h3 style="margin:0 0 8px;color:#1565c0">?? 装货登记使用说明</h3>
+  <h3 style="margin:0 0 8px;color:#1565c0">📖 装货登记使用说明</h3>
   <p style="color:#888;font-size:12px;margin:0 0 12px">本工具用来在手机上快速登记货车装货信息,数据云端同步,多机共享。</p>
   <h4 style="margin:12px 0 4px;color:#1565c0">一、登记新记录</h4>
   <ol style="margin:0 0 8px;padding-left:22px">
     <li>点底部「<b>+ 新增登记</b>」</li>
     <li>从微信复制司机发来的装货信息(可含车牌、姓名、装货地、收货地、运费等)</li>
-    <li>点「<b>?? 一键识别</b>」按钮,工具会自动填入能识别的字段</li>
+    <li>点「<b>🔍 一键识别</b>」按钮,工具会自动填入能识别的字段</li>
     <li>补全必填项:<b>主车车牌</b> + <b>装货地</b> + <b>日期</b> + <b>货物</b> + <b>运费</b></li>
     <li>点「<b>提交登记</b>」,列表自动刷新</li>
   </ol>
   <h4 style="margin:12px 0 4px;color:#1565c0">二、生成通知文字发群</h4>
   <ol style="margin:0 0 8px;padding-left:22px">
     <li>点开任意一条记录的<b>详情页</b></li>
-    <li>点「<b>?? 复制通知</b>」</li>
+    <li>点「<b>📋 复制通知</b>」</li>
     <li>切换到微信群,长按输入框「粘贴」发送</li>
   </ol>
   <h4 style="margin:12px 0 4px;color:#1565c0">三、查看与筛选</h4>
@@ -1086,13 +1086,13 @@ function showHelp() {
   </ul>
   <h4 style="margin:12px 0 4px;color:#1565c0">四、补填/修改/删除</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
-    <li><b>补填过磅</b>:详情页点「?? 补填」补重量/过磅费</li>
-    <li><b>修改</b>:详情页点「?? 修改」可改任意字段,改过的字段会<b>标红加粗</b></li>
-    <li><b>删除</b>:详情页点「?? 删除」移到回收站(可恢复)</li>
-    <li><b>回收站</b>:列表页点「?? 回收站(N)」查看已删记录,点「?? 恢复」还原</li>
+    <li><b>补填过磅</b>:详情页点「✏️ 补填」补重量/过磅费</li>
+    <li><b>修改</b>:详情页点「📝 修改」可改任意字段,改过的字段会<b>标红加粗</b></li>
+    <li><b>删除</b>:详情页点「🗑 删除」移到回收站(可恢复)</li>
+    <li><b>回收站</b>:列表页点「🗑 回收站(N)」查看已删记录,点「♻️ 恢复」还原</li>
   </ul>
   <h4 style="margin:12px 0 4px;color:#1565c0">五、已支付状态</h4>
-  <p>详情页勾「? 已支付」表示运费已结清。取消勾选需要<b>两次确认</b>(防误点)。</p>
+  <p>详情页勾「☐ 已支付」表示运费已结清。取消勾选需要<b>两次确认</b>(防误点)。</p>
   <h4 style="margin:12px 0 4px;color:#1565c0">六、导入与导出</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
     <li><b>备份全部</b>:一键导出所有记录为 Excel CSV(中文不乱码)</li>
@@ -1105,9 +1105,9 @@ function showHelp() {
   </ul>
   <h4 style="margin:12px 0 4px;color:#1565c0">七、离线使用</h4>
   <p>工地没网也能用!<br>
-    ?? 断网时提交 → 提示「?? 离线模式」,数据存本机<br>
-    ?? 恢复网络 → 自动同步,提示「?? 已同步 N 条」<br>
-    同步状态看页面底部<b>橙色「?? 待同步 N」</b>徽章</p>
+    🔴 断网时提交 → 提示「📴 离线模式」,数据存本机<br>
+    🟢 恢复网络 → 自动同步,提示「🔄 已同步 N 条」<br>
+    同步状态看页面底部<b>橙色「📴 待同步 N」</b>徽章</p>
   <h4 style="margin:12px 0 4px;color:#1565c0">八、密码说明</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
     <li><b>登录密码</b>:打开页面要输,30 天免输</li>
@@ -1120,10 +1120,10 @@ function showHelp() {
   <p><b>Q: 同一司机第二次来怎么自动带出姓名手机?</b><br>
     A: 输入主车车牌后 0.5 秒,工具会从历史记录里查同车牌最近一条,自动填上姓名/手机/身份证。</p>
   <p><b>Q: 误删了怎么找回?</b><br>
-    A: 列表页「?? 回收站」里点「?? 恢复」,记录会回到列表。</p>
+    A: 列表页「🗑 回收站」里点「♻️ 恢复」,记录会回到列表。</p>
   <p><b>Q: 卸载浏览器会丢数据吗?</b><br>
     A: 云端数据不丢,只丢未同步的离线队列。尽量联网后再卸载。</p>
-  <p style="margin-top:16px;color:#888;font-size:12px">?? 需要帮?问开发者。</p>
+  <p style="margin-top:16px;color:#888;font-size:12px">📞 需要帮?问开发者。</p>
 </div>`;
   // 复用现成的 confirm-overlay 机制
   let overlay = document.getElementById('helpOverlay');
@@ -1144,7 +1144,7 @@ function generateNotice(r) {
   const weightStr = r.weight ? r.weight + '公斤' : '待填';
   const feeStr = r.weighFee ? r.weighFee + '元' : '待填';
   const route = r.from && r.to ? '装:' + r.from + ' → 收:' + r.to : (r.from ? '装货地:' + r.from : (r.to ? '收货地:' + r.to : ''));
-  return '?? 已登记 | ' + r.date + ' | 车牌:' + plateStr + nameStr + phoneStr + ' | ' + route + ' | 货物:' + r.goods + ' | 运费:' + r.freight + '元 | 过磅:' + weightStr + ' | 过磅费:' + feeStr + (r.note ? ' | 备注:' + r.note : '');
+  return '🚛 已登记 | ' + r.date + ' | 车牌:' + plateStr + nameStr + phoneStr + ' | ' + route + ' | 货物:' + r.goods + ' | 运费:' + r.freight + '元 | 过磅:' + weightStr + ' | 过磅费:' + feeStr + (r.note ? ' | 备注:' + r.note : '');
 }
 
 async function loadRecords() {
@@ -1152,7 +1152,7 @@ async function loadRecords() {
     const { data, error } = await supabaseClient.from('records').select('*').order('created_at', { ascending: false });
     if (error) {
       console.error('加载记录出错:', error);
-      document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">?</div>加载失败:<br>' + (error.message || JSON.stringify(error)) + '</div>';
+      document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>加载失败:<br>' + (error.message || JSON.stringify(error)) + '</div>';
       return;
     }
     currentRecords = data || [];
@@ -1160,7 +1160,7 @@ async function loadRecords() {
     renderList();
   } catch (e) {
     console.error('loadRecords异常:', e);
-    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">?</div>加载异常:<br>' + e.message + '</div>';
+    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>加载异常:<br>' + e.message + '</div>';
   }
 }
 
@@ -1255,8 +1255,8 @@ function renderList() {
     summaryEl2.style.display = display.length > 0 ? 'block' : 'none';
   }
   const el = document.getElementById('recordList');
-  if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">??</div>还没有登记记录<br>点上方按钮开始</div>'; return; }
-  if (display.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">??</div>没有符合条件的记录<br>试试调整筛选条件</div>'; return; }
+  if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">📋</div>还没有登记记录<br>点上方按钮开始</div>'; return; }
+  if (display.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🔍</div>没有符合条件的记录<br>试试调整筛选条件</div>'; return; }
   // 按年月分组（统一成 YYYY-MM，避免中文格式和字符串比较错位）
   const groups = {};
   display.forEach(r => {
@@ -1452,7 +1452,7 @@ function parseCSV(text) {
 
 function downloadTemplate() {
   const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数'];
-  const csv = '?' + headers.join(',') + '\n';
+  const csv = '﻿' + headers.join(',') + '\n';
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
@@ -1634,7 +1634,7 @@ async function clearAllRecords() {
     clearPwdVerified = true;
   }
   // 第二步: 二次确认(防误点)
-  if (!confirm('?? 最后确认: 这将删除所有记录(含已支付/未支付/回收站),不可恢复!\n\n你确定要清空全部数据吗?')) {
+  if (!confirm('⚠️ 最后确认: 这将删除所有记录(含已支付/未支付/回收站),不可恢复!\n\n你确定要清空全部数据吗?')) {
     return;
   }
   // 第三步: 执行
@@ -1700,7 +1700,7 @@ function doCancelPaidStep1() {
   if (cancelPaidStep === 1) {
     // 第二步：更强烈的警告
     cancelPaidStep = 2;
-    document.getElementById('cancelPaidIcon').textContent = '??';
+    document.getElementById('cancelPaidIcon').textContent = '🚫';
     document.getElementById('cancelPaidTitle').textContent = '再次确认取消已支付!';
     document.getElementById('cancelPaidDesc').textContent = '这是最后一次确认，取消后该记录的已支付状态将被清除，运费将不再计入已支付合计!';
     document.getElementById('cancelPaidBtn1').textContent = '确认取消（不可撤销）';
@@ -1900,7 +1900,7 @@ async function saveFullEdit() {
 function showModifyBanner(msg, changedFields) {
   const banner = document.getElementById('modifyBanner');
   const text = document.getElementById('modifyBannerText');
-  text.innerHTML = '?? ' + msg;
+  text.innerHTML = '⚠️ ' + msg;
   banner.classList.add('show');
   // 永久显示，不自动隐藏
 }
@@ -1931,7 +1931,7 @@ function toggleEdit() {
   if (section.classList.contains('show')) { hideEdit(); }
   else {
     section.classList.add('show');
-    btn.textContent = '?? 收起';
+    btn.textContent = '✏️ 收起';
     document.getElementById('eWeight').value = currentDetail.weight || '';
     document.getElementById('eWeighFee').value = currentDetail.weigh_fee || '';
   }
@@ -1939,7 +1939,7 @@ function toggleEdit() {
 
 function hideEdit() {
   document.getElementById('editSection').classList.remove('show');
-  document.getElementById('editToggleBtn').textContent = '?? 补填';
+  document.getElementById('editToggleBtn').textContent = '✏️ 补填';
 }
 
 async function saveEdit() {
@@ -1959,7 +1959,7 @@ async function saveEdit() {
     notice: generateNotice(r)
   }).eq('id', currentDetail.id);
   if (error) { toast('保存失败:' + error.message, false, true); return; }
-  toast('已保存 ?', true);
+  toast('已保存 ✓', true);
   // 刷新当前记录
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
   if (data) { currentDetail = data; renderDetailChanged(currentDetail); }
@@ -1970,7 +1970,7 @@ async function saveEdit() {
 // ===== 删除(两步确认)=====
 function confirmDelete() {
   deleteStep = 1;
-  document.getElementById('deleteIcon').textContent = '??';
+  document.getElementById('deleteIcon').textContent = '⚠️';
   document.getElementById('deleteTitle').textContent = '确定要删除这条记录吗?';
   document.getElementById('deleteDesc').textContent = '将移入回收站,可在回收站恢复。';
   document.getElementById('deleteBtn1').textContent = '确定删除';
@@ -1982,7 +1982,7 @@ function doDeleteStep1() {
   if (deleteStep === 1) {
     // 第二步:更强烈的警告
     deleteStep = 2;
-    document.getElementById('deleteIcon').textContent = '??';
+    document.getElementById('deleteIcon').textContent = '🚫';
     document.getElementById('deleteTitle').textContent = '再次确认删除!';
     document.getElementById('deleteDesc').textContent = '将移入回收站,之后可在回收站恢复,确认吗?';
     document.getElementById('deleteBtn1').textContent = '确认删除(不可撤销)';
@@ -2015,7 +2015,7 @@ function renderRecycle() {
   if (cnt) cnt.textContent = list.length + ' 条(回收站)';
   const s1 = document.getElementById('summaryBar'); if (s1) s1.style.display = 'none';
   const s2 = document.getElementById('summaryBar2'); if (s2) s2.style.display = 'none';
-  if (list.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">??</div>回收站是空的<br>已删除的记录会在这里保留,可恢复</div>'; return; }
+  if (list.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🗑</div>回收站是空的<br>已删除的记录会在这里保留,可恢复</div>'; return; }
   el.innerHTML = list.map(r => {
     const plateHtml = r.plate_trailer
       ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+挂' + r.plate_trailer + '</span>'
@@ -2023,7 +2023,7 @@ function renderRecycle() {
     return '<div class="record-card recycle-card">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
       '<div class="bottom"><span class="goods-tag">' + (r.goods || '待填') + '</span><span style="color:#999;font-size:12px;margin-left:8px">删于 ' + (r.deleted_at ? r.deleted_at.substring(0,10) : '未知') + '</span></div>' +
-      '<div style="margin-top:8px"><button class="filter-btn-export" onclick="event.stopPropagation();restoreRecord(\'' + r.id + '\')">?? 恢复</button></div>' +
+      '<div style="margin-top:8px"><button class="filter-btn-export" onclick="event.stopPropagation();restoreRecord(\'' + r.id + '\')">♻️ 恢复</button></div>' +
       '</div>';
   }).join('');
 }
@@ -2039,7 +2039,7 @@ function updateRecycleBtn() {
   const btn = document.getElementById('recycleBtn');
   if (!btn) return;
   const n = (currentRecords || []).filter(r => r.deleted === true).length;
-  btn.textContent = '?? 回收站(' + n + ')';
+  btn.textContent = '🗑 回收站(' + n + ')';
 }
 
 async function restoreRecord(id) {
