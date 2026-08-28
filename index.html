@@ -1,10 +1,10 @@
-ï»¿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>è£…è´§ç™»è®°</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="document.getElementById('recordList').innerHTML='<div class=empty><div class=empty-icon>âŒ</div>Supabase è„šæœ¬åŠ è½½å¤±è´¥</div>'"></script>
+<title>×°»õµÇ¼Ç</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="document.getElementById('recordList').innerHTML='<div class=empty><div class=empty-icon>?</div>Supabase ½Å±¾¼ÓÔØÊ§°Ü</div>'"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -179,13 +179,13 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 .edit-section .save-btn:disabled { background: #ccc; }
 .edit-section .cancel-btn { width: 100%; background: #f0f0f0; color: #333; border: none; padding: 10px; border-radius: 8px; font-size: 14px; margin-top: 6px; cursor: pointer; }
 
-/* ä¿®æ”¹æç¤ºæ¨ªæ¡ */
+/* ĞŞ¸ÄÌáÊ¾ºáÌõ */
 .modify-banner { background: #fff3e0; border-left: 3px solid #e65100; padding: 8px 12px; margin: 10px 0; border-radius: 4px; font-size: 13px; color: #e65100; display: none; }
 .modify-banner.show { display: block; }
 
-/* å­—æ®µè¢«ä¿®æ”¹åæ ‡çº¢åŠ ç²— */
+/* ×Ö¶Î±»ĞŞ¸Äºó±êºì¼Ó´Ö */
 .detail-item .value.changed { color: #d32f2f; font-weight: 700; }
-/* ç‰ˆæœ¬å· */
+/* °æ±¾ºÅ */
 .version-footer { text-align: center; padding: 20px; font-size: 12px; color: #999; margin-top: 10px; }
 .offline-badge { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; margin: 0 6px; animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
@@ -193,269 +193,269 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 </head>
 <body>
 
-<!-- ===== è®¿é—®å¯†ç é—¨ ===== -->
+<!-- ===== ·ÃÎÊÃÜÂëÃÅ ===== -->
 <div class="confirm-overlay" id="gateModal" style="z-index:9999">
   <div class="confirm-box" style="max-width:340px;text-align:center;padding:30px 24px">
-    <div style="font-size:48px;margin-bottom:8px">ğŸ”’</div>
-    <div class="confirm-title" style="margin-bottom:8px">è£…è´§ç™»è®°</div>
-    <div style="color:#666;font-size:13px;margin-bottom:20px">è¯·è¾“å…¥è®¿é—®å¯†ç </div>
-    <input type="password" id="gatePassword" placeholder="å¯†ç " style="width:100%;padding:12px;font-size:16px;border:2px solid #ddd;border-radius:8px;text-align:center;letter-spacing:2px" onkeydown="if(event.key==='Enter')checkGate()">
+    <div style="font-size:48px;margin-bottom:8px">??</div>
+    <div class="confirm-title" style="margin-bottom:8px">×°»õµÇ¼Ç</div>
+    <div style="color:#666;font-size:13px;margin-bottom:20px">ÇëÊäÈë·ÃÎÊÃÜÂë</div>
+    <input type="password" id="gatePassword" placeholder="ÃÜÂë" style="width:100%;padding:12px;font-size:16px;border:2px solid #ddd;border-radius:8px;text-align:center;letter-spacing:2px" onkeydown="if(event.key==='Enter')checkGate()">
     <div id="gateError" style="color:#c0392b;font-size:13px;margin-top:10px;min-height:18px"></div>
-    <button class="save-btn" onclick="checkGate()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:8px;cursor:pointer">è¿›å…¥</button>
+    <button class="save-btn" onclick="checkGate()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:8px;cursor:pointer">½øÈë</button>
   </div>
 </div>
 
 <div class="container">
-  <!-- ===== åˆ—è¡¨é¡µ ===== -->
+  <!-- ===== ÁĞ±íÒ³ ===== -->
   <div class="list-page" id="listPage">
     <div class="header">
-      <h1>ğŸš› è£…è´§ç™»è®°</h1>
-      <span class="count" id="recordCount">åŠ è½½ä¸­...</span>
+      <h1>?? ×°»õµÇ¼Ç</h1>
+      <span class="count" id="recordCount">¼ÓÔØÖĞ...</span>
     </div>
     <div class="summary-bar" id="summaryBar" style="display:none"></div>
     <div class="summary-bar2" id="summaryBar2" style="display:none"></div>
     <div class="filter-bar">
       <div class="filter-row">
         <input type="date" id="filterStart" onchange="applyFilter()">
-        <span class="filter-sep">è‡³</span>
+        <span class="filter-sep">ÖÁ</span>
         <input type="date" id="filterEnd" onchange="applyFilter()">
       </div>
       <div class="filter-row">
-        <input type="text" id="filterKeyword" placeholder="æœåœ°ç‚¹/è½¦ç‰Œ/å§“å" oninput="applyFilter()">
-        <button class="filter-btn-reset" onclick="resetFilter()">é‡ç½®</button>
-        <button class="filter-btn-export" onclick="exportCSV()">å¯¼å‡º</button>
-        <button class="filter-btn-backup" onclick="exportAllCSV()">ğŸ’¾ å¤‡ä»½å…¨éƒ¨</button>
+        <input type="text" id="filterKeyword" placeholder="ËÑµØµã/³µÅÆ/ĞÕÃû" oninput="applyFilter()">
+        <button class="filter-btn-reset" onclick="resetFilter()">ÖØÖÃ</button>
+        <button class="filter-btn-export" onclick="exportCSV()">µ¼³ö</button>
+        <button class="filter-btn-backup" onclick="exportAllCSV()">?? ±¸·İÈ«²¿</button>
       </div>
       <div class="filter-row">
         <div class="location-selector">
-          <select id="locationFilter" onchange="setLocationFilter(this.value)" title="æŒ‰ç±»å‹ç­›é€‰è®°å½•">
-            <option value="all">é€è´§+é€€è´§</option>
-            <option value="delivery">é€è´§</option>
-            <option value="return">é€€è´§</option>
-            <option value="nostat">ä¸ç»Ÿè®¡</option>
+          <select id="locationFilter" onchange="setLocationFilter(this.value)" title="°´ÀàĞÍÉ¸Ñ¡¼ÇÂ¼">
+            <option value="all">ËÍ»õ+ÍË»õ</option>
+            <option value="delivery">ËÍ»õ</option>
+            <option value="return">ÍË»õ</option>
+            <option value="nostat">²»Í³¼Æ</option>
           </select>
         </div>
         <div class="location-selector">
-          <select id="goodsFilter" onchange="setGoodsFilter(this.value)" title="æŒ‰è´§ç‰©ç­›é€‰è®°å½•">
-            <option value="all">å…¨éƒ¨è´§ç‰©</option>
-            <option value="ç›˜æ‰£">ç›˜æ‰£</option>
-            <option value="å¥—æ‰£">å¥—æ‰£</option>
-            <option value="å…¶ä»–">å…¶ä»–</option>
+          <select id="goodsFilter" onchange="setGoodsFilter(this.value)" title="°´»õÎïÉ¸Ñ¡¼ÇÂ¼">
+            <option value="all">È«²¿»õÎï</option>
+            <option value="ÅÌ¿Û">ÅÌ¿Û</option>
+            <option value="Ì×¿Û">Ì×¿Û</option>
+            <option value="ÆäËû">ÆäËû</option>
           </select>
         </div>
-        <button class="filter-btn-import" onclick="document.getElementById('importFile').click()" title="æ”¯æŒ .csv / .xlsx / .xls">ğŸ“¥ å¯¼å…¥å†å²</button>
-        <button class="filter-btn-template" onclick="downloadTemplate()">ğŸ“„ ä¸‹è½½æ¨¡æ¿</button>
-        <button class="filter-btn-recycle" id="recycleBtn" onclick="toggleRecycle()">ğŸ—‘ å›æ”¶ç«™(0)</button>
-<button class="filter-btn-danger" id="clearBtn" onclick="clearAllRecords()">ğŸ”’ æ¸…ç©ºå…¨éƒ¨</button>
+        <button class="filter-btn-import" onclick="document.getElementById('importFile').click()" title="Ö§³Ö .csv / .xlsx / .xls">?? µ¼ÈëÀúÊ·</button>
+        <button class="filter-btn-template" onclick="downloadTemplate()">?? ÏÂÔØÄ£°å</button>
+        <button class="filter-btn-recycle" id="recycleBtn" onclick="toggleRecycle()">?? »ØÊÕÕ¾(0)</button>
+<button class="filter-btn-danger" id="clearBtn" onclick="clearAllRecords()">?? Çå¿ÕÈ«²¿</button>
       </div>
     </div>
     <input type="file" id="importFile" accept=".csv,.xlsx,.xls,.xlsm" style="display:none" onchange="handleImportFile(event)">
-    <button class="add-btn" onclick="showForm()">+ æ–°å¢ç™»è®°</button>
-    <div id="recordList"><div class="loading">è¿æ¥æ•°æ®åº“...</div></div>
+    <button class="add-btn" onclick="showForm()">+ ĞÂÔöµÇ¼Ç</button>
+    <div id="recordList"><div class="loading">Á¬½ÓÊı¾İ¿â...</div></div>
   </div>
 
-  <!-- ===== è¯¦æƒ…é¡µ ===== -->
+  <!-- ===== ÏêÇéÒ³ ===== -->
   <div class="detail-page" id="detailPage">
     <div class="detail-header">
       <div class="detail-header-left">
-        <button class="back-btn" onclick="showList()">â† è¿”å›</button>
-        <span style="font-weight:600">è®°å½•è¯¦æƒ…</span>
+        <button class="back-btn" onclick="showList()">¡û ·µ»Ø</button>
+        <span style="font-weight:600">¼ÇÂ¼ÏêÇé</span>
       </div>
       <div class="detail-actions">
-        <button class="action-btn edit-btn" onclick="openFullEdit()">ğŸ“ ä¿®æ”¹</button>
-        <button class="action-btn edit-btn" id="editToggleBtn" onclick="toggleEdit()">âœï¸ è¡¥å¡«</button>
-        <button class="action-btn delete-btn" onclick="confirmDelete()">ğŸ—‘ï¸ åˆ é™¤</button>
+        <button class="action-btn edit-btn" onclick="openFullEdit()">?? ĞŞ¸Ä</button>
+        <button class="action-btn edit-btn" id="editToggleBtn" onclick="toggleEdit()">?? ²¹Ìî</button>
+        <button class="action-btn delete-btn" onclick="confirmDelete()">??? É¾³ı</button>
       </div>
     </div>
     <div class="detail-items" id="detailItems"></div>
     <div class="btn-row">
-      <button class="copy-notice-btn" id="detailCopyBtn" onclick="copyDetailNotice()">ğŸ“‹ å¤åˆ¶é€šçŸ¥æ–‡å­—</button>
+      <button class="copy-notice-btn" id="detailCopyBtn" onclick="copyDetailNotice()">?? ¸´ÖÆÍ¨ÖªÎÄ×Ö</button>
     </div>
 
-    <!-- è¡¥å¡«ç¼–è¾‘åŒº -->
+    <!-- ²¹Ìî±à¼­Çø -->
     <div class="edit-section" id="editSection">
-      <div class="edit-section-title">âœï¸ è¡¥å¡« / ä¿®æ”¹ <span class="tag">ä»…å¯ä¿®æ”¹è¿‡ç£…ä¿¡æ¯</span></div>
+      <div class="edit-section-title">?? ²¹Ìî / ĞŞ¸Ä <span class="tag">½ö¿ÉĞŞ¸Ä¹ı°õĞÅÏ¢</span></div>
       <div class="edit-form">
         <div class="two-col">
           <div class="form-group">
-            <label>è¿‡ç£…é‡é‡(å…¬æ–¤)</label>
-            <input type="number" id="eWeight" placeholder="å¦‚:20000">
+            <label>¹ı°õÖØÁ¿(¹«½ï)</label>
+            <input type="number" id="eWeight" placeholder="Èç:20000">
           </div>
           <div class="form-group">
-            <label>è¿‡ç£…è´¹(å…ƒ)</label>
-            <input type="number" id="eWeighFee" placeholder="å¦‚:50">
+            <label>¹ı°õ·Ñ(Ôª)</label>
+            <input type="number" id="eWeighFee" placeholder="Èç:50">
           </div>
         </div>
         <div class="edit-btn-row">
-          <button class="save-edit-btn" onclick="saveEdit()">ä¿å­˜ä¿®æ”¹</button>
-          <button class="cancel-edit-btn" onclick="toggleEdit()">å–æ¶ˆ</button>
+          <button class="save-edit-btn" onclick="saveEdit()">±£´æĞŞ¸Ä</button>
+          <button class="cancel-edit-btn" onclick="toggleEdit()">È¡Ïû</button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ===== ç™»è®°è¡¨å•é¡µ ===== -->
+  <!-- ===== µÇ¼Ç±íµ¥Ò³ ===== -->
   <div class="form-page" id="formPage">
     <div class="form-header">
-      <button class="back-btn" onclick="showList()">â† è¿”å›</button>
-      <span style="font-weight:600">æ–°å¢ç™»è®°</span>
+      <button class="back-btn" onclick="showList()">¡û ·µ»Ø</button>
+      <span style="font-weight:600">ĞÂÔöµÇ¼Ç</span>
     </div>
 
     <div class="form-section">
-      <div class="section-title">ğŸ“‹ ç²˜è´´è¯†åˆ«åŒº <span class="tag">è‡ªåŠ¨å¡«å…¥</span></div>
-      <textarea class="paste-area" id="pasteArea" placeholder="æŠŠå¸æœºå‘æ¥çš„ä¿¡æ¯æ•´æ®µç²˜è´´åˆ°è¿™é‡Œ..." oninput="checkPaste()"></textarea>
-      <button class="recognize-btn" id="recognizeBtn" onclick="doRecognize()" disabled>ğŸ” è¯†åˆ«</button>
+      <div class="section-title">?? Õ³ÌùÊ¶±ğÇø <span class="tag">×Ô¶¯ÌîÈë</span></div>
+      <textarea class="paste-area" id="pasteArea" placeholder="°ÑË¾»ú·¢À´µÄĞÅÏ¢Õû¶ÎÕ³Ìùµ½ÕâÀï..." oninput="checkPaste()"></textarea>
+      <button class="recognize-btn" id="recognizeBtn" onclick="doRecognize()" disabled>?? Ê¶±ğ</button>
       <div class="recognize-result" id="recognizeResult"></div>
     </div>
 
     <div class="form-section">
-      <div class="section-title">ğŸ“ æ ¸å¯¹ä¸è¡¥å¡«</div>
+      <div class="section-title">?? ºË¶ÔÓë²¹Ìî</div>
 
       <div class="form-group" style="margin-bottom:10px">
         <input type="date" id="fDate" style="text-align:center;font-size:15px;padding:10px">
       </div>
 
-      <div class="field-label">è½¦ç‰Œå·ç </div>
+      <div class="field-label">³µÅÆºÅÂë</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fPlateMain" placeholder="ä¸»è½¦:ç²¤******" oninput="debounceAutoFill()">
-        <input type="text" id="fPlateTrailer" placeholder="æŒ‚è½¦:ç²¤****æŒ‚">
+        <input type="text" id="fPlateMain" placeholder="Ö÷³µ:ÔÁ******" oninput="debounceAutoFill()">
+        <input type="text" id="fPlateTrailer" placeholder="¹Ò³µ:ÔÁ****¹Ò">
       </div>
 
-      <div class="field-label">å¸æœºå§“å</div>
+      <div class="field-label">Ë¾»úĞÕÃû</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fName" placeholder="å§“å:æœªè¾“å…¥">
-        <input type="tel" id="fPhone" placeholder="æ‰‹æœº:188****8888">
+        <input type="text" id="fName" placeholder="ĞÕÃû:Î´ÊäÈë">
+        <input type="tel" id="fPhone" placeholder="ÊÖ»ú:188****8888">
       </div>
 
-      <div class="addr-label">è£…è´§åœ° ----- æ”¶è´§åœ°</div>
+      <div class="addr-label">×°»õµØ ----- ÊÕ»õµØ</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fFrom" placeholder="è£…è´§åœ°:">
-        <input type="text" id="fTo" placeholder="æ”¶è´§åœ°:">
+        <input type="text" id="fFrom" placeholder="×°»õµØ:">
+        <input type="text" id="fTo" placeholder="ÊÕ»õµØ:">
       </div>
 
       <div class="form-group" style="margin-bottom:10px">
-        <div class="field-label">ç±»å‹</div>
+        <div class="field-label">ÀàĞÍ</div>
         <div class="goods-btns" id="typeBtns">
-          <div class="goods-btn active" onclick="selectType(this, 'é€è´§')">é€è´§</div>
-          <div class="goods-btn" onclick="selectType(this, 'é€€è´§')">é€€è´§</div>
-          <div class="goods-btn" onclick="selectType(this, 'ä¸ç»Ÿè®¡')">ä¸ç»Ÿè®¡</div>
+          <div class="goods-btn active" onclick="selectType(this, 'ËÍ»õ')">ËÍ»õ</div>
+          <div class="goods-btn" onclick="selectType(this, 'ÍË»õ')">ÍË»õ</div>
+          <div class="goods-btn" onclick="selectType(this, '²»Í³¼Æ')">²»Í³¼Æ</div>
         </div>
       </div>
 
       <div class="form-group" style="margin-bottom:10px">
         <div class="goods-btns" id="goodsBtns">
-          <div class="goods-btn" onclick="selectGoods(this, 'ç›˜æ‰£')">ç›˜æ‰£</div>
-          <div class="goods-btn" onclick="selectGoods(this, 'å¥—æ‰£')">å¥—æ‰£</div>
-          <div class="goods-btn" onclick="selectGoods(this, 'å…¶ä»–')">å…¶ä»–</div>
+          <div class="goods-btn" onclick="selectGoods(this, 'ÅÌ¿Û')">ÅÌ¿Û</div>
+          <div class="goods-btn" onclick="selectGoods(this, 'Ì×¿Û')">Ì×¿Û</div>
+          <div class="goods-btn" onclick="selectGoods(this, 'ÆäËû')">ÆäËû</div>
         </div>
         <div class="other-input-wrap" id="otherWrap">
-          <input type="text" id="fGoodsOther" placeholder="è¯·è¾“å…¥è´§ç‰©åç§°">
+          <input type="text" id="fGoodsOther" placeholder="ÇëÊäÈë»õÎïÃû³Æ">
         </div>
       </div>
 
-      <div class="field-label">è¿è¾“è´¹(å…ƒ)</div>
+      <div class="field-label">ÔËÊä·Ñ(Ôª)</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="number" id="fFreight" placeholder="è¿è´¹(å…ƒ)">
-        <input type="number" id="fWeighFee" placeholder="è¿‡ç£…è´¹(å…ƒ)">
+        <input type="number" id="fFreight" placeholder="ÔË·Ñ(Ôª)">
+        <input type="number" id="fWeighFee" placeholder="¹ı°õ·Ñ(Ôª)">
       </div>
 
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:0">
-        <input type="number" id="fWeight" placeholder="è¿‡ç£…(å…¬æ–¤)" style="flex:1" oninput="updateTon()">
+        <input type="number" id="fWeight" placeholder="¹ı°õ(¹«½ï)" style="flex:1" oninput="updateTon()">
         <span id="tonDisplay" style="font-size:16px;color:#333;white-space:nowrap;font-weight:500"></span>
       </div>
-      <textarea id="fNote" placeholder="å¤‡æ³¨ï¼šå…¶ä»–æƒ…å†µè¯´æ˜ï¼ˆå¦‚ï¼šèŒ‚å—å›¾ä¹¦é¦†è£…å¥—æ‰£ï¼Œå›èŒ‚åä»“åº“æ¢è´§ï¼Œé€å¼€å¹³é¹å³°ï¼‰" style="width:100%;min-height:56px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:8px;resize:vertical;font-family:inherit"></textarea>
+      <textarea id="fNote" placeholder="±¸×¢£ºÆäËûÇé¿öËµÃ÷£¨Èç£ºÃ¯ÄÏÍ¼Êé¹İ×°Ì×¿Û£¬»ØÃ¯Ãû²Ö¿â»»»õ£¬ËÍ¿ªÆ½Åô·å£©" style="width:100%;min-height:56px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:8px;resize:vertical;font-family:inherit"></textarea>
       <input type="text" id="fIdCard" readonly style="display:none">
     </div>
 
-    <button class="submit-btn" id="submitBtn" onclick="doSubmit()">æ äº¤</button>
+    <button class="submit-btn" id="submitBtn" onclick="doSubmit()">Ìá ½»</button>
   </div>
 </div>
 
-<!-- ===== å®Œæ•´ä¿®æ”¹å¼¹çª— ===== -->
+<!-- ===== ÍêÕûĞŞ¸Äµ¯´° ===== -->
 <div class="confirm-overlay" id="fullEditModal">
   <div class="confirm-box" style="max-width:90%; width:500px; max-height:90vh; overflow-y:auto; text-align:left">
-    <div class="confirm-title">ğŸ“ ä¿®æ”¹è®°å½•</div>
+    <div class="confirm-title">?? ĞŞ¸Ä¼ÇÂ¼</div>
     <div id="fullEditForm">
-      <div class="field-label">æ—¥æœŸ</div>
+      <div class="field-label">ÈÕÆÚ</div>
       <input type="date" id="mDate">
-      <div class="field-label">è½¦ç‰Œå·ç </div>
+      <div class="field-label">³µÅÆºÅÂë</div>
       <div class="two-col">
-        <input type="text" id="mPlateMain" placeholder="ä¸»è½¦">
-        <input type="text" id="mPlateTrailer" placeholder="æŒ‚è½¦">
+        <input type="text" id="mPlateMain" placeholder="Ö÷³µ">
+        <input type="text" id="mPlateTrailer" placeholder="¹Ò³µ">
       </div>
-      <div class="field-label">å¸æœºä¿¡æ¯</div>
+      <div class="field-label">Ë¾»úĞÅÏ¢</div>
       <div class="two-col">
-        <input type="text" id="mName" placeholder="å§“å">
-        <input type="tel" id="mPhone" placeholder="æ‰‹æœºå·">
+        <input type="text" id="mName" placeholder="ĞÕÃû">
+        <input type="tel" id="mPhone" placeholder="ÊÖ»úºÅ">
       </div>
-      <input type="text" id="mIdCard" placeholder="èº«ä»½è¯å·">
-      <div class="field-label">è£…è´§åœ° - æ”¶è´§åœ°</div>
+      <input type="text" id="mIdCard" placeholder="Éí·İÖ¤ºÅ">
+      <div class="field-label">×°»õµØ - ÊÕ»õµØ</div>
       <div class="two-col">
-        <input type="text" id="mFrom" placeholder="è£…è´§åœ°">
-        <input type="text" id="mTo" placeholder="æ”¶è´§åœ°">
+        <input type="text" id="mFrom" placeholder="×°»õµØ">
+        <input type="text" id="mTo" placeholder="ÊÕ»õµØ">
       </div>
-      <div class="field-label">è´§ç‰©</div>
+      <div class="field-label">»õÎï</div>
       <div class="goods-btns">
-        <div class="goods-btn" onclick="selectModalGoods(this, 'ç›˜æ‰£')">ç›˜æ‰£</div>
-        <div class="goods-btn" onclick="selectModalGoods(this, 'å¥—æ‰£')">å¥—æ‰£</div>
-        <div class="goods-btn" onclick="selectModalGoods(this, 'å…¶ä»–')">å…¶ä»–</div>
+        <div class="goods-btn" onclick="selectModalGoods(this, 'ÅÌ¿Û')">ÅÌ¿Û</div>
+        <div class="goods-btn" onclick="selectModalGoods(this, 'Ì×¿Û')">Ì×¿Û</div>
+        <div class="goods-btn" onclick="selectModalGoods(this, 'ÆäËû')">ÆäËû</div>
       </div>
-      <input type="text" id="mGoodsOther" placeholder="å…¶ä»–è´§ç‰©åç§°" style="display:none">
-      <div class="field-label">ç±»å‹</div>
+      <input type="text" id="mGoodsOther" placeholder="ÆäËû»õÎïÃû³Æ" style="display:none">
+      <div class="field-label">ÀàĞÍ</div>
       <div class="goods-btns" id="mTypeBtns">
-        <div class="goods-btn" onclick="selectModalType(this, 'é€è´§')">é€è´§</div>
-        <div class="goods-btn" onclick="selectModalType(this, 'é€€è´§')">é€€è´§</div>
-        <div class="goods-btn" onclick="selectModalType(this, 'ä¸ç»Ÿè®¡')">ä¸ç»Ÿè®¡</div>
+        <div class="goods-btn" onclick="selectModalType(this, 'ËÍ»õ')">ËÍ»õ</div>
+        <div class="goods-btn" onclick="selectModalType(this, 'ÍË»õ')">ÍË»õ</div>
+        <div class="goods-btn" onclick="selectModalType(this, '²»Í³¼Æ')">²»Í³¼Æ</div>
       </div>
       <input type="hidden" id="mDeliveryType" value="">
-      <div class="field-label">è¿è´¹(å…ƒ)</div>
+      <div class="field-label">ÔË·Ñ(Ôª)</div>
       <div class="two-col">
-        <input type="number" id="mFreight" placeholder="è¿è´¹">
-        <input type="number" id="mWeighFee" placeholder="è¿‡ç£…è´¹">
+        <input type="number" id="mFreight" placeholder="ÔË·Ñ">
+        <input type="number" id="mWeighFee" placeholder="¹ı°õ·Ñ">
       </div>
-      <div class="field-label">è¿‡ç£…é‡é‡(å…¬æ–¤)</div>
-      <input type="number" id="mWeight" placeholder="è¿‡ç£…é‡é‡">
+      <div class="field-label">¹ı°õÖØÁ¿(¹«½ï)</div>
+      <input type="number" id="mWeight" placeholder="¹ı°õÖØÁ¿">
     </div>
-    <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">ğŸ’¾ ä¿å­˜ä¿®æ”¹</button>
-    <button class="cancel-btn" onclick="closeFullEdit()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">å–æ¶ˆ</button>
+    <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">?? ±£´æĞŞ¸Ä</button>
+    <button class="cancel-btn" onclick="closeFullEdit()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">È¡Ïû</button>
   </div>
 </div>
 
-<!-- ===== ä¿®æ”¹æç¤ºæ¨ªå¹… =====
+<!-- ===== ĞŞ¸ÄÌáÊ¾ºá·ù =====
 <div class="modify-banner" id="modifyBanner">
   <div id="modifyBannerText"></div>
 </div>
 
-<!-- ===== åˆ é™¤ç¡®è®¤å¼¹çª— ===== -->
+<!-- ===== É¾³ıÈ·ÈÏµ¯´° ===== -->
 <div class="confirm-overlay" id="deleteConfirm">
   <div class="confirm-box">
-    <div class="confirm-icon" id="deleteIcon">âš ï¸</div>
-    <div class="confirm-title" id="deleteTitle">ç¡®å®šè¦åˆ é™¤è¿™æ¡è®°å½•å—?</div>
-    <div class="confirm-desc" id="deleteDesc">åˆ é™¤åæ•°æ®æ— æ³•æ¢å¤,è¯·è°¨æ…æ“ä½œã€‚</div>
-    <button class="confirm-btn primary" id="deleteBtn1" onclick="doDeleteStep1()">ç¡®å®šåˆ é™¤</button>
-    <button class="confirm-btn secondary" id="deleteBtn2" onclick="hideDeleteConfirm()">å–æ¶ˆ</button>
+    <div class="confirm-icon" id="deleteIcon">??</div>
+    <div class="confirm-title" id="deleteTitle">È·¶¨ÒªÉ¾³ıÕâÌõ¼ÇÂ¼Âğ?</div>
+    <div class="confirm-desc" id="deleteDesc">É¾³ıºóÊı¾İÎŞ·¨»Ö¸´,Çë½÷É÷²Ù×÷¡£</div>
+    <button class="confirm-btn primary" id="deleteBtn1" onclick="doDeleteStep1()">È·¶¨É¾³ı</button>
+    <button class="confirm-btn secondary" id="deleteBtn2" onclick="hideDeleteConfirm()">È¡Ïû</button>
   </div>
 </div>
 
 <div class="confirm-overlay" id="cancelPaidConfirm">
   <div class="confirm-box">
-    <div class="confirm-icon" id="cancelPaidIcon">âš ï¸</div>
-    <div class="confirm-title" id="cancelPaidTitle">ç¡®å®šè¦å–æ¶ˆå·²æ”¯ä»˜çŠ¶æ€å—?</div>
-    <div class="confirm-desc" id="cancelPaidDesc">è½¦ç‰Œ <span id="cancelPaidPlate" style="font-weight:600;color:#333"></span> çš„å·²æ”¯ä»˜çŠ¶æ€å°†è¢«å–æ¶ˆï¼Œè¯¥è®°å½•çš„è¿è´¹å°†ä¸å†è®¡å…¥å·²æ”¯ä»˜åˆè®¡ã€‚</div>
-    <button class="confirm-btn primary" id="cancelPaidBtn1" onclick="doCancelPaidStep1()">ç¡®å®šå–æ¶ˆ</button>
-    <button class="confirm-btn secondary" id="cancelPaidBtn2" onclick="hideCancelPaidConfirm()">ä¿ç•™å·²æ”¯ä»˜</button>
+    <div class="confirm-icon" id="cancelPaidIcon">??</div>
+    <div class="confirm-title" id="cancelPaidTitle">È·¶¨ÒªÈ¡ÏûÒÑÖ§¸¶×´Ì¬Âğ?</div>
+    <div class="confirm-desc" id="cancelPaidDesc">³µÅÆ <span id="cancelPaidPlate" style="font-weight:600;color:#333"></span> µÄÒÑÖ§¸¶×´Ì¬½«±»È¡Ïû£¬¸Ã¼ÇÂ¼µÄÔË·Ñ½«²»ÔÙ¼ÆÈëÒÑÖ§¸¶ºÏ¼Æ¡£</div>
+    <button class="confirm-btn primary" id="cancelPaidBtn1" onclick="doCancelPaidStep1()">È·¶¨È¡Ïû</button>
+    <button class="confirm-btn secondary" id="cancelPaidBtn2" onclick="hideCancelPaidConfirm()">±£ÁôÒÑÖ§¸¶</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <script>
-// Supabase é…ç½®ï¼ˆç­‰ supabase å…¨å±€å˜é‡å°±ç»ªååˆå§‹åŒ–ï¼‰
+// Supabase ÅäÖÃ£¨µÈ supabase È«¾Ö±äÁ¿¾ÍĞ÷ºó³õÊ¼»¯£©
 const SUPABASE_URL = 'https://gdyiottosunwjothghaz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OMPVS-R2K3r9o8vx0VCx1A_SAd4iomg';
 
-// ===== è®¿é—®å¯†ç é—¨ =====
-// å¯†ç  "123456" çš„ SHA-256 å“ˆå¸Œ (å¯éšæ—¶æ”¹ passwordHash æ¢å¯†ç )
+// ===== ·ÃÎÊÃÜÂëÃÅ =====
+// ÃÜÂë "123456" µÄ SHA-256 ¹şÏ£ (¿ÉËæÊ±¸Ä passwordHash »»ÃÜÂë)
 const PASSWORD_HASH = '398a15bc9bdc4db26d1d21dda9bf0e6e018ae388020e0e1398f5ecc9789c18e0';
 const GATE_KEY = 'truck_gate_ok_v2';
 
@@ -476,46 +476,46 @@ async function checkGate() {
     document.getElementById('gateError').textContent = '';
     if (typeof initSupabase === 'function') initSupabase();
   } else {
-    document.getElementById('gateError').textContent = 'å¯†ç é”™è¯¯';
+    document.getElementById('gateError').textContent = 'ÃÜÂë´íÎó';
     document.getElementById('gatePassword').value = '';
     document.getElementById('gatePassword').focus();
   }
 }
 
-// å¦‚æœå·²éªŒè¯è¿‡å¯†ç ï¼ˆ30å¤©å†…ï¼‰ï¼Œè‡ªåŠ¨è·³è¿‡å¯†ç é—¨
+// Èç¹ûÒÑÑéÖ¤¹ıÃÜÂë£¨30ÌìÄÚ£©£¬×Ô¶¯Ìø¹ıÃÜÂëÃÅ
 (function autoCheckGate() {
   if (localStorage.getItem(GATE_KEY) === '1') {
     document.getElementById('gateModal').classList.remove('show');
   } else {
     document.getElementById('gateModal').classList.add('show');
     setTimeout(() => document.getElementById('gatePassword').focus(), 100);
-    // æ‹¦æˆªåŸæ¥çš„è‡ªåŠ¨åˆå§‹åŒ–
+    // À¹½ØÔ­À´µÄ×Ô¶¯³õÊ¼»¯
     window._gatePassed = false;
   }
 })();
 
 function initSupabase() {
   if (typeof supabase === 'undefined') {
-    console.warn('supabase å…¨å±€å˜é‡è¿˜æœªå°±ç»ªï¼Œç­‰å¾…ä¸­...');
+    console.warn('supabase È«¾Ö±äÁ¿»¹Î´¾ÍĞ÷£¬µÈ´ıÖĞ...');
     setTimeout(initSupabase, 100);
     return;
   }
   try {
     supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    console.log('Supabase åˆå§‹åŒ–å®Œæˆ');
+    console.log('Supabase ³õÊ¼»¯Íê³É');
     if (typeof loadRecords === 'function') loadRecords();
-    // åˆå§‹åŒ–æ—¶æ£€æŸ¥ç¦»çº¿é˜Ÿåˆ—,åœ¨çº¿åˆ™è‡ªåŠ¨åŒæ­¥
+    // ³õÊ¼»¯Ê±¼ì²éÀëÏß¶ÓÁĞ,ÔÚÏßÔò×Ô¶¯Í¬²½
     updateOfflineBadge();
     if (navigator.onLine && getOfflineQueue().length > 0) {
       setTimeout(() => syncOfflineQueue(), 1000);
     }
   } catch (e) {
-    console.error('Supabase åˆå§‹åŒ–å¤±è´¥:', e);
-    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">âŒ</div>Supabaseåˆå§‹åŒ–å¤±è´¥:<br>' + e.message + '</div>';
+    console.error('Supabase ³õÊ¼»¯Ê§°Ü:', e);
+    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">?</div>Supabase³õÊ¼»¯Ê§°Ü:<br>' + e.message + '</div>';
   }
 }
 
-// ä½œä¸ºå…¨å±€å˜é‡ä¾›åç»­å‡½æ•°ä½¿ç”¨
+// ×÷ÎªÈ«¾Ö±äÁ¿¹©ºóĞøº¯ÊıÊ¹ÓÃ
 var supabaseClient;
 
 let currentRecords = [];
@@ -524,15 +524,15 @@ let collapsedMonths = {}; // { '2026-08': true }
 let filterEndDate = '';
 let filterKeyword = '';
 let locationFilter = 'all'; // 'all' | 'from' | 'to'
-let goodsFilter = 'all'; // 'all' | 'ç›˜æ‰£' | 'å¥—æ‰£' | 'å…¶ä»–'
+let goodsFilter = 'all'; // 'all' | 'ÅÌ¿Û' | 'Ì×¿Û' | 'ÆäËû'
 let currentDetail = null;
-let deliveryType = 'é€è´§'; // é»˜è®¤é€è´§
-let showRecycle = false; // å›æ”¶ç«™è§†å›¾å¼€å…³
-let autoFillTimer = null; // å¸æœºè‡ªåŠ¨å¡«å……é˜²æŠ–
+let deliveryType = 'ËÍ»õ'; // Ä¬ÈÏËÍ»õ
+let showRecycle = false; // »ØÊÕÕ¾ÊÓÍ¼¿ª¹Ø
+let autoFillTimer = null; // Ë¾»ú×Ô¶¯Ìî³ä·À¶¶
 let selectedGoods = '';
-let deleteStep = 0; // 0=æœªç¡®è®¤ 1=ç¬¬ä¸€æ­¥ç¡®è®¤ 2=ç¬¬äºŒæ­¥ç¡®è®¤
+let deleteStep = 0; // 0=Î´È·ÈÏ 1=µÚÒ»²½È·ÈÏ 2=µÚ¶ş²½È·ÈÏ
 
-// é¡µé¢åˆ‡æ¢
+// Ò³ÃæÇĞ»»
 function showList() {
   document.getElementById('listPage').style.display = 'block';
   document.getElementById('detailPage').style.display = 'none';
@@ -571,68 +571,68 @@ function checkPaste() {
   document.getElementById('recognizeBtn').disabled = text.length < 5;
 }
 
-// æ™ºèƒ½è¯†åˆ«
+// ÖÇÄÜÊ¶±ğ
 function recognize(rawText) {
   const text = rawText.replace(/\r\n/g, '\n').trim();
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
-  const provinceRe = '[äº¬æ´¥æ²ªæ¸å†€è±«äº‘è¾½é»‘æ¹˜çš–é²æ–°è‹æµ™èµ£é„‚æ¡‚ç”˜æ™‹è’™é™•å‰è´µç²¤é’è—å·å®ç¼å°æ¸¯æ¾³é—½]';
+  const provinceRe = '[¾©½ò»¦Óå¼½Ô¥ÔÆÁÉºÚÏæÍîÂ³ĞÂËÕÕã¸Ó¶õ¹ğ¸Ê½úÃÉÉÂ¼ª¹óÔÁÇà²Ø´¨ÄşÇíÌ¨¸Û°ÄÃö]';
   const plateOneRe = provinceRe + '[A-Z][A-Z0-9]{4,6}';
   let result = { date: formatDate(new Date()), plateMain: '', plateTrailer: '', name: '', phone: '', idCard: '', from: '', to: '', goods: '', goodsRaw: '', freight: '', note: '' };
 
   const allText = text;
 
-  // æ—¥æœŸ
+  // ÈÕÆÚ
   for (const line of lines) {
-    const m = line.match(/^(\d{1,2})[æœˆ\-\.](\d{1,2})/);
+    const m = line.match(/^(\d{1,2})[ÔÂ\-\.](\d{1,2})/);
     if (m) { const y = new Date().getFullYear(); result.date = y + '-' + m[1].padStart(2,'0') + '-' + m[2].padStart(2,'0'); break; }
-    const m2 = line.match(/^(\d{4})[å¹´\-\.](\d{1,2})[æœˆ\-\.](\d{1,2})/);
+    const m2 = line.match(/^(\d{4})[Äê\-\.](\d{1,2})[ÔÂ\-\.](\d{1,2})/);
     if (m2) { result.date = m2[1] + '-' + m2[2].padStart(2,'0') + '-' + m2[3].padStart(2,'0'); break; }
   }
 
-  // èº«ä»½è¯
-  const idWithLabel = allText.match(/èº«ä»½è¯[::\s]*([1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dx])/i);
+  // Éí·İÖ¤
+  const idWithLabel = allText.match(/Éí·İÖ¤[::\s]*([1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dx])/i);
   if (idWithLabel) result.idCard = idWithLabel[1].toUpperCase();
   else { const idAll = allText.match(/([1-9]\d{5}(?:19|20)\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\d|3[01])\d{3}[\dx])/i); if (idAll) result.idCard = idAll[1].toUpperCase(); }
 
-  // æ‰‹æœºå·
-  const phoneWithLabel = allText.match(/ç”µè¯[::\s]*(\d{11})/);
+  // ÊÖ»úºÅ
+  const phoneWithLabel = allText.match(/µç»°[::\s]*(\d{11})/);
   if (phoneWithLabel) result.phone = phoneWithLabel[1];
   else {
     const phoneAll = allText.match(/(?:^|[^\d])(\d{11})(?=[^\d]|$)/);
     if (phoneAll) result.phone = phoneAll[1];
   }
 
-  // è´§ç‰©
+  // »õÎï
   for (const line of lines) {
-    if (line.includes('ç›˜æ‰£')) { result.goods = 'ç›˜æ‰£'; break; }
-    if (line.includes('å¥—æ‰£')) { result.goods = 'å¥—æ‰£'; break; }
-    if (/^å…¶ä»–[\s\d\u4e00-\u9fa5]/.test(line)) { result.goods = line.replace(/^å…¶ä»–/, '').trim() || 'å…¶ä»–'; result.goodsRaw = 'å…¶ä»–'; break; }
+    if (line.includes('ÅÌ¿Û')) { result.goods = 'ÅÌ¿Û'; break; }
+    if (line.includes('Ì×¿Û')) { result.goods = 'Ì×¿Û'; break; }
+    if (/^ÆäËû[\s\d\u4e00-\u9fa5]/.test(line)) { result.goods = line.replace(/^ÆäËû/, '').trim() || 'ÆäËû'; result.goodsRaw = 'ÆäËû'; break; }
   }
   if (!result.goods) {
-    const goodsLine = lines.find(l => l.includes('ç›˜æ‰£') || l.includes('å¥—æ‰£'));
-    if (goodsLine) { if (goodsLine.includes('ç›˜æ‰£')) result.goods = 'ç›˜æ‰£'; else if (goodsLine.includes('å¥—æ‰£')) result.goods = 'å¥—æ‰£'; }
+    const goodsLine = lines.find(l => l.includes('ÅÌ¿Û') || l.includes('Ì×¿Û'));
+    if (goodsLine) { if (goodsLine.includes('ÅÌ¿Û')) result.goods = 'ÅÌ¿Û'; else if (goodsLine.includes('Ì×¿Û')) result.goods = 'Ì×¿Û'; }
   }
 
-  // å§“å(å¤šç§æ¨¡å¼)
-  const excludeNames = ['ç›˜æ‰£','å¥—æ‰£','å…¶ä»–','å¹³æ¿è½¦','ç‰µå¼•è½¦','è´§è½¦','åœ°å€','ç›˜æ‰£è½¦è¾†','å¥—æ‰£è½¦è¾†','æ²¡æœ‰','æ²¡æœ‰å§“å','æ²¡æœ‰è½¦ç‰Œ','æ²¡æœ‰è´§','æ²¡æœ‰è½¦','æ²¡æœ‰åœ°å€','æ²¡æœ‰è´¹ç”¨','æ²¡æœ‰é‡é‡','æ²¡æœ‰è¿è´¹','æ²¡æœ‰ç”µè¯'];
-  // 1. æ ‡ç­¾å¼:å§“å:xxx / å¸æœº:xxx / å¸æœº:xxx / å¸æœº,xxx / å¸æœº xxx
-  const nameWithLabel = allText.match(/(?:å§“å|å¸æœº)[ï¼šï¼šï¼Œ:\s]*([^\d\sï¼Œ,ã€ã€‚ï¼š:è´§åœ°å€]{2,4})/);
+  // ĞÕÃû(¶àÖÖÄ£Ê½)
+  const excludeNames = ['ÅÌ¿Û','Ì×¿Û','ÆäËû','Æ½°å³µ','Ç£Òı³µ','»õ³µ','µØÖ·','ÅÌ¿Û³µÁ¾','Ì×¿Û³µÁ¾','Ã»ÓĞ','Ã»ÓĞĞÕÃû','Ã»ÓĞ³µÅÆ','Ã»ÓĞ»õ','Ã»ÓĞ³µ','Ã»ÓĞµØÖ·','Ã»ÓĞ·ÑÓÃ','Ã»ÓĞÖØÁ¿','Ã»ÓĞÔË·Ñ','Ã»ÓĞµç»°'];
+  // 1. ±êÇ©Ê½:ĞÕÃû:xxx / Ë¾»ú:xxx / Ë¾»ú:xxx / Ë¾»ú,xxx / Ë¾»ú xxx
+  const nameWithLabel = allText.match(/(?:ĞÕÃû|Ë¾»ú)[£º£º£¬:\s]*([^\d\s£¬,¡¢¡££º:»õµØÖ·]{2,4})/);
   if (nameWithLabel && !excludeNames.includes(nameWithLabel[1])) result.name = nameWithLabel[1].trim();
-  // 2. å•è¡Œæ··æ’:xxx,å§“å,èº«ä»½è¯
+  // 2. µ¥ĞĞ»ìÅÅ:xxx,ĞÕÃû,Éí·İÖ¤
   if (!result.name) {
-    const m = allText.match(/[ï¼Œ,]\s*([\u4e00-\u9fa5]{2,4})\s*[ï¼Œ,]\s*èº«ä»½è¯/);
+    const m = allText.match(/[£¬,]\s*([\u4e00-\u9fa5]{2,4})\s*[£¬,]\s*Éí·İÖ¤/);
     if (m && !excludeNames.includes(m[1])) result.name = m[1];
   }
-  // 3. å•è¡Œæ··æ’:èº«ä»½è¯å‰æ¥å§“å
+  // 3. µ¥ĞĞ»ìÅÅ:Éí·İÖ¤Ç°½ÓĞÕÃû
   if (!result.name && result.idCard) {
     const idPos = allText.indexOf(result.idCard);
     if (idPos > 0) {
       const beforeId = allText.substring(Math.max(0, idPos - 20), idPos);
-      const m = beforeId.match(/([\u4e00-\u9fa5]{2,4})[ï¼Œ,]\s*$/);
+      const m = beforeId.match(/([\u4e00-\u9fa5]{2,4})[£¬,]\s*$/);
       if (m && !excludeNames.includes(m[1])) result.name = m[1];
     }
   }
-  // 4. ç‹¬ç«‹è¡Œ
+  // 4. ¶ÀÁ¢ĞĞ
   if (!result.name) {
     for (const l of lines) {
       if (/^[\u4e00-\u9fa5]{2,4}$/.test(l) && !excludeNames.includes(l)) {
@@ -642,53 +642,53 @@ function recognize(rawText) {
     }
   }
 
-  // è¿è´¹
-  const freightWithLabel = allText.match(/è¿è´¹[::\s]*(\d+)/);
+  // ÔË·Ñ
+  const freightWithLabel = allText.match(/ÔË·Ñ[::\s]*(\d+)/);
   if (freightWithLabel) result.freight = freightWithLabel[1];
   else {
-    const freightNear = allText.match(/è¿è´¹[\u4e00-\u9fa5]*(\d+)/);
+    const freightNear = allText.match(/ÔË·Ñ[\u4e00-\u9fa5]*(\d+)/);
     if (freightNear) result.freight = freightNear[1];
     else {
-      const m = allText.match(/å®ä»˜[\u4e00-\u9fa5]*(\d+)/);
+      const m = allText.match(/Êµ¸¶[\u4e00-\u9fa5]*(\d+)/);
       if (m) result.freight = m[1];
     }
   }
 
-  // è½¦ç‰Œ(å¤šç§æ¨¡å¼)
-  // 1. æ ‡ç­¾+åŒè½¦ç‰Œ:è½¦ç‰Œ:ç²¤Kxxx+ç²¤KyyyyæŒ‚ / è½¦ç‰Œ:ç²¤Kxxx ç²¤KyyyyæŒ‚
-  let m = allText.match(new RegExp('è½¦ç‰Œ[:,\\s]*(' + plateOneRe + ')\\s*[+ \\t]\\s*(' + plateOneRe + ')\\s*æŒ‚'));
-  if (m) { result.plateMain = m[1]; result.plateTrailer = m[2] + 'æŒ‚'; }
-  // 2. æ ‡ç­¾+å•è½¦ç‰Œ:è½¦ç‰Œ:ç²¤Kxxx / è½¦å·ç²¤Kxxx(æ ‡ç­¾åä»»æ„æ ‡ç‚¹/ç©ºæ ¼)
+  // ³µÅÆ(¶àÖÖÄ£Ê½)
+  // 1. ±êÇ©+Ë«³µÅÆ:³µÅÆ:ÔÁKxxx+ÔÁKyyyy¹Ò / ³µÅÆ:ÔÁKxxx ÔÁKyyyy¹Ò
+  let m = allText.match(new RegExp('³µÅÆ[:,\\s]*(' + plateOneRe + ')\\s*[+ \\t]\\s*(' + plateOneRe + ')\\s*¹Ò'));
+  if (m) { result.plateMain = m[1]; result.plateTrailer = m[2] + '¹Ò'; }
+  // 2. ±êÇ©+µ¥³µÅÆ:³µÅÆ:ÔÁKxxx / ³µºÅÔÁKxxx(±êÇ©ºóÈÎÒâ±êµã/¿Õ¸ñ)
   if (!result.plateMain) {
-    m = allText.match(new RegExp('è½¦ç‰Œ[::\\s,]*(' + plateOneRe + ')'));
+    m = allText.match(new RegExp('³µÅÆ[::\\s,]*(' + plateOneRe + ')'));
     if (m) result.plateMain = m[1];
     else {
-      m = allText.match(new RegExp('è½¦å·[::\\s]*(' + plateOneRe + ')'));
+      m = allText.match(new RegExp('³µºÅ[::\\s]*(' + plateOneRe + ')'));
       if (m) result.plateMain = m[1];
     }
   }
-  // 3. æŒ‚è½¦æ ‡ç­¾(å¤„ç†ç©ºæ ¼,å¦‚ã€ŒæŒ‚è½¦å·çš– L1B70æŒ‚ã€)
+  // 3. ¹Ò³µ±êÇ©(´¦Àí¿Õ¸ñ,Èç¡¸¹Ò³µºÅÍî L1B70¹Ò¡¹)
   if (!result.plateTrailer) {
-    m = allText.match(new RegExp('(?:æŒ‚è½¦|æŒ‚è½¦å·)[ï¼š:\\s,]*(' + provinceRe + ')\\s*([A-Z][A-Z0-9]{4,6})\\s*æŒ‚'));
-    if (m) result.plateTrailer = m[1] + m[2] + 'æŒ‚';
+    m = allText.match(new RegExp('(?:¹Ò³µ|¹Ò³µºÅ)[£º:\\s,]*(' + provinceRe + ')\\s*([A-Z][A-Z0-9]{4,6})\\s*¹Ò'));
+    if (m) result.plateTrailer = m[1] + m[2] + '¹Ò';
   }
-  // 4. é€šç”¨æå–:æ‰€æœ‰è½¦ç‰ŒåŠæŒ‚è½¦
+  // 4. Í¨ÓÃÌáÈ¡:ËùÓĞ³µÅÆ¼°¹Ò³µ
   if (!result.plateMain || !result.plateTrailer) {
     const allPlates = [];
-    const plateRegex = new RegExp(plateOneRe + 'æŒ‚?', 'g');
+    const plateRegex = new RegExp(plateOneRe + '¹Ò?', 'g');
     let pm;
     while ((pm = plateRegex.exec(allText)) !== null) {
       allPlates.push({ text: pm[0], pos: pm.index });
     }
-    const trailers = allPlates.filter(p => p.text.endsWith('æŒ‚'));
-    const mains = allPlates.filter(p => !p.text.endsWith('æŒ‚'));
+    const trailers = allPlates.filter(p => p.text.endsWith('¹Ò'));
+    const mains = allPlates.filter(p => !p.text.endsWith('¹Ò'));
     if (!result.plateMain && mains.length > 0) result.plateMain = mains[0].text;
     if (!result.plateTrailer) {
       if (trailers.length > 0) result.plateTrailer = trailers[0].text;
       else if (mains.length >= 2) result.plateTrailer = mains[1].text;
     }
   }
-  // 5. å•è¡Œæ··æ’å…œåº•
+  // 5. µ¥ĞĞ»ìÅÅ¶µµ×
   if (!result.plateMain && result.idCard) {
     const idPos = allText.indexOf(result.idCard);
     if (idPos > 0) {
@@ -696,33 +696,33 @@ function recognize(rawText) {
       const plates = beforeId.match(new RegExp(plateOneRe, 'g'));
       if (plates && plates.length > 0) {
         result.plateMain = plates[0];
-        if (plates.length >= 2) result.plateTrailer = plates[1] + (plates[1].endsWith('æŒ‚') ? '' : '');
+        if (plates.length >= 2) result.plateTrailer = plates[1] + (plates[1].endsWith('¹Ò') ? '' : '');
       }
     }
   }
 
-  // ä¿®å¤æŒ‚è½¦"æŒ‚"å­—
-  if (result.plateTrailer && !result.plateTrailer.endsWith('æŒ‚')) {
-    result.plateTrailer = result.plateTrailer + 'æŒ‚';
+  // ĞŞ¸´¹Ò³µ"¹Ò"×Ö
+  if (result.plateTrailer && !result.plateTrailer.endsWith('¹Ò')) {
+    result.plateTrailer = result.plateTrailer + '¹Ò';
   }
 
-  // åœ°å€
-  // ä¼˜å…ˆçº§1: å¤šå¸è´§ç‚¹("å¸ï¼šxxx"å¤šæ¬¡) â†’ toå–æœ€åä¸€ä¸ª
-  const unloadRe = /^å¸[\s:\ï¼š]*\s*/;
-  const goodsWordRe = /^(å¥—æ‰£|ç›˜æ‰£|è´§ç‰©|è´§)$/;
+  // µØÖ·
+  // ÓÅÏÈ¼¶1: ¶àĞ¶»õµã("Ğ¶£ºxxx"¶à´Î) ¡ú toÈ¡×îºóÒ»¸ö
+  const unloadRe = /^Ğ¶[\s:\£º]*\s*/;
+  const goodsWordRe = /^(Ì×¿Û|ÅÌ¿Û|»õÎï|»õ)$/;
   const unloadLines = lines.filter(l => unloadRe.test(l));
   if (unloadLines.length >= 1) {
     const unloads = unloadLines.map(l => l.replace(unloadRe, '').trim());
-    result.toCandidates = unloads.filter(u => u.length >= 2); // æ”¶é›†æ‰€æœ‰å¤šå¸è´§ç‚¹å€™é€‰,ä¾›å‰ç«¯æŒ‰é’®é€‰æ‹©
-    const backMatch = allText.match(/([\u4e00-\u9fa5]{2,20})é€€å›/);
+    result.toCandidates = unloads.filter(u => u.length >= 2); // ÊÕ¼¯ËùÓĞ¶àĞ¶»õµãºòÑ¡,¹©Ç°¶Ë°´Å¥Ñ¡Ôñ
+    const backMatch = allText.match(/([\u4e00-\u9fa5]{2,20})ÍË»Ø/);
     if (backMatch && !result.from) result.from = backMatch[1];
     if (!result.to) result.to = unloads[unloads.length - 1];
   }
-  // ä¼˜å…ˆçº§2: "é€€å›/é€è‡³/â†’" åˆ‡åˆ†(æ’é™¤è´§ç‰©è¯è¢«è¯¯è¯†åˆ«ä¸ºæ”¶è´§åœ°)
+  // ÓÅÏÈ¼¶2: "ÍË»Ø/ËÍÖÁ/¡ú" ÇĞ·Ö(ÅÅ³ı»õÎï´Ê±»ÎóÊ¶±ğÎªÊÕ»õµØ)
   if (!result.from || !result.to) {
-    const singleLine = lines.find(l => /é€€å›|é€è‡³|â†’/.test(l));
+    const singleLine = lines.find(l => /ÍË»Ø|ËÍÖÁ|¡ú/.test(l));
     if (singleLine) {
-      const parts = singleLine.split(/é€€å›|é€è‡³|â†’/).map(s => s.trim());
+      const parts = singleLine.split(/ÍË»Ø|ËÍÖÁ|¡ú/).map(s => s.trim());
       if (parts.length >= 2) {
         if (!result.from && parts[0]) result.from = parts[0];
         for (let i = 1; i < parts.length; i++) {
@@ -735,78 +735,78 @@ function recognize(rawText) {
       }
     }
   }
-  // ä¼˜å…ˆçº§3: å¤šè¡Œæ‰«æ"é€€å›/é€è‡³/â†’" (æ’é™¤è´§ç‰©è¯)
+  // ÓÅÏÈ¼¶3: ¶àĞĞÉ¨Ãè"ÍË»Ø/ËÍÖÁ/¡ú" (ÅÅ³ı»õÎï´Ê)
   if (!result.from || !result.to) {
     for (const line of lines) {
-      if (/é€€å›|é€è‡³|â†’/.test(line) && line.length > 3 && line.length < 50) {
-        const parts = line.split(/é€€å›|é€è‡³|â†’/).map(s => s.trim());
+      if (/ÍË»Ø|ËÍÖÁ|¡ú/.test(line) && line.length > 3 && line.length < 50) {
+        const parts = line.split(/ÍË»Ø|ËÍÖÁ|¡ú/).map(s => s.trim());
         if (!result.from && parts[0]) result.from = parts[0];
         if (!result.to && parts[1] && !goodsWordRe.test(parts[1]) && parts[1].length >= 2) result.to = parts[1];
         if (result.from && result.to) break;
       }
     }
   }
-  // ä¼˜å…ˆçº§4: "Xè£…å¥—æ‰£/ç›˜æ‰£" â†’ from, "é€X" â†’ to (ä»¥æœ€åé€è¾¾åœ°ä¸ºå‡†)
-  // æ³¨æ„: "è¿™å°è½¦èŒ‚å—å›¾ä¹¦é¦†è£…å¥—æ‰£" è¿™ç±»å¥å­é‡Œ,å…ˆå»æ‰"è¿™å°è½¦"å‰ç¼€å†æå–åœ°å
+  // ÓÅÏÈ¼¶4: "X×°Ì×¿Û/ÅÌ¿Û" ¡ú from, "ËÍX" ¡ú to (ÒÔ×îºóËÍ´ïµØÎª×¼)
+  // ×¢Òâ: "ÕâÌ¨³µÃ¯ÄÏÍ¼Êé¹İ×°Ì×¿Û" ÕâÀà¾ä×ÓÀï,ÏÈÈ¥µô"ÕâÌ¨³µ"Ç°×ºÔÙÌáÈ¡µØÃû
   if (!result.from) {
-    const m = allText.match(/(?:è¿™å°è½¦|è¿™è½¦)([\u4e00-\u9fa5]{2,15})è£…(å¥—æ‰£|ç›˜æ‰£)/);
+    const m = allText.match(/(?:ÕâÌ¨³µ|Õâ³µ)([\u4e00-\u9fa5]{2,15})×°(Ì×¿Û|ÅÌ¿Û)/);
     if (m && !goodsWordRe.test(m[1])) result.from = m[1];
     if (!result.from) {
-      const m2 = allText.match(/([\u4e00-\u9fa5]{2,15})è£…(å¥—æ‰£|ç›˜æ‰£)/);
-      if (m2 && !goodsWordRe.test(m2[1]) && !/è½¦/.test(m2[1])) result.from = m2[1];
+      const m2 = allText.match(/([\u4e00-\u9fa5]{2,15})×°(Ì×¿Û|ÅÌ¿Û)/);
+      if (m2 && !goodsWordRe.test(m2[1]) && !/³µ/.test(m2[1])) result.from = m2[1];
     }
   }
   if (!result.to) {
-    const m = allText.match(/é€([\u4e00-\u9fa5]{2,15})/);
+    const m = allText.match(/ËÍ([\u4e00-\u9fa5]{2,15})/);
     if (m && !goodsWordRe.test(m[1])) result.to = m[1];
   }
-  // ä¼˜å…ˆçº§5: å…¨æ–‡åŒ¹é…"Xé€€å›/é€è‡³Y"
+  // ÓÅÏÈ¼¶5: È«ÎÄÆ¥Åä"XÍË»Ø/ËÍÖÁY"
   if (!result.from || !result.to) {
-    const fullLine = allText.match(/([\u4e00-\u9fa5]{2,20})(?:é€€å›|é€è‡³|â†’)([\u4e00-\u9fa5]{2,20})/);
+    const fullLine = allText.match(/([\u4e00-\u9fa5]{2,20})(?:ÍË»Ø|ËÍÖÁ|¡ú)([\u4e00-\u9fa5]{2,20})/);
     if (fullLine) {
       if (!result.from) result.from = fullLine[1];
       if (!result.to && !goodsWordRe.test(fullLine[2])) result.to = fullLine[2];
     }
   }
 
-  // è¿‡ç£…é‡é‡
-  const weightWithLabel = allText.match(/(?:è¿‡ç£…|ç£…å•|é‡é‡)[^\d]*(\d+)/);
+  // ¹ı°õÖØÁ¿
+  const weightWithLabel = allText.match(/(?:¹ı°õ|°õµ¥|ÖØÁ¿)[^\d]*(\d+)/);
   if (weightWithLabel) result.weight = weightWithLabel[1];
-  else { const w = allText.match(/(?:å…¬æ–¤|kg|KG)[^\d]*(\d+)/); if (w) result.weight = w[1]; }
+  else { const w = allText.match(/(?:¹«½ï|kg|KG)[^\d]*(\d+)/); if (w) result.weight = w[1]; }
 
-  // å¤‡æ³¨:æ™ºèƒ½æå–å«å…³é”®è¯çš„æè¿°å¥,å¹¶åˆå¹¶è·¨è¡Œçš„è£…-é€-æ¢æè¿°
+  // ±¸×¢:ÖÇÄÜÌáÈ¡º¬¹Ø¼ü´ÊµÄÃèÊö¾ä,²¢ºÏ²¢¿çĞĞµÄ×°-ËÍ-»»ÃèÊö
   const noteSentences = [];
-  const kwRe = /(æ¢è´§|è½¬é€|å†é€|å›å»|å…ˆé€|åé€|å†èµ°|ä»“åº“æ¢|æ¢å¤´|å¸¦è£…)/;
-  // 1. å…³é”®è¯å•è¡ŒåŒ¹é…
+  const kwRe = /(»»»õ|×ªËÍ|ÔÙËÍ|»ØÈ¥|ÏÈËÍ|ºóËÍ|ÔÙ×ß|²Ö¿â»»|»»Í·|´ø×°)/;
+  // 1. ¹Ø¼ü´Êµ¥ĞĞÆ¥Åä
   for (const line of lines) {
     if (line.length >= 6 && kwRe.test(line)) {
       if (!noteSentences.includes(line)) noteSentences.push(line);
     }
   }
-  // 2. "ä¸€è£…Xå¸" æ•´å¥(å¦‚"ä¸€è£…äºŒå¸")
-  const m1 = allText.match(/ä¸€è£…[ä¸€äºŒä¸‰å››äº”å…­ä¸ƒå…«ä¹å\d+]+å¸[^\n]*/);
+  // 2. "Ò»×°XĞ¶" Õû¾ä(Èç"Ò»×°¶şĞ¶")
+  const m1 = allText.match(/Ò»×°[Ò»¶şÈıËÄÎåÁùÆß°Ë¾ÅÊ®\d+]+Ğ¶[^\n]*/);
   if (m1 && !noteSentences.includes(m1[0].trim())) noteSentences.push(m1[0].trim());
-  // 3. è·¨è¡Œåˆå¹¶å™è¿°å‹è£…-é€æ–‡æœ¬(å¦‚ "è¿™å°è½¦èŒ‚å—å›¾ä¹¦é¦†è£…å¥—æ‰£ï¼Œå›èŒ‚åä»“åº“æ¢è´§ï¼Œ\né€å¼€å¹³é¹å³°")
-  // å¦‚æœèƒ½åˆå¹¶,å°±è·³è¿‡åŸå¥é‡å¤æ·»åŠ 
+  // 3. ¿çĞĞºÏ²¢ĞğÊöĞÍ×°-ËÍÎÄ±¾(Èç "ÕâÌ¨³µÃ¯ÄÏÍ¼Êé¹İ×°Ì×¿Û£¬»ØÃ¯Ãû²Ö¿â»»»õ£¬\nËÍ¿ªÆ½Åô·å")
+  // Èç¹ûÄÜºÏ²¢,¾ÍÌø¹ıÔ­¾äÖØ¸´Ìí¼Ó
   let merged = false;
   for (let i = 0; i < lines.length - 1; i++) {
     const cur = lines[i];
     const nxt = lines[i+1];
     if (cur.length < 8 || nxt.length < 2) continue;
-    const curIsNarrative = /(è¿™å°è½¦|è¿™è½¦).*?(è£….*?(å¥—æ‰£|ç›˜æ‰£)|é€€è´§|æ¢è´§)/.test(cur);
-    const nxtHasGo = /^[é€è‡³å»]/.test(nxt) || /^é€[^\s]/.test(nxt);
+    const curIsNarrative = /(ÕâÌ¨³µ|Õâ³µ).*?(×°.*?(Ì×¿Û|ÅÌ¿Û)|ÍË»õ|»»»õ)/.test(cur);
+    const nxtHasGo = /^[ËÍÖÁÈ¥]/.test(nxt) || /^ËÍ[^\s]/.test(nxt);
     if (curIsNarrative && (nxtHasGo || (result.to && nxt.includes(result.to)))) {
-      const combined = cur + (cur.endsWith('ï¼Œ') || cur.endsWith(',') ? '' : 'ï¼Œ') + nxt;
+      const combined = cur + (cur.endsWith('£¬') || cur.endsWith(',') ? '' : '£¬') + nxt;
       if (!noteSentences.includes(combined)) noteSentences.push(combined);
-      // ä»noteSentencesç§»é™¤åŸå¥
+      // ´ÓnoteSentencesÒÆ³ıÔ­¾ä
       const idx = noteSentences.indexOf(cur);
       if (idx >= 0) noteSentences.splice(idx, 1);
       merged = true;
     }
   }
-  if (noteSentences.length > 0) result.note = noteSentences.join('ï¼›');
+  if (noteSentences.length > 0) result.note = noteSentences.join('£»');
 
-  // æ ¸å¿ƒå­—æ®µå…¨ç©º â†’ æ•´æ®µè¯†åˆ«å¤±è´¥,ç”¨äºå¼¹çª—æç¤º
+  // ºËĞÄ×Ö¶ÎÈ«¿Õ ¡ú Õû¶ÎÊ¶±ğÊ§°Ü,ÓÃÓÚµ¯´°ÌáÊ¾
   result.allEmpty = !result.plateMain && !result.name && !result.from && !result.to && !result.goods && !result.freight;
 
   return result;
@@ -817,7 +817,7 @@ function updateTon() {
   const el = document.getElementById('tonDisplay');
   if (!v || isNaN(v) || Number(v) <= 0) { el.textContent = ''; return; }
   const t = (Number(v) / 1000).toFixed(2);
-  el.textContent = ' = ' + t + ' å¨';
+  el.textContent = ' = ' + t + ' ¶Ö';
 }
 
 function doRecognize() {
@@ -843,45 +843,45 @@ function doRecognize() {
   document.querySelectorAll('.goods-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('otherWrap').classList.remove('show');
   selectedGoods = '';
-  if (r.goods === 'ç›˜æ‰£' || r.goods === 'å¥—æ‰£') { document.querySelectorAll('.goods-btn').forEach(b => { if (b.textContent.trim() === r.goods) b.classList.add('active'); }); selectedGoods = r.goods; }
-  else if (r.goods && r.goods !== 'å…¶ä»–') { selectedGoods = r.goodsRaw || 'å…¶ä»–'; document.querySelectorAll('.goods-btn').forEach(b => { if (b.textContent.trim() === 'å…¶ä»–') b.classList.add('active'); }); document.getElementById('otherWrap').classList.add('show'); document.getElementById('fGoodsOther').value = r.goods; }
+  if (r.goods === 'ÅÌ¿Û' || r.goods === 'Ì×¿Û') { document.querySelectorAll('.goods-btn').forEach(b => { if (b.textContent.trim() === r.goods) b.classList.add('active'); }); selectedGoods = r.goods; }
+  else if (r.goods && r.goods !== 'ÆäËû') { selectedGoods = r.goodsRaw || 'ÆäËû'; document.querySelectorAll('.goods-btn').forEach(b => { if (b.textContent.trim() === 'ÆäËû') b.classList.add('active'); }); document.getElementById('otherWrap').classList.add('show'); document.getElementById('fGoodsOther').value = r.goods; }
   const resultEl = document.getElementById('recognizeResult');
-  // ç»¿å‹¾/ç°æ¨ªæ‘˜è¦:ç‚¹æœªè¯†åˆ«å­—æ®µå¯è·³è½¬åˆ°å¯¹åº”è¾“å…¥æ¡†
+  // ÂÌ¹´/»ÒºáÕªÒª:µãÎ´Ê¶±ğ×Ö¶Î¿ÉÌø×ªµ½¶ÔÓ¦ÊäÈë¿ò
   const fieldList = [
-    {label:'æ—¥æœŸ', val:r.date, key:'fDate'}, {label:'ä¸»è½¦', val:r.plateMain, key:'fPlateMain'},
-    {label:'æŒ‚è½¦', val:r.plateTrailer, key:'fPlateTrailer'}, {label:'å§“å', val:r.name, key:'fName'},
-    {label:'æ‰‹æœº', val:r.phone, key:'fPhone'}, {label:'èº«ä»½è¯', val:r.idCard, key:'fIdCard'},
-    {label:'è¿è´¹', val:r.freight ? r.freight + 'å…ƒ' : '', key:'fFreight'},
-    {label:'è£…è´§åœ°', val:r.from, key:'fFrom'}, {label:'æ”¶è´§åœ°', val:r.to, key:'fTo'},
-    {label:'è´§ç‰©', val:r.goods, key:'goods'}, {label:'å¤‡æ³¨', val:r.note, key:'fNote'}
+    {label:'ÈÕÆÚ', val:r.date, key:'fDate'}, {label:'Ö÷³µ', val:r.plateMain, key:'fPlateMain'},
+    {label:'¹Ò³µ', val:r.plateTrailer, key:'fPlateTrailer'}, {label:'ĞÕÃû', val:r.name, key:'fName'},
+    {label:'ÊÖ»ú', val:r.phone, key:'fPhone'}, {label:'Éí·İÖ¤', val:r.idCard, key:'fIdCard'},
+    {label:'ÔË·Ñ', val:r.freight ? r.freight + 'Ôª' : '', key:'fFreight'},
+    {label:'×°»õµØ', val:r.from, key:'fFrom'}, {label:'ÊÕ»õµØ', val:r.to, key:'fTo'},
+    {label:'»õÎï', val:r.goods, key:'goods'}, {label:'±¸×¢', val:r.note, key:'fNote'}
   ];
   const filled = fieldList.filter(f => f.val);
   const empty = fieldList.filter(f => !f.val);
   const fieldChip = (f, isFilled) => '<span class="rec-field ' + (isFilled ? 'filled' : 'empty') + '" onclick="focusField(\'' + f.key + '\')">' + f.label + (f.val ? ' ' + f.val : '') + '</span>';
-  const filledHtml = filled.length ? '<span style="color:#2e7d32">âœ…</span>' + filled.map(f => fieldChip(f, true)).join('') : '<span style="color:#999">â­• å…¨éƒ¨æœªè¯†åˆ«</span>';
-  const emptyHtml = empty.length ? '<div class="rec-row"><span style="color:#999">â­•</span>' + empty.map(f => fieldChip(f, false)).join('') + '</div>' : '';
-  // å¤šå¸è´§ç‚¹å€™é€‰æŒ‰é’®
+  const filledHtml = filled.length ? '<span style="color:#2e7d32">?</span>' + filled.map(f => fieldChip(f, true)).join('') : '<span style="color:#999">? È«²¿Î´Ê¶±ğ</span>';
+  const emptyHtml = empty.length ? '<div class="rec-row"><span style="color:#999">?</span>' + empty.map(f => fieldChip(f, false)).join('') + '</div>' : '';
+  // ¶àĞ¶»õµãºòÑ¡°´Å¥
   let toCandidatesHtml = '';
   if (r.toCandidates && r.toCandidates.length >= 2) {
-    toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">ğŸ“ å¤šæ”¶è´§åœ°å€™é€‰(ç‚¹é€‰åˆ‡æ¢):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" onclick="pickToCandidate(\'' + c.replace(/'/g, "\\'") + '\')">' + c + '</button>').join('') + '</div>';
+    toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">?? ¶àÊÕ»õµØºòÑ¡(µãÑ¡ÇĞ»»):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" onclick="pickToCandidate(\'' + c.replace(/'/g, "\\'") + '\')">' + c + '</button>').join('') + '</div>';
   }
   resultEl.innerHTML = '<div class="rec-summary"><div class="rec-row">' + filledHtml + '</div>' + emptyHtml + toCandidatesHtml + '</div>';
   resultEl.style.display = 'block';
-  // æ•´æ®µæ²¡è¯†åˆ« â†’ å¼¹çª—æç¤º(å…œåº•)
+  // Õû¶ÎÃ»Ê¶±ğ ¡ú µ¯´°ÌáÊ¾(¶µµ×)
   if (r.allEmpty) {
     setTimeout(() => {
-      if (confirm('è¿™æ®µæ–‡æœ¬æ²¡æœ‰è¯†åˆ«å‡ºä»»ä½•å…³é”®å­—æ®µ,å¯èƒ½æ˜¯æ ¼å¼ä¸ä¸€æ ·ã€‚\n\nç‚¹"ç¡®å®š"é‡æ–°ç²˜è´´æ–‡æœ¬,ç‚¹"å–æ¶ˆ"ç»§ç»­æ‰‹åŠ¨å¡«å†™ã€‚')) {
+      if (confirm('Õâ¶ÎÎÄ±¾Ã»ÓĞÊ¶±ğ³öÈÎºÎ¹Ø¼ü×Ö¶Î,¿ÉÄÜÊÇ¸ñÊ½²»Ò»Ñù¡£\n\nµã"È·¶¨"ÖØĞÂÕ³ÌùÎÄ±¾,µã"È¡Ïû"¼ÌĞøÊÖ¶¯ÌîĞ´¡£')) {
         document.getElementById('pasteArea').focus();
       }
     }, 200);
   }
-  toast('è¯†åˆ«å®Œæˆ,è¯·æ ¸å¯¹åæäº¤', true);
+  toast('Ê¶±ğÍê³É,ÇëºË¶ÔºóÌá½»', true);
 }
 
-// ç‚¹æœªè¯†åˆ«å­—æ®µ â†’ è·³åˆ°å¯¹åº”è¾“å…¥æ¡†
+// µãÎ´Ê¶±ğ×Ö¶Î ¡ú Ìøµ½¶ÔÓ¦ÊäÈë¿ò
 function focusField(id) {
   let el = document.getElementById(id);
-  // è´§ç‰©æŒ‰é’®ç»„ç‰¹æ®Šå¤„ç†
+  // »õÎï°´Å¥×éÌØÊâ´¦Àí
   if (id === 'goods') {
     el = document.getElementById('goodsBtns');
   }
@@ -891,11 +891,11 @@ function focusField(id) {
   }
 }
 
-// å¤šæ”¶è´§åœ°å€™é€‰æŒ‰é’®:ç‚¹å“ªä¸ªå¡«å“ªä¸ª
+// ¶àÊÕ»õµØºòÑ¡°´Å¥:µãÄÄ¸öÌîÄÄ¸ö
 function pickToCandidate(addr) {
   document.getElementById('fTo').value = addr;
   document.querySelectorAll('.rec-candidate').forEach(b => b.classList.toggle('active', b.textContent === addr));
-  toast('å·²å¡«æ”¶è´§åœ°:' + addr, true);
+  toast('ÒÑÌîÊÕ»õµØ:' + addr, true);
 }
 
 function selectType(el, type) {
@@ -910,15 +910,15 @@ function selectGoods(el, type) {
   el.classList.add('active');
   selectedGoods = type;
   const wrap = document.getElementById('otherWrap');
-  if (type === 'å…¶ä»–') { wrap.classList.add('show'); document.getElementById('fGoodsOther').focus(); }
+  if (type === 'ÆäËû') { wrap.classList.add('show'); document.getElementById('fGoodsOther').focus(); }
   else { wrap.classList.remove('show'); document.getElementById('fGoodsOther').value = ''; }
 }
 
 async function doSubmit() {
   const plate = document.getElementById('fPlateMain').value.trim();
   const from = document.getElementById('fFrom').value.trim();
-  if (!plate) { toast('è¯·å¡«å†™ä¸»è½¦è½¦ç‰Œ'); return; }
-  const goodsDisplay = selectedGoods === 'å…¶ä»–' ? (document.getElementById('fGoodsOther').value.trim() || 'å…¶ä»–') : (selectedGoods || 'å¾…å¡«');
+  if (!plate) { toast('ÇëÌîĞ´Ö÷³µ³µÅÆ'); return; }
+  const goodsDisplay = selectedGoods === 'ÆäËû' ? (document.getElementById('fGoodsOther').value.trim() || 'ÆäËû') : (selectedGoods || '´ıÌî');
   const r = {
     date: document.getElementById('fDate').value || formatDate(new Date()),
     plateMain: plate,
@@ -942,48 +942,48 @@ async function doSubmit() {
     freight: r.freight, weight: r.weight, weigh_fee: r.weighFee,
     notice: generateNotice(r)
   };
-  // ä»¥ä¸‹æ˜¯å¯é€‰å­—æ®µ(å¯èƒ½åœ¨æŸäº›ç‰ˆæœ¬ä¸å­˜åœ¨,è‡ªåŠ¨å»é‡)
+  // ÒÔÏÂÊÇ¿ÉÑ¡×Ö¶Î(¿ÉÄÜÔÚÄ³Ğ©°æ±¾²»´æÔÚ,×Ô¶¯È¥ÖØ)
   if (r.note) record.note = r.note;
   if (r.deliveryType) record.delivery_type = r.deliveryType;
-  // æ£€æµ‹ç½‘ç»œ:åœ¨çº¿åˆ™æ­£å¸¸æäº¤,ç¦»çº¿åˆ™å­˜æœ¬åœ°é˜Ÿåˆ—
+  // ¼ì²âÍøÂç:ÔÚÏßÔòÕı³£Ìá½»,ÀëÏßÔò´æ±¾µØ¶ÓÁĞ
   if (!navigator.onLine) {
     saveOfflineRecord(record);
-    toast('ğŸ“´ ç¦»çº¿æ¨¡å¼:å·²å­˜æœ¬åœ°,æœ‰ç½‘åè‡ªåŠ¨åŒæ­¥', false);
+    toast('?? ÀëÏßÄ£Ê½:ÒÑ´æ±¾µØ,ÓĞÍøºó×Ô¶¯Í¬²½', false);
     resetForm();
     setTimeout(() => { loadRecords(); showList(); }, 600);
     return;
   }
-  // åœ¨çº¿æäº¤(å¸¦æœ€å¤š2æ¬¡é‡è¯•:æ¯æ¬¡å‡ºç°æœªçŸ¥åˆ—é”™è¯¯éƒ½å»æ‰è¯¥åˆ—)
+  // ÔÚÏßÌá½»(´ø×î¶à2´ÎÖØÊÔ:Ã¿´Î³öÏÖÎ´ÖªÁĞ´íÎó¶¼È¥µô¸ÃÁĞ)
   let { error } = await supabaseClient.from('records').insert([record]);
   let retryCount = 0;
   while (error && /Could not find the '([\w_]+)' column/i.test(error.message) && retryCount < 3) {
     const m = error.message.match(/Could not find the '([\w_]+)' column/i);
     const colName = m[1];
-    if (record[colName] === undefined) break;  // å·²ç»æ²¡äº†,è·³å‡º
+    if (record[colName] === undefined) break;  // ÒÑ¾­Ã»ÁË,Ìø³ö
     delete record[colName];
-    console.warn('åˆ— ' + colName + ' ä¸å­˜åœ¨,å·²ç§»é™¤é‡è¯•');
+    console.warn('ÁĞ ' + colName + ' ²»´æÔÚ,ÒÑÒÆ³ıÖØÊÔ');
     const retry = await supabaseClient.from('records').insert([record]);
     error = retry.error;
     retryCount++;
   }
   if (error) {
-    // ç½‘ç»œæŠ¥é”™(å¯èƒ½æ˜¯ä¸´æ—¶æ–­ç½‘) â†’ ä¹Ÿå­˜æœ¬åœ°
+    // ÍøÂç±¨´í(¿ÉÄÜÊÇÁÙÊ±¶ÏÍø) ¡ú Ò²´æ±¾µØ
     if (/fetch|network|timeout|ENOTFOUND|connection/i.test(error.message)) {
       saveOfflineRecord(record);
-      toast('ğŸ“´ ç½‘ç»œå¼‚å¸¸:å·²å­˜æœ¬åœ°,æœ‰ç½‘åè‡ªåŠ¨åŒæ­¥', false);
+      toast('?? ÍøÂçÒì³£:ÒÑ´æ±¾µØ,ÓĞÍøºó×Ô¶¯Í¬²½', false);
       resetForm();
       setTimeout(() => { loadRecords(); showList(); }, 600);
       return;
     }
-    toast('æäº¤å¤±è´¥:' + error.message, false, true);
+    toast('Ìá½»Ê§°Ü:' + error.message, false, true);
     return;
   }
-  toast('å·²ç™»è®° âœ“', true);
+  toast('ÒÑµÇ¼Ç ?', true);
   resetForm();
   setTimeout(() => { loadRecords(); showList(); }, 600);
 }
 
-// ===== ç¦»çº¿ç¼“å­˜ =====
+// ===== ÀëÏß»º´æ =====
 const OFFLINE_KEY = 'truck_offline_queue';
 function getOfflineQueue() {
   try { return JSON.parse(localStorage.getItem(OFFLINE_KEY) || '[]'); } catch (e) { return []; }
@@ -994,13 +994,13 @@ function saveOfflineQueue(q) {
 }
 function saveOfflineRecord(record) {
   const q = getOfflineQueue();
-  // æœ¬åœ°ä¸´æ—¶ID,ç”¨äºåŒæ­¥åèƒ½è¯†åˆ«
+  // ±¾µØÁÙÊ±ID,ÓÃÓÚÍ¬²½ºóÄÜÊ¶±ğ
   record._offline_id = 'offline_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
   record._offline_time = new Date().toISOString();
   q.push(record);
   saveOfflineQueue(q);
 }
-// åŒæ­¥ç¦»çº¿é˜Ÿåˆ—(ç½‘ç»œæ¢å¤æ—¶è‡ªåŠ¨è°ƒç”¨)
+// Í¬²½ÀëÏß¶ÓÁĞ(ÍøÂç»Ö¸´Ê±×Ô¶¯µ÷ÓÃ)
 async function syncOfflineQueue() {
   let q = getOfflineQueue();
   if (q.length === 0) { updateOfflineBadge(); return; }
@@ -1014,9 +1014,9 @@ async function syncOfflineQueue() {
     delete cleanRec._offline_time;
     const { error } = await supabaseClient.from('records').insert([cleanRec]);
     if (error) {
-      // å¤±è´¥(é™¤äº†åˆ—ä¸å­˜åœ¨çš„),ç•™åœ¨é˜Ÿåˆ—
+      // Ê§°Ü(³ıÁËÁĞ²»´æÔÚµÄ),ÁôÔÚ¶ÓÁĞ
       if (/Could not find the '([\w_]+)' column/i.test(error.message)) {
-        // åˆ—ä¸å­˜åœ¨ â†’ åˆ é™¤è¯¥å­—æ®µé‡è¯•
+        // ÁĞ²»´æÔÚ ¡ú É¾³ı¸Ã×Ö¶ÎÖØÊÔ
         const m = error.message.match(/Could not find the '([\w_]+)' column/i);
         if (cleanRec[m[1]] !== undefined) {
           delete cleanRec[m[1]];
@@ -1031,101 +1031,101 @@ async function syncOfflineQueue() {
     }
   }
   saveOfflineQueue(remain);
-  if (synced > 0) toast('ğŸ”„ å·²åŒæ­¥ ' + synced + ' æ¡ç¦»çº¿è®°å½•' + (failed > 0 ? ',è¿˜æœ‰ ' + failed + ' æ¡å¾…åŒæ­¥' : ''), true);
-  else if (failed > 0) toast('åŒæ­¥å¤±è´¥,' + failed + ' æ¡å¾…é‡è¯•', false, true);
-  // åŒæ­¥ååˆ·æ–°åˆ—è¡¨
+  if (synced > 0) toast('?? ÒÑÍ¬²½ ' + synced + ' ÌõÀëÏß¼ÇÂ¼' + (failed > 0 ? ',»¹ÓĞ ' + failed + ' Ìõ´ıÍ¬²½' : ''), true);
+  else if (failed > 0) toast('Í¬²½Ê§°Ü,' + failed + ' Ìõ´ıÖØÊÔ', false, true);
+  // Í¬²½ºóË¢ĞÂÁĞ±í
   if (synced > 0) loadRecords();
 }
-// é¡¶éƒ¨ç¦»çº¿çŠ¶æ€å¾½ç« 
+// ¶¥²¿ÀëÏß×´Ì¬»ÕÕÂ
 function updateOfflineBadge() {
   const q = getOfflineQueue();
   let badge = document.getElementById('offlineBadge');
   if (!badge) return;
   if (q.length > 0) {
-    badge.innerHTML = '<span class="offline-badge">ğŸ“´ å¾…åŒæ­¥ ' + q.length + '</span>';
+    badge.innerHTML = '<span class="offline-badge">?? ´ıÍ¬²½ ' + q.length + '</span>';
     badge.style.display = 'inline';
   } else {
     badge.style.display = 'none';
   }
 }
-// ç›‘å¬ç½‘ç»œçŠ¶æ€å˜åŒ–
+// ¼àÌıÍøÂç×´Ì¬±ä»¯
 window.addEventListener('online', () => {
-  toast('âœ… ç½‘ç»œå·²æ¢å¤,å¼€å§‹åŒæ­¥ç¦»çº¿æ•°æ®', true);
+  toast('? ÍøÂçÒÑ»Ö¸´,¿ªÊ¼Í¬²½ÀëÏßÊı¾İ', true);
   syncOfflineQueue();
 });
 window.addEventListener('offline', () => {
-  toast('ğŸ“´ ç½‘ç»œå·²æ–­å¼€,æ–°æ•°æ®å°†å­˜æœ¬åœ°', false);
+  toast('?? ÍøÂçÒÑ¶Ï¿ª,ĞÂÊı¾İ½«´æ±¾µØ', false);
 });
 
-// ===== ä½¿ç”¨è¯´æ˜ =====
+// ===== Ê¹ÓÃËµÃ÷ =====
 function showHelp() {
   const html = `
 <div style="max-width:560px;max-height:75vh;overflow-y:auto;padding:4px 8px;line-height:1.7;font-size:14px;color:#333;text-align:left">
-  <h3 style="margin:0 0 8px;color:#1565c0">ğŸ“– è£…è´§ç™»è®°ä½¿ç”¨è¯´æ˜</h3>
-  <p style="color:#888;font-size:12px;margin:0 0 12px">æœ¬å·¥å…·ç”¨æ¥åœ¨æ‰‹æœºä¸Šå¿«é€Ÿç™»è®°è´§è½¦è£…è´§ä¿¡æ¯,æ•°æ®äº‘ç«¯åŒæ­¥,å¤šæœºå…±äº«ã€‚</p>
-  <h4 style="margin:12px 0 4px;color:#1565c0">ä¸€ã€ç™»è®°æ–°è®°å½•</h4>
+  <h3 style="margin:0 0 8px;color:#1565c0">?? ×°»õµÇ¼ÇÊ¹ÓÃËµÃ÷</h3>
+  <p style="color:#888;font-size:12px;margin:0 0 12px">±¾¹¤¾ßÓÃÀ´ÔÚÊÖ»úÉÏ¿ìËÙµÇ¼Ç»õ³µ×°»õĞÅÏ¢,Êı¾İÔÆ¶ËÍ¬²½,¶à»ú¹²Ïí¡£</p>
+  <h4 style="margin:12px 0 4px;color:#1565c0">Ò»¡¢µÇ¼ÇĞÂ¼ÇÂ¼</h4>
   <ol style="margin:0 0 8px;padding-left:22px">
-    <li>ç‚¹åº•éƒ¨ã€Œ<b>+ æ–°å¢ç™»è®°</b>ã€</li>
-    <li>ä»å¾®ä¿¡å¤åˆ¶å¸æœºå‘æ¥çš„è£…è´§ä¿¡æ¯(å¯å«è½¦ç‰Œã€å§“åã€è£…è´§åœ°ã€æ”¶è´§åœ°ã€è¿è´¹ç­‰)</li>
-    <li>ç‚¹ã€Œ<b>ğŸ” ä¸€é”®è¯†åˆ«</b>ã€æŒ‰é’®,å·¥å…·ä¼šè‡ªåŠ¨å¡«å…¥èƒ½è¯†åˆ«çš„å­—æ®µ</li>
-    <li>è¡¥å…¨å¿…å¡«é¡¹:<b>ä¸»è½¦è½¦ç‰Œ</b> + <b>è£…è´§åœ°</b> + <b>æ—¥æœŸ</b> + <b>è´§ç‰©</b> + <b>è¿è´¹</b></li>
-    <li>ç‚¹ã€Œ<b>æäº¤ç™»è®°</b>ã€,åˆ—è¡¨è‡ªåŠ¨åˆ·æ–°</li>
+    <li>µãµ×²¿¡¸<b>+ ĞÂÔöµÇ¼Ç</b>¡¹</li>
+    <li>´ÓÎ¢ĞÅ¸´ÖÆË¾»ú·¢À´µÄ×°»õĞÅÏ¢(¿Éº¬³µÅÆ¡¢ĞÕÃû¡¢×°»õµØ¡¢ÊÕ»õµØ¡¢ÔË·ÑµÈ)</li>
+    <li>µã¡¸<b>?? Ò»¼üÊ¶±ğ</b>¡¹°´Å¥,¹¤¾ß»á×Ô¶¯ÌîÈëÄÜÊ¶±ğµÄ×Ö¶Î</li>
+    <li>²¹È«±ØÌîÏî:<b>Ö÷³µ³µÅÆ</b> + <b>×°»õµØ</b> + <b>ÈÕÆÚ</b> + <b>»õÎï</b> + <b>ÔË·Ñ</b></li>
+    <li>µã¡¸<b>Ìá½»µÇ¼Ç</b>¡¹,ÁĞ±í×Ô¶¯Ë¢ĞÂ</li>
   </ol>
-  <h4 style="margin:12px 0 4px;color:#1565c0">äºŒã€ç”Ÿæˆé€šçŸ¥æ–‡å­—å‘ç¾¤</h4>
+  <h4 style="margin:12px 0 4px;color:#1565c0">¶ş¡¢Éú³ÉÍ¨ÖªÎÄ×Ö·¢Èº</h4>
   <ol style="margin:0 0 8px;padding-left:22px">
-    <li>ç‚¹å¼€ä»»æ„ä¸€æ¡è®°å½•çš„<b>è¯¦æƒ…é¡µ</b></li>
-    <li>ç‚¹ã€Œ<b>ğŸ“‹ å¤åˆ¶é€šçŸ¥</b>ã€</li>
-    <li>åˆ‡æ¢åˆ°å¾®ä¿¡ç¾¤,é•¿æŒ‰è¾“å…¥æ¡†ã€Œç²˜è´´ã€å‘é€</li>
+    <li>µã¿ªÈÎÒâÒ»Ìõ¼ÇÂ¼µÄ<b>ÏêÇéÒ³</b></li>
+    <li>µã¡¸<b>?? ¸´ÖÆÍ¨Öª</b>¡¹</li>
+    <li>ÇĞ»»µ½Î¢ĞÅÈº,³¤°´ÊäÈë¿ò¡¸Õ³Ìù¡¹·¢ËÍ</li>
   </ol>
-  <h4 style="margin:12px 0 4px;color:#1565c0">ä¸‰ã€æŸ¥çœ‹ä¸ç­›é€‰</h4>
+  <h4 style="margin:12px 0 4px;color:#1565c0">Èı¡¢²é¿´ÓëÉ¸Ñ¡</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
-    <li><b>æŒ‰æ—¥æœŸèŒƒå›´</b>:é€‰å¼€å§‹/ç»“æŸæ—¥æœŸ</li>
-    <li><b>æœåœ°ç‚¹/è½¦ç‰Œ/å§“å</b>:åœ¨æœç´¢æ¡†è¾“å…¥å…³é”®å­—(åŒæ—¶åŒ¹é…è´§è½¦ä»ã€æ”¶è´§åœ°ã€è½¦ç‰Œã€å§“å)</li>
-    <li><b>åœ°ç‚¹ç­›é€‰</b>:ä¸‹æ‹‰é€‰æ‹©â€œå…¨éƒ¨åœ°ç‚¹/è£…è´§åœ°/æ”¶è´§åœ°â€</li>
-    <li>ç‚¹ã€Œ<b>é‡ç½®</b>ã€æ¸…é™¤æ‰€æœ‰ç­›é€‰æ¡ä»¶</li>
+    <li><b>°´ÈÕÆÚ·¶Î§</b>:Ñ¡¿ªÊ¼/½áÊøÈÕÆÚ</li>
+    <li><b>ËÑµØµã/³µÅÆ/ĞÕÃû</b>:ÔÚËÑË÷¿òÊäÈë¹Ø¼ü×Ö(Í¬Ê±Æ¥Åä»õ³µ´Ó¡¢ÊÕ»õµØ¡¢³µÅÆ¡¢ĞÕÃû)</li>
+    <li><b>µØµãÉ¸Ñ¡</b>:ÏÂÀ­Ñ¡Ôñ¡°È«²¿µØµã/×°»õµØ/ÊÕ»õµØ¡±</li>
+    <li>µã¡¸<b>ÖØÖÃ</b>¡¹Çå³ıËùÓĞÉ¸Ñ¡Ìõ¼ş</li>
   </ul>
-  <h4 style="margin:12px 0 4px;color:#1565c0">å››ã€è¡¥å¡«/ä¿®æ”¹/åˆ é™¤</h4>
+  <h4 style="margin:12px 0 4px;color:#1565c0">ËÄ¡¢²¹Ìî/ĞŞ¸Ä/É¾³ı</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
-    <li><b>è¡¥å¡«è¿‡ç£…</b>:è¯¦æƒ…é¡µç‚¹ã€Œâœï¸ è¡¥å¡«ã€è¡¥é‡é‡/è¿‡ç£…è´¹</li>
-    <li><b>ä¿®æ”¹</b>:è¯¦æƒ…é¡µç‚¹ã€ŒğŸ“ ä¿®æ”¹ã€å¯æ”¹ä»»æ„å­—æ®µ,æ”¹è¿‡çš„å­—æ®µä¼š<b>æ ‡çº¢åŠ ç²—</b></li>
-    <li><b>åˆ é™¤</b>:è¯¦æƒ…é¡µç‚¹ã€ŒğŸ—‘ åˆ é™¤ã€ç§»åˆ°å›æ”¶ç«™(å¯æ¢å¤)</li>
-    <li><b>å›æ”¶ç«™</b>:åˆ—è¡¨é¡µç‚¹ã€ŒğŸ—‘ å›æ”¶ç«™(N)ã€æŸ¥çœ‹å·²åˆ è®°å½•,ç‚¹ã€Œâ™»ï¸ æ¢å¤ã€è¿˜åŸ</li>
+    <li><b>²¹Ìî¹ı°õ</b>:ÏêÇéÒ³µã¡¸?? ²¹Ìî¡¹²¹ÖØÁ¿/¹ı°õ·Ñ</li>
+    <li><b>ĞŞ¸Ä</b>:ÏêÇéÒ³µã¡¸?? ĞŞ¸Ä¡¹¿É¸ÄÈÎÒâ×Ö¶Î,¸Ä¹ıµÄ×Ö¶Î»á<b>±êºì¼Ó´Ö</b></li>
+    <li><b>É¾³ı</b>:ÏêÇéÒ³µã¡¸?? É¾³ı¡¹ÒÆµ½»ØÊÕÕ¾(¿É»Ö¸´)</li>
+    <li><b>»ØÊÕÕ¾</b>:ÁĞ±íÒ³µã¡¸?? »ØÊÕÕ¾(N)¡¹²é¿´ÒÑÉ¾¼ÇÂ¼,µã¡¸?? »Ö¸´¡¹»¹Ô­</li>
   </ul>
-  <h4 style="margin:12px 0 4px;color:#1565c0">äº”ã€å·²æ”¯ä»˜çŠ¶æ€</h4>
-  <p>è¯¦æƒ…é¡µå‹¾ã€Œâ˜ å·²æ”¯ä»˜ã€è¡¨ç¤ºè¿è´¹å·²ç»“æ¸…ã€‚å–æ¶ˆå‹¾é€‰éœ€è¦<b>ä¸¤æ¬¡ç¡®è®¤</b>(é˜²è¯¯ç‚¹)ã€‚</p>
-  <h4 style="margin:12px 0 4px;color:#1565c0">å…­ã€å¯¼å…¥ä¸å¯¼å‡º</h4>
+  <h4 style="margin:12px 0 4px;color:#1565c0">Îå¡¢ÒÑÖ§¸¶×´Ì¬</h4>
+  <p>ÏêÇéÒ³¹´¡¸? ÒÑÖ§¸¶¡¹±íÊ¾ÔË·ÑÒÑ½áÇå¡£È¡Ïû¹´Ñ¡ĞèÒª<b>Á½´ÎÈ·ÈÏ</b>(·ÀÎóµã)¡£</p>
+  <h4 style="margin:12px 0 4px;color:#1565c0">Áù¡¢µ¼ÈëÓëµ¼³ö</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
-    <li><b>å¤‡ä»½å…¨éƒ¨</b>:ä¸€é”®å¯¼å‡ºæ‰€æœ‰è®°å½•ä¸º Excel CSV(ä¸­æ–‡ä¸ä¹±ç )</li>
-    <li><b>ä¸‹è½½æ¨¡æ¿</b>:ä¸‹è½½ç©ºæ¨¡æ¿(CSV),å¡«å®Œä»ã€Œå¯¼å…¥å†å²ã€ä¸Šä¼ </li>
-    <li><b>æ”¯æŒçš„æ ¼å¼</b>:.csv / .xlsx / .xls å‡å¯ç›´æ¥æ‹–å…¥(Excel æ–‡ä»¶æ— éœ€å¦å­˜ä¸º CSV)</li>
-    <li>ç¼–ç è‡ªåŠ¨è¯†åˆ«: UTF-8(æ¨è) / GBK(Excel ä¸­æ–‡ç‰ˆå¦å­˜å¸¸è§)å‡å¯</li>
-    <li>æŒ‰<b>åˆ—å</b>åŒ¹é…(ä¸æ˜¯åˆ—é¡ºåº),åˆ—åç”¨ã€Œæ—¥æœŸ/ä¸»è½¦/æŒ‚è½¦/å§“å/æ‰‹æœºå·/èº«ä»½è¯å·/è£…è´§åœ°/æ”¶è´§åœ°/è´§ç‰©/è¿è´¹/è¿‡ç£…è´¹/è¿‡ç£…é‡é‡/ç±»å‹/å¤‡æ³¨/å·²æ”¯ä»˜/ä¿®æ”¹æ¬¡æ•°ã€</li>
-    <li>Excel æ—¥æœŸæ”¯æŒ 2025-5-29 / 2025/5/29 / 2025å¹´5æœˆ29æ—¥ å¤šç§å†™æ³•,è‡ªåŠ¨ç»Ÿä¸€</li>
-    <li>å¯¼å…¥æ—¶å¦‚å‘ç°<b>æ—¥æœŸ+ä¸»è½¦è½¦ç‰Œ+é‡é‡</b>ä¸‰è€…é‡å¤,ä¼šè‡ªåŠ¨è·³è¿‡</li>
+    <li><b>±¸·İÈ«²¿</b>:Ò»¼üµ¼³öËùÓĞ¼ÇÂ¼Îª Excel CSV(ÖĞÎÄ²»ÂÒÂë)</li>
+    <li><b>ÏÂÔØÄ£°å</b>:ÏÂÔØ¿ÕÄ£°å(CSV),ÌîÍê´Ó¡¸µ¼ÈëÀúÊ·¡¹ÉÏ´«</li>
+    <li><b>Ö§³ÖµÄ¸ñÊ½</b>:.csv / .xlsx / .xls ¾ù¿ÉÖ±½ÓÍÏÈë(Excel ÎÄ¼şÎŞĞèÁí´æÎª CSV)</li>
+    <li>±àÂë×Ô¶¯Ê¶±ğ: UTF-8(ÍÆ¼ö) / GBK(Excel ÖĞÎÄ°æÁí´æ³£¼û)¾ù¿É</li>
+    <li>°´<b>ÁĞÃû</b>Æ¥Åä(²»ÊÇÁĞË³Ğò),ÁĞÃûÓÃ¡¸ÈÕÆÚ/Ö÷³µ/¹Ò³µ/ĞÕÃû/ÊÖ»úºÅ/Éí·İÖ¤ºÅ/×°»õµØ/ÊÕ»õµØ/»õÎï/ÔË·Ñ/¹ı°õ·Ñ/¹ı°õÖØÁ¿/ÀàĞÍ/±¸×¢/ÒÑÖ§¸¶/ĞŞ¸Ä´ÎÊı¡¹</li>
+    <li>Excel ÈÕÆÚÖ§³Ö 2025-5-29 / 2025/5/29 / 2025Äê5ÔÂ29ÈÕ ¶àÖÖĞ´·¨,×Ô¶¯Í³Ò»</li>
+    <li>µ¼ÈëÊ±Èç·¢ÏÖ<b>ÈÕÆÚ+Ö÷³µ³µÅÆ+ÖØÁ¿+ÀàĞÍ</b>ËÄÕßÖØ¸´,»á×Ô¶¯Ìø¹ı</li>
   </ul>
-  <h4 style="margin:12px 0 4px;color:#1565c0">ä¸ƒã€ç¦»çº¿ä½¿ç”¨</h4>
-  <p>å·¥åœ°æ²¡ç½‘ä¹Ÿèƒ½ç”¨!<br>
-    ğŸ”´ æ–­ç½‘æ—¶æäº¤ â†’ æç¤ºã€ŒğŸ“´ ç¦»çº¿æ¨¡å¼ã€,æ•°æ®å­˜æœ¬æœº<br>
-    ğŸŸ¢ æ¢å¤ç½‘ç»œ â†’ è‡ªåŠ¨åŒæ­¥,æç¤ºã€ŒğŸ”„ å·²åŒæ­¥ N æ¡ã€<br>
-    åŒæ­¥çŠ¶æ€çœ‹é¡µé¢åº•éƒ¨<b>æ©™è‰²ã€ŒğŸ“´ å¾…åŒæ­¥ Nã€</b>å¾½ç« </p>
-  <h4 style="margin:12px 0 4px;color:#1565c0">å…«ã€å¯†ç è¯´æ˜</h4>
+  <h4 style="margin:12px 0 4px;color:#1565c0">Æß¡¢ÀëÏßÊ¹ÓÃ</h4>
+  <p>¹¤µØÃ»ÍøÒ²ÄÜÓÃ!<br>
+    ?? ¶ÏÍøÊ±Ìá½» ¡ú ÌáÊ¾¡¸?? ÀëÏßÄ£Ê½¡¹,Êı¾İ´æ±¾»ú<br>
+    ?? »Ö¸´ÍøÂç ¡ú ×Ô¶¯Í¬²½,ÌáÊ¾¡¸?? ÒÑÍ¬²½ N Ìõ¡¹<br>
+    Í¬²½×´Ì¬¿´Ò³Ãæµ×²¿<b>³ÈÉ«¡¸?? ´ıÍ¬²½ N¡¹</b>»ÕÕÂ</p>
+  <h4 style="margin:12px 0 4px;color:#1565c0">°Ë¡¢ÃÜÂëËµÃ÷</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
-    <li><b>ç™»å½•å¯†ç </b>:æ‰“å¼€é¡µé¢è¦è¾“,30 å¤©å…è¾“</li>
-    <li><b>æ¸…ç©ºå¯†ç </b>:æ¸…ç©ºå…¨éƒ¨æ•°æ®æ—¶å•ç‹¬è¦,ç‹¬ç«‹äºç™»å½•å¯†ç </li>
-    <li>ç‚¹é¡µé¢åº•éƒ¨ã€Œ<b>é‡æ–°ç™»å½•</b>ã€å¯é€€å‡ºå½“å‰è´¦å·</li>
+    <li><b>µÇÂ¼ÃÜÂë</b>:´ò¿ªÒ³ÃæÒªÊä,30 ÌìÃâÊä</li>
+    <li><b>Çå¿ÕÃÜÂë</b>:Çå¿ÕÈ«²¿Êı¾İÊ±µ¥¶ÀÒª,¶ÀÁ¢ÓÚµÇÂ¼ÃÜÂë</li>
+    <li>µãÒ³Ãæµ×²¿¡¸<b>ÖØĞÂµÇÂ¼</b>¡¹¿ÉÍË³öµ±Ç°ÕËºÅ</li>
   </ul>
-  <h4 style="margin:12px 0 4px;color:#1565c0">ä¹ã€å¸¸è§é—®é¢˜</h4>
-  <p><b>Q: è¯†åˆ«æ²¡å¡«ä¸Šå­—æ®µ?</b><br>
-    A: å¸æœºä¿¡æ¯æ ¼å¼å¤ªç‰¹æ®Š,æ‰‹åŠ¨è¡¥å¡«å³å¯,ä¸å½±å“å…¶ä»–å­—æ®µä¿å­˜ã€‚</p>
-  <p><b>Q: åŒä¸€å¸æœºç¬¬äºŒæ¬¡æ¥æ€ä¹ˆè‡ªåŠ¨å¸¦å‡ºå§“åæ‰‹æœº?</b><br>
-    A: è¾“å…¥ä¸»è½¦è½¦ç‰Œå 0.5 ç§’,å·¥å…·ä¼šä»å†å²è®°å½•é‡ŒæŸ¥åŒè½¦ç‰Œæœ€è¿‘ä¸€æ¡,è‡ªåŠ¨å¡«ä¸Šå§“å/æ‰‹æœº/èº«ä»½è¯ã€‚</p>
-  <p><b>Q: è¯¯åˆ äº†æ€ä¹ˆæ‰¾å›?</b><br>
-    A: åˆ—è¡¨é¡µã€ŒğŸ—‘ å›æ”¶ç«™ã€é‡Œç‚¹ã€Œâ™»ï¸ æ¢å¤ã€,è®°å½•ä¼šå›åˆ°åˆ—è¡¨ã€‚</p>
-  <p><b>Q: å¸è½½æµè§ˆå™¨ä¼šä¸¢æ•°æ®å—?</b><br>
-    A: äº‘ç«¯æ•°æ®ä¸ä¸¢,åªä¸¢æœªåŒæ­¥çš„ç¦»çº¿é˜Ÿåˆ—ã€‚å°½é‡è”ç½‘åå†å¸è½½ã€‚</p>
-  <p style="margin-top:16px;color:#888;font-size:12px">ğŸ“ éœ€è¦å¸®?é—®å¼€å‘è€…ã€‚</p>
+  <h4 style="margin:12px 0 4px;color:#1565c0">¾Å¡¢³£¼ûÎÊÌâ</h4>
+  <p><b>Q: Ê¶±ğÃ»ÌîÉÏ×Ö¶Î?</b><br>
+    A: Ë¾»úĞÅÏ¢¸ñÊ½Ì«ÌØÊâ,ÊÖ¶¯²¹Ìî¼´¿É,²»Ó°ÏìÆäËû×Ö¶Î±£´æ¡£</p>
+  <p><b>Q: Í¬Ò»Ë¾»úµÚ¶ş´ÎÀ´ÔõÃ´×Ô¶¯´ø³öĞÕÃûÊÖ»ú?</b><br>
+    A: ÊäÈëÖ÷³µ³µÅÆºó 0.5 Ãë,¹¤¾ß»á´ÓÀúÊ·¼ÇÂ¼Àï²éÍ¬³µÅÆ×î½üÒ»Ìõ,×Ô¶¯ÌîÉÏĞÕÃû/ÊÖ»ú/Éí·İÖ¤¡£</p>
+  <p><b>Q: ÎóÉ¾ÁËÔõÃ´ÕÒ»Ø?</b><br>
+    A: ÁĞ±íÒ³¡¸?? »ØÊÕÕ¾¡¹Àïµã¡¸?? »Ö¸´¡¹,¼ÇÂ¼»á»Øµ½ÁĞ±í¡£</p>
+  <p><b>Q: Ğ¶ÔØä¯ÀÀÆ÷»á¶ªÊı¾İÂğ?</b><br>
+    A: ÔÆ¶ËÊı¾İ²»¶ª,Ö»¶ªÎ´Í¬²½µÄÀëÏß¶ÓÁĞ¡£¾¡Á¿ÁªÍøºóÔÙĞ¶ÔØ¡£</p>
+  <p style="margin-top:16px;color:#888;font-size:12px">?? ĞèÒª°ï?ÎÊ¿ª·¢Õß¡£</p>
 </div>`;
-  // å¤ç”¨ç°æˆçš„ confirm-overlay æœºåˆ¶
+  // ¸´ÓÃÏÖ³ÉµÄ confirm-overlay »úÖÆ
   let overlay = document.getElementById('helpOverlay');
   if (!overlay) {
     overlay = document.createElement('div');
@@ -1133,39 +1133,39 @@ function showHelp() {
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;position:relative"><button onclick="document.getElementById(&quot;helpOverlay&quot;).style.display=&quot;none&quot;" style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;color:#999">Ã—</button>' + html + '</div>';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;position:relative"><button onclick="document.getElementById(&quot;helpOverlay&quot;).style.display=&quot;none&quot;" style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;color:#999">¡Á</button>' + html + '</div>';
   overlay.style.display = 'flex';
 }
 
 function generateNotice(r) {
   const plateStr = r.plateTrailer ? r.plateMain + '+' + r.plateTrailer : r.plateMain;
-  const nameStr = r.name ? ' | å§“å:' + r.name : '';
-  const phoneStr = r.phone ? ' | æ‰‹æœº:' + r.phone : '';
-  const weightStr = r.weight ? r.weight + 'å…¬æ–¤' : 'å¾…å¡«';
-  const feeStr = r.weighFee ? r.weighFee + 'å…ƒ' : 'å¾…å¡«';
-  const route = r.from && r.to ? 'è£…:' + r.from + ' â†’ æ”¶:' + r.to : (r.from ? 'è£…è´§åœ°:' + r.from : (r.to ? 'æ”¶è´§åœ°:' + r.to : ''));
-  return 'ğŸš› å·²ç™»è®° | ' + r.date + ' | è½¦ç‰Œ:' + plateStr + nameStr + phoneStr + ' | ' + route + ' | è´§ç‰©:' + r.goods + ' | è¿è´¹:' + r.freight + 'å…ƒ | è¿‡ç£…:' + weightStr + ' | è¿‡ç£…è´¹:' + feeStr + (r.note ? ' | å¤‡æ³¨:' + r.note : '');
+  const nameStr = r.name ? ' | ĞÕÃû:' + r.name : '';
+  const phoneStr = r.phone ? ' | ÊÖ»ú:' + r.phone : '';
+  const weightStr = r.weight ? r.weight + '¹«½ï' : '´ıÌî';
+  const feeStr = r.weighFee ? r.weighFee + 'Ôª' : '´ıÌî';
+  const route = r.from && r.to ? '×°:' + r.from + ' ¡ú ÊÕ:' + r.to : (r.from ? '×°»õµØ:' + r.from : (r.to ? 'ÊÕ»õµØ:' + r.to : ''));
+  return '?? ÒÑµÇ¼Ç | ' + r.date + ' | ³µÅÆ:' + plateStr + nameStr + phoneStr + ' | ' + route + ' | »õÎï:' + r.goods + ' | ÔË·Ñ:' + r.freight + 'Ôª | ¹ı°õ:' + weightStr + ' | ¹ı°õ·Ñ:' + feeStr + (r.note ? ' | ±¸×¢:' + r.note : '');
 }
 
 async function loadRecords() {
   try {
     const { data, error } = await supabaseClient.from('records').select('*').order('created_at', { ascending: false });
     if (error) {
-      console.error('åŠ è½½è®°å½•å‡ºé”™:', error);
-      document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">âŒ</div>åŠ è½½å¤±è´¥:<br>' + (error.message || JSON.stringify(error)) + '</div>';
+      console.error('¼ÓÔØ¼ÇÂ¼³ö´í:', error);
+      document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">?</div>¼ÓÔØÊ§°Ü:<br>' + (error.message || JSON.stringify(error)) + '</div>';
       return;
     }
     currentRecords = data || [];
     updateRecycleBtn();
     renderList();
   } catch (e) {
-    console.error('loadRecordså¼‚å¸¸:', e);
-    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">âŒ</div>åŠ è½½å¼‚å¸¸:<br>' + e.message + '</div>';
+    console.error('loadRecordsÒì³£:', e);
+    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">?</div>¼ÓÔØÒì³£:<br>' + e.message + '</div>';
   }
 }
 
 function getFilteredRecords() {
-  // å›æ”¶ç«™æ¨¡å¼:åªæ˜¾ç¤ºå·²åˆ é™¤çš„è®°å½•
+  // »ØÊÕÕ¾Ä£Ê½:Ö»ÏÔÊ¾ÒÑÉ¾³ıµÄ¼ÇÂ¼
   if (showRecycle) {
     let del = (currentRecords || []).filter(r => r.deleted === true);
     if (filterKeyword) {
@@ -1189,20 +1189,20 @@ function getFilteredRecords() {
     );
   }
   if (locationFilter !== 'all') {
-    // ç±»å‹ç­›é€‰: 'all'=é€è´§+é€€è´§ 'delivery'=é€è´§ 'return'=é€€è´§ 'nostat'=ä¸ç»Ÿè®¡
-    if (locationFilter === 'delivery') list = list.filter(r => (r.delivery_type || 'é€è´§') === 'é€è´§');
-    else if (locationFilter === 'return') list = list.filter(r => r.delivery_type === 'é€€è´§');
-    else if (locationFilter === 'nostat') list = list.filter(r => r.delivery_type === 'ä¸ç»Ÿè®¡');
+    // ÀàĞÍÉ¸Ñ¡: 'all'=ËÍ»õ+ÍË»õ 'delivery'=ËÍ»õ 'return'=ÍË»õ 'nostat'=²»Í³¼Æ
+    if (locationFilter === 'delivery') list = list.filter(r => (r.delivery_type || 'ËÍ»õ') === 'ËÍ»õ');
+    else if (locationFilter === 'return') list = list.filter(r => r.delivery_type === 'ÍË»õ');
+    else if (locationFilter === 'nostat') list = list.filter(r => r.delivery_type === '²»Í³¼Æ');
   }
   if (goodsFilter !== 'all') {
-    // è´§ç‰©ç­›é€‰: 'all'/'ç›˜æ‰£'/'å¥—æ‰£'/'å…¶ä»–' (å…¶ä»– = ä¸æ˜¯ç›˜æ‰£ä¸”ä¸æ˜¯å¥—æ‰£)
-    if (goodsFilter === 'ç›˜æ‰£') list = list.filter(r => r.goods === 'ç›˜æ‰£');
-    else if (goodsFilter === 'å¥—æ‰£') list = list.filter(r => r.goods === 'å¥—æ‰£');
-    else if (goodsFilter === 'å…¶ä»–') list = list.filter(r => r.goods && r.goods !== 'ç›˜æ‰£' && r.goods !== 'å¥—æ‰£');
+    // »õÎïÉ¸Ñ¡: 'all'/'ÅÌ¿Û'/'Ì×¿Û'/'ÆäËû' (ÆäËû = ²»ÊÇÅÌ¿ÛÇÒ²»ÊÇÌ×¿Û)
+    if (goodsFilter === 'ÅÌ¿Û') list = list.filter(r => r.goods === 'ÅÌ¿Û');
+    else if (goodsFilter === 'Ì×¿Û') list = list.filter(r => r.goods === 'Ì×¿Û');
+    else if (goodsFilter === 'ÆäËû') list = list.filter(r => r.goods && r.goods !== 'ÅÌ¿Û' && r.goods !== 'Ì×¿Û');
   }
-  // æ’åº:è£…è´§æ—¥æœŸé™åº(æœ€æ–°è£…è´§åœ¨ä¸Š),åŒæ—¥ç™»è®°æ—¶åˆ»é™åº(æœ€åç™»è®°çš„åœ¨æœ€ä¸Š)
+  // ÅÅĞò:×°»õÈÕÆÚ½µĞò(×îĞÂ×°»õÔÚÉÏ),Í¬ÈÕµÇ¼ÇÊ±¿Ì½µĞò(×îºóµÇ¼ÇµÄÔÚ×îÉÏ)
   list = list.slice().sort((a, b) => {
-    // ç”¨ Date æ—¶é—´æˆ³æ¯”è¾ƒ,é¿å… 2026-8-13 vs 2026-8-2 è¿™ç§æ— å‰å¯¼é›¶çš„å­—ç¬¦ä¸²æ¯”è¾ƒé”™ä½
+    // ÓÃ Date Ê±¼ä´Á±È½Ï,±ÜÃâ 2026-8-13 vs 2026-8-2 ÕâÖÖÎŞÇ°µ¼ÁãµÄ×Ö·û´®±È½Ï´íÎ»
     const da = parseDateTs(a.date);
     const db = parseDateTs(b.date);
     if (db !== da) return db - da;
@@ -1211,18 +1211,18 @@ function getFilteredRecords() {
   return list;
 }
 
-// æŠŠä»»æ„æ—¥æœŸæ ¼å¼è½¬æˆæ—¶é—´æˆ³ç”¨äºæ’åº(æ”¯æŒ 2026-8-13 / 2026å¹´8æœˆ13æ—¥ / 2026-08-13)
+// °ÑÈÎÒâÈÕÆÚ¸ñÊ½×ª³ÉÊ±¼ä´ÁÓÃÓÚÅÅĞò(Ö§³Ö 2026-8-13 / 2026Äê8ÔÂ13ÈÕ / 2026-08-13)
 function parseDateTs(s) {
   if (!s) return 0;
-  const m = String(s).match(/(\d{4})[-å¹´](\d{1,2})[-æœˆ](\d{1,2})/);
+  const m = String(s).match(/(\d{4})[-Äê](\d{1,2})[-ÔÂ](\d{1,2})/);
   if (m) return new Date(+m[1], +m[2] - 1, +m[3]).getTime();
   return 0;
 }
 
-// æŠŠä»»æ„æ—¥æœŸæ ¼å¼å½’ä¸€ä¸º YYYY-MMï¼ˆç”¨äºæœˆä»½åˆ†ç»„ï¼‰
+// °ÑÈÎÒâÈÕÆÚ¸ñÊ½¹éÒ»Îª YYYY-MM£¨ÓÃÓÚÔÂ·İ·Ö×é£©
 function parseYm(s) {
-  if (!s) return '9999-12'; // ç©ºæ—¥æœŸæ”¾åˆ°æœ€å
-  const m = String(s).match(/(\d{4})[-å¹´](\d{1,2})/);
+  if (!s) return '9999-12'; // ¿ÕÈÕÆÚ·Åµ½×îºó
+  const m = String(s).match(/(\d{4})[-Äê](\d{1,2})/);
   if (m) {
     const y = m[1];
     const mo = String(parseInt(m[2], 10)).padStart(2, '0'); // 7 -> 07
@@ -1234,37 +1234,37 @@ function parseYm(s) {
 function renderList() {
   if (showRecycle) { renderRecycle(); return; }
   const display = getFilteredRecords();
-  document.getElementById('recordCount').textContent = display.length + ' æ¡';
-  // è®¡ç®—æ±‡æ€»
+  document.getElementById('recordCount').textContent = display.length + ' Ìõ';
+  // ¼ÆËã»ã×Ü
   const totalFreight = display.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
   const totalPaid = display.reduce((sum, r) => sum + ((r.is_paid === true) ? (parseFloat(r.freight) || 0) : 0), 0);
   const totalWeighFee = display.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
-  // é€è´§/é€€è´§é‡é‡æ±‡æ€»ï¼ˆå…¬æ–¤â†’å¨ï¼‰ã€‚â€œä¸ç»Ÿè®¡â€ç±»å‹ä¸è®¡å…¥é€/é€€è´§é‡é‡
-  const totalDeliveryWeight = display.filter(r => (r.delivery_type || 'é€è´§') === 'é€è´§').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
-  const totalReturnWeight = display.filter(r => r.delivery_type === 'é€€è´§').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
-  const totalNostatWeight = display.filter(r => r.delivery_type === 'ä¸ç»Ÿè®¡').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+  // ËÍ»õ/ÍË»õÖØÁ¿»ã×Ü£¨¹«½ï¡ú¶Ö£©¡£¡°²»Í³¼Æ¡±ÀàĞÍ²»¼ÆÈëËÍ/ÍË»õÖØÁ¿
+  const totalDeliveryWeight = display.filter(r => (r.delivery_type || 'ËÍ»õ') === 'ËÍ»õ').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+  const totalReturnWeight = display.filter(r => r.delivery_type === 'ÍË»õ').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+  const totalNostatWeight = display.filter(r => r.delivery_type === '²»Í³¼Æ').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
   const summaryEl = document.getElementById('summaryBar');
   if (summaryEl) {
-    summaryEl.innerHTML = 'å·²æ”¯ä»˜/è¿è´¹åˆè®¡:' + totalPaid.toFixed(0) + '/' + totalFreight.toFixed(0) + 'å…ƒ | è¿‡ç£…è´¹åˆè®¡:' + totalWeighFee.toFixed(0) + 'å…ƒ';
+    summaryEl.innerHTML = 'ÒÑÖ§¸¶/ÔË·ÑºÏ¼Æ:' + totalPaid.toFixed(0) + '/' + totalFreight.toFixed(0) + 'Ôª | ¹ı°õ·ÑºÏ¼Æ:' + totalWeighFee.toFixed(0) + 'Ôª';
     summaryEl.style.display = display.length > 0 ? 'block' : 'none';
   }
   const summaryEl2 = document.getElementById('summaryBar2');
   if (summaryEl2) {
-    const nostatPart = totalNostatWeight > 0 ? ' | ä¸ç»Ÿè®¡é‡é‡:' + (totalNostatWeight/1000).toFixed(3) + 'å¨' : '';
-    summaryEl2.innerHTML = 'é€è´§é‡é‡:' + (totalDeliveryWeight/1000).toFixed(3) + 'å¨ | é€€è´§é‡é‡:' + (totalReturnWeight/1000).toFixed(3) + 'å¨' + nostatPart;
+    const nostatPart = totalNostatWeight > 0 ? ' | ²»Í³¼ÆÖØÁ¿:' + (totalNostatWeight/1000).toFixed(3) + '¶Ö' : '';
+    summaryEl2.innerHTML = 'ËÍ»õÖØÁ¿:' + (totalDeliveryWeight/1000).toFixed(3) + '¶Ö | ÍË»õÖØÁ¿:' + (totalReturnWeight/1000).toFixed(3) + '¶Ö' + nostatPart;
     summaryEl2.style.display = display.length > 0 ? 'block' : 'none';
   }
   const el = document.getElementById('recordList');
-  if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">ğŸ“‹</div>è¿˜æ²¡æœ‰ç™»è®°è®°å½•<br>ç‚¹ä¸Šæ–¹æŒ‰é’®å¼€å§‹</div>'; return; }
-  if (display.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">ğŸ”</div>æ²¡æœ‰ç¬¦åˆæ¡ä»¶çš„è®°å½•<br>è¯•è¯•è°ƒæ•´ç­›é€‰æ¡ä»¶</div>'; return; }
-  // æŒ‰å¹´æœˆåˆ†ç»„ï¼ˆç»Ÿä¸€æˆ YYYY-MMï¼Œé¿å…ä¸­æ–‡æ ¼å¼å’Œå­—ç¬¦ä¸²æ¯”è¾ƒé”™ä½ï¼‰
+  if (currentRecords.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">??</div>»¹Ã»ÓĞµÇ¼Ç¼ÇÂ¼<br>µãÉÏ·½°´Å¥¿ªÊ¼</div>'; return; }
+  if (display.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">??</div>Ã»ÓĞ·ûºÏÌõ¼şµÄ¼ÇÂ¼<br>ÊÔÊÔµ÷ÕûÉ¸Ñ¡Ìõ¼ş</div>'; return; }
+  // °´ÄêÔÂ·Ö×é£¨Í³Ò»³É YYYY-MM£¬±ÜÃâÖĞÎÄ¸ñÊ½ºÍ×Ö·û´®±È½Ï´íÎ»£©
   const groups = {};
   display.forEach(r => {
-    const ym = parseYm(r.date); // ç»Ÿä¸€ä¸º 2025-07 è¿™ç§æ ‡å‡†æ ¼å¼
+    const ym = parseYm(r.date); // Í³Ò»Îª 2025-07 ÕâÖÖ±ê×¼¸ñÊ½
     if (!groups[ym]) groups[ym] = [];
     groups[ym].push(r);
   });
-  // æŒ‰å¹´æœˆæ•°å€¼æ’åºï¼ˆæœ€æ–°æœˆåœ¨å…ˆï¼‰ï¼Œé¿å… 5æœˆ vs 11æœˆ vs 12æœˆ å­—å…¸åºé”™ä½
+  // °´ÄêÔÂÊıÖµÅÅĞò£¨×îĞÂÔÂÔÚÏÈ£©£¬±ÜÃâ 5ÔÂ vs 11ÔÂ vs 12ÔÂ ×ÖµäĞò´íÎ»
   const sortedKeys = Object.keys(groups).sort((a, b) => {
     const [ay, am] = a.split('-').map(Number);
     const [by, bm] = b.split('-').map(Number);
@@ -1274,28 +1274,28 @@ function renderList() {
   const cardHtml = r => {
     const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
     const plateHtml = r.plate_trailer
-      ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+æŒ‚' + r.plate_trailer + '</span>'
+      ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+¹Ò' + r.plate_trailer + '</span>'
       : '<span class="plate-main">' + r.plate_main + '</span>';
     const hasWeight = r.weight && r.weight.trim();
     const hasWeighFee = r.weigh_fee && r.weigh_fee.trim();
     const badges = [];
-    if (!hasWeight) badges.push('<span class="badge-pending">å¾…è¡¥é‡é‡</span>');
-    if (!hasWeighFee) badges.push('<span class="badge-pending">å¾…è¡¥è¿‡ç£…è´¹</span>');
-    if ((r.modified_count || 0) > 0) badges.push('<span class="badge-modified">å·²ä¿®æ”¹</span>');
+    if (!hasWeight) badges.push('<span class="badge-pending">´ı²¹ÖØÁ¿</span>');
+    if (!hasWeighFee) badges.push('<span class="badge-pending">´ı²¹¹ı°õ·Ñ</span>');
+    if ((r.modified_count || 0) > 0) badges.push('<span class="badge-modified">ÒÑĞŞ¸Ä</span>');
     const badgeStr = badges.join('');
-    const goods = r.goods || 'å¾…å¡«';
+    const goods = r.goods || '´ıÌî';
     let typeTag;
-    if (r.delivery_type === 'é€€è´§') typeTag = '<span class="goods-tag" style="background:#ffebee;color:#c62828">é€€è´§</span>';
-    else if (r.delivery_type === 'ä¸ç»Ÿè®¡') typeTag = '<span class="goods-tag" style="background:#eceff1;color:#607d8b">ä¸ç»Ÿè®¡</span>';
-    else typeTag = '<span class="goods-tag" style="background:#e8f5e9;color:#2e7d32">é€è´§</span>';
-    const freightStr = r.freight ? 'è¿è´¹:' + r.freight + 'å…ƒ' : '';
-    const weighFeeStr = r.weigh_fee ? 'è¿‡ç£…è´¹:' + r.weigh_fee + 'å…ƒ' : '';
-    const weightStr = r.weight ? 'é‡é‡:' + (parseFloat(r.weight) / 1000).toFixed(3) + 'å¨' : '';
+    if (r.delivery_type === 'ÍË»õ') typeTag = '<span class="goods-tag" style="background:#ffebee;color:#c62828">ÍË»õ</span>';
+    else if (r.delivery_type === '²»Í³¼Æ') typeTag = '<span class="goods-tag" style="background:#eceff1;color:#607d8b">²»Í³¼Æ</span>';
+    else typeTag = '<span class="goods-tag" style="background:#e8f5e9;color:#2e7d32">ËÍ»õ</span>';
+    const freightStr = r.freight ? 'ÔË·Ñ:' + r.freight + 'Ôª' : '';
+    const weighFeeStr = r.weigh_fee ? '¹ı°õ·Ñ:' + r.weigh_fee + 'Ôª' : '';
+    const weightStr = r.weight ? 'ÖØÁ¿:' + (parseFloat(r.weight) / 1000).toFixed(3) + '¶Ö' : '';
     const isPaid = (r.is_paid === true);
-    const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>å·²æ”¯ä»˜</label>';
+    const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>ÒÑÖ§¸¶</label>';
     const feeStr = freightStr || weighFeeStr || weightStr ? '<div class="fee-line">' + [freightStr, weighFeeStr, weightStr].filter(Boolean).join(' ') + paidCheck + '</div>' : '<div class="fee-line">' + paidCheck + '</div>';
-    const toStr = r.to_location ? '<span>â†’ ' + r.to_location + '</span>' : '';
-    const routeStr = (r.from_location || r.to_location) ? '<div class="route-line">è£…:' + (r.from_location || 'å¾…å¡«') + ' â†’ ' + (r.to_location || 'å¾…å¡«') + '</div>' : '';
+    const toStr = r.to_location ? '<span>¡ú ' + r.to_location + '</span>' : '';
+    const routeStr = (r.from_location || r.to_location) ? '<div class="route-line">×°:' + (r.from_location || '´ıÌî') + ' ¡ú ' + (r.to_location || '´ıÌî') + '</div>' : '';
     return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
       feeStr +
@@ -1305,7 +1305,7 @@ function renderList() {
   };
   const monthLabel = ym => {
     const [y, m] = ym.split('-');
-    return y + 'å¹´' + parseInt(m) + 'æœˆ';
+    return y + 'Äê' + parseInt(m) + 'ÔÂ';
   };
   el.innerHTML = sortedKeys.map(ym => {
     const rows = groups[ym];
@@ -1313,7 +1313,7 @@ function renderList() {
     const collapsed = collapsedMonths[ym] ? ' collapsed' : '';
     return '<div class="month-group">' +
       '<div class="month-header' + collapsed + '" data-ym="' + ym + '" onclick="toggleMonth(\'' + ym + '\')">' +
-      '<span><span class="month-toggle">â–¼</span> ' + monthLabel(ym) + ' <span class="month-count">' + rows.length + 'æ¡ Â· è¿è´¹' + mfreight.toFixed(0) + 'å…ƒ</span></span>' +
+      '<span><span class="month-toggle">¨‹</span> ' + monthLabel(ym) + ' <span class="month-count">' + rows.length + 'Ìõ ¡¤ ÔË·Ñ' + mfreight.toFixed(0) + 'Ôª</span></span>' +
       '</div>' +
       '<div class="month-records' + collapsed + '" data-ym="' + ym + '">' + rows.map(cardHtml).join('') + '</div>' +
       '</div>';
@@ -1366,12 +1366,12 @@ function resetFilter() {
 
 function exportCSV() {
   const list = getFilteredRecords();
-  if (list.length === 0) { toast('æ²¡æœ‰å¯å¯¼å‡ºçš„è®°å½•', false, true); return; }
-  const headers = ['æ—¥æœŸ','ä¸»è½¦','æŒ‚è½¦','å§“å','æ‰‹æœºå·','èº«ä»½è¯å·','è£…è´§åœ°','æ”¶è´§åœ°','è´§ç‰©','è¿è´¹','è¿‡ç£…è´¹','è¿‡ç£…é‡é‡','ç±»å‹','å¤‡æ³¨','å·²æ”¯ä»˜','ä¿®æ”¹æ¬¡æ•°'];
+  if (list.length === 0) { toast('Ã»ÓĞ¿Éµ¼³öµÄ¼ÇÂ¼', false, true); return; }
+  const headers = ['ÈÕÆÚ','Ö÷³µ','¹Ò³µ','ĞÕÃû','ÊÖ»úºÅ','Éí·İÖ¤ºÅ','×°»õµØ','ÊÕ»õµØ','»õÎï','ÔË·Ñ','¹ı°õ·Ñ','¹ı°õÖØÁ¿','ÀàĞÍ','±¸×¢','ÒÑÖ§¸¶','ĞŞ¸Ä´ÎÊı'];
   const rows = list.map(r => [
     r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
     r.id_card || '', r.from_location || '', r.to_location || '', r.goods || '', r.freight || '',
-    r.weigh_fee || '', r.weight || '', r.delivery_type || 'é€è´§', r.note || '', (r.is_paid === true) ? 'æ˜¯' : 'å¦', r.modified_count || 0
+    r.weigh_fee || '', r.weight || '', r.delivery_type || 'ËÍ»õ', r.note || '', (r.is_paid === true) ? 'ÊÇ' : '·ñ', r.modified_count || 0
   ]);
   let csv = '\uFEFF' + headers.join(',') + '\n';
   rows.forEach(row => {
@@ -1381,23 +1381,23 @@ function exportCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'è£…è´§ç™»è®°_' + formatDate(new Date()) + '.csv';
+  a.download = '×°»õµÇ¼Ç_' + formatDate(new Date()) + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('å·²å¯¼å‡º ' + list.length + ' æ¡è®°å½•', true);
+  toast('ÒÑµ¼³ö ' + list.length + ' Ìõ¼ÇÂ¼', true);
 }
 
-// å¤‡ä»½å…¨éƒ¨:å¯¼å‡º currentRecords å…¨éƒ¨(å«å›æ”¶ç«™),ç”¨äºæœ¬åœ°å­˜æ¡£
+// ±¸·İÈ«²¿:µ¼³ö currentRecords È«²¿(º¬»ØÊÕÕ¾),ÓÃÓÚ±¾µØ´æµµ
 function exportAllCSV() {
   const list = (currentRecords || []).slice();
-  if (list.length === 0) { toast('æ²¡æœ‰å¯å¯¼å‡ºçš„è®°å½•', false, true); return; }
-  const headers = ['æ—¥æœŸ','ä¸»è½¦','æŒ‚è½¦','å§“å','æ‰‹æœºå·','èº«ä»½è¯å·','è£…è´§åœ°','æ”¶è´§åœ°','è´§ç‰©','è¿è´¹','è¿‡ç£…è´¹','è¿‡ç£…é‡é‡','ç±»å‹','å¤‡æ³¨','å·²æ”¯ä»˜','ä¿®æ”¹æ¬¡æ•°','å·²åˆ é™¤'];
+  if (list.length === 0) { toast('Ã»ÓĞ¿Éµ¼³öµÄ¼ÇÂ¼', false, true); return; }
+  const headers = ['ÈÕÆÚ','Ö÷³µ','¹Ò³µ','ĞÕÃû','ÊÖ»úºÅ','Éí·İÖ¤ºÅ','×°»õµØ','ÊÕ»õµØ','»õÎï','ÔË·Ñ','¹ı°õ·Ñ','¹ı°õÖØÁ¿','ÀàĞÍ','±¸×¢','ÒÑÖ§¸¶','ĞŞ¸Ä´ÎÊı','ÒÑÉ¾³ı'];
   const rows = list.map(r => [
     r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
     r.id_card || '', r.from_location || '', r.to_location || '', r.goods || '', r.freight || '',
-    r.weigh_fee || '', r.weight || '', r.delivery_type || 'é€è´§', r.note || '', (r.is_paid === true) ? 'æ˜¯' : 'å¦', r.modified_count || 0, (r.deleted === true) ? 'æ˜¯' : 'å¦'
+    r.weigh_fee || '', r.weight || '', r.delivery_type || 'ËÍ»õ', r.note || '', (r.is_paid === true) ? 'ÊÇ' : '·ñ', r.modified_count || 0, (r.deleted === true) ? 'ÊÇ' : '·ñ'
   ]);
   let csv = '\uFEFF' + headers.join(',') + '\n';
   rows.forEach(row => {
@@ -1407,29 +1407,29 @@ function exportAllCSV() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'è£…è´§ç™»è®°_å…¨é‡å¤‡ä»½_' + formatDate(new Date()) + '.csv';
+  a.download = '×°»õµÇ¼Ç_È«Á¿±¸·İ_' + formatDate(new Date()) + '.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('å·²å¤‡ä»½å…¨éƒ¨ ' + list.length + ' æ¡è®°å½•', true);
+  toast('ÒÑ±¸·İÈ«²¿ ' + list.length + ' Ìõ¼ÇÂ¼', true);
 }
 
-// æ£€æµ‹ä¸­æ–‡æ–‡æœ¬æ˜¯å¦ä¹±ç (è¿ç»­é—®å·æˆ–ä¹±ç å­—ç¬¦è¿‡å¤š)
+// ¼ì²âÖĞÎÄÎÄ±¾ÊÇ·ñÂÒÂë(Á¬ĞøÎÊºÅ»òÂÒÂë×Ö·û¹ı¶à)
 function looksLikeGarbled(text) {
   if (!text) return false;
-  // å–å‰ 500 å­—ç¬¦,ç»Ÿè®¡ U+FFFD ä¹±ç å­—ç¬¦
+  // È¡Ç° 500 ×Ö·û,Í³¼Æ U+FFFD ÂÒÂë×Ö·û
   const sample = text.substring(0, 500);
   let bad = 0;
   for (let i = 0; i < sample.length; i++) {
     const code = sample.charCodeAt(i);
     if (code === 0xFFFD) bad++;
   }
-  return bad > 3;  // 3 ä¸ªä»¥ä¸Šä¹±ç å°±è®¤ä¸ºç¼–ç ä¸å¯¹
+  return bad > 3;  // 3 ¸öÒÔÉÏÂÒÂë¾ÍÈÏÎª±àÂë²»¶Ô
 }
 
 function parseCSV(text) {
-  text = text.replace(/^ï»¿/, '');
+  text = text.replace(/^?/, '');
   const rows = [];
   let row = [], field = '', inQ = false;
   for (let i = 0; i < text.length; i++) {
@@ -1451,18 +1451,18 @@ function parseCSV(text) {
 }
 
 function downloadTemplate() {
-  const headers = ['æ—¥æœŸ','ä¸»è½¦','æŒ‚è½¦','å§“å','æ‰‹æœºå·','èº«ä»½è¯å·','è£…è´§åœ°','æ”¶è´§åœ°','è´§ç‰©','è¿è´¹','è¿‡ç£…è´¹','è¿‡ç£…é‡é‡','ç±»å‹','å¤‡æ³¨','å·²æ”¯ä»˜','ä¿®æ”¹æ¬¡æ•°'];
-  const csv = 'ï»¿' + headers.join(',') + '\n';
+  const headers = ['ÈÕÆÚ','Ö÷³µ','¹Ò³µ','ĞÕÃû','ÊÖ»úºÅ','Éí·İÖ¤ºÅ','×°»õµØ','ÊÕ»õµØ','»õÎï','ÔË·Ñ','¹ı°õ·Ñ','¹ı°õÖØÁ¿','ÀàĞÍ','±¸×¢','ÒÑÖ§¸¶','ĞŞ¸Ä´ÎÊı'];
+  const csv = '?' + headers.join(',') + '\n';
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'è£…è´§ç™»è®°_å¯¼å…¥æ¨¡æ¿.csv';
+  a.download = '×°»õµÇ¼Ç_µ¼ÈëÄ£°å.csv';
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('å·²ä¸‹è½½ç©ºç™½æ¨¡æ¿', true);
+  toast('ÒÑÏÂÔØ¿Õ°×Ä£°å', true);
 }
 
 async function handleImportFile(e) {
@@ -1476,7 +1476,7 @@ async function handleImportFile(e) {
       rows = await parseExcelFile(file);
     } else {
       const text = await file.text();
-      // è‡ªåŠ¨æ£€æµ‹ç¼–ç : UTF-8 è§£ç åå¦‚æœä¹±ç å¤š,é‡è¯•ç”¨ GBK
+      // ×Ô¶¯¼ì²â±àÂë: UTF-8 ½âÂëºóÈç¹ûÂÒÂë¶à,ÖØÊÔÓÃ GBK
       let decoded = text;
       if (looksLikeGarbled(decoded)) {
         try {
@@ -1488,42 +1488,42 @@ async function handleImportFile(e) {
             try {
               retry = new TextDecoder('gb18030').decode(buf);
             } catch (eGb18030) {
-              console.warn('æµè§ˆå™¨ä¸æ”¯æŒ GBK è§£ç ');
+              console.warn('ä¯ÀÀÆ÷²»Ö§³Ö GBK ½âÂë');
             }
           }
           if (retry && !looksLikeGarbled(retry)) {
             decoded = retry;
-            console.log('å·²è‡ªåŠ¨è¯†åˆ«ä¸º GBK ç¼–ç ');
+            console.log('ÒÑ×Ô¶¯Ê¶±ğÎª GBK ±àÂë');
           }
         } catch (e2) {
-          console.warn('GBK é‡è¯•å¤±è´¥:', e2);
+          console.warn('GBK ÖØÊÔÊ§°Ü:', e2);
         }
       }
       rows = parseCSV(decoded);
     }
     await processImportedRows(rows);
   } catch (err) {
-    console.error('å¯¼å…¥å¤±è´¥:', err);
-    toast('å¯¼å…¥å¤±è´¥: ' + (err.message || err), false, true);
+    console.error('µ¼ÈëÊ§°Ü:', err);
+    toast('µ¼ÈëÊ§°Ü: ' + (err.message || err), false, true);
   } finally {
     e.target.value = '';
   }
 }
 
-// è§£æ Excel æ–‡ä»¶ (ä½¿ç”¨ SheetJS)
+// ½âÎö Excel ÎÄ¼ş (Ê¹ÓÃ SheetJS)
 async function parseExcelFile(file) {
   if (typeof XLSX === 'undefined') {
-    throw new Error('Excel è§£æåº“æœªåŠ è½½,è¯·åˆ·æ–°é¡µé¢æˆ–æ”¹ç”¨ CSV');
+    throw new Error('Excel ½âÎö¿âÎ´¼ÓÔØ,ÇëË¢ĞÂÒ³Ãæ»ò¸ÄÓÃ CSV');
   }
   const buf = await file.arrayBuffer();
   const wb = XLSX.read(buf, { type: 'array' });
   const ws = wb.Sheets[wb.SheetNames[0]];
-  // raw:false è®©æ‰€æœ‰å•å…ƒæ ¼è½¬æˆå­—ç¬¦ä¸²(æ—¥æœŸå˜ 2025/5/29 å½¢å¼,æ•°å­—å˜æ–‡æœ¬),ä¾¿äºç»Ÿä¸€å¤„ç†
+  // raw:false ÈÃËùÓĞµ¥Ôª¸ñ×ª³É×Ö·û´®(ÈÕÆÚ±ä 2025/5/29 ĞÎÊ½,Êı×Ö±äÎÄ±¾),±ãÓÚÍ³Ò»´¦Àí
   const data = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '', raw: false });
   return data;
 }
 
-// è§„èŒƒåŒ–æ—¥æœŸ: æ”¯æŒ 2025-5-29 / 2025/5/29 / 2025.5.29 / 2025å¹´5æœˆ29æ—¥ / Dateå¯¹è±¡
+// ¹æ·¶»¯ÈÕÆÚ: Ö§³Ö 2025-5-29 / 2025/5/29 / 2025.5.29 / 2025Äê5ÔÂ29ÈÕ / Date¶ÔÏó
 function normalizeDate(s) {
   if (s == null) return '';
   s = String(s).trim();
@@ -1531,7 +1531,7 @@ function normalizeDate(s) {
   if (m) return m[1] + '-' + parseInt(m[2]) + '-' + parseInt(m[3]);
   m = s.match(/(\d{4})[\/\.](\d{1,2})[\/\.](\d{1,2})/);
   if (m) return m[1] + '-' + parseInt(m[2]) + '-' + parseInt(m[3]);
-  m = s.match(/(\d{4})å¹´(\d{1,2})æœˆ(\d{1,2})æ—¥/);
+  m = s.match(/(\d{4})Äê(\d{1,2})ÔÂ(\d{1,2})ÈÕ/);
   if (m) return m[1] + '-' + parseInt(m[2]) + '-' + parseInt(m[3]);
   try {
     const d = new Date(s);
@@ -1541,7 +1541,7 @@ function normalizeDate(s) {
 }
 
 async function processImportedRows(rows) {
-      if (rows.length < 2) { toast('æ–‡ä»¶æ²¡æœ‰æ•°æ®è¡Œ', false, true); return; }
+      if (rows.length < 2) { toast('ÎÄ¼şÃ»ÓĞÊı¾İĞĞ', false, true); return; }
       const header = rows[0].map(h => h.trim());
       const idx = {};
       header.forEach((h, i) => idx[h] = i);
@@ -1549,98 +1549,99 @@ async function processImportedRows(rows) {
       const records = [];
       let skipped = 0;
       let duplicate = 0;
-      // å»é‡:å…ˆæ‹‰å–å·²æœ‰è®°å½•çš„(æ—¥æœŸ+ä¸»è½¦+é‡é‡)é”®
+      // È¥ÖØ:ÏÈÀ­È¡ÒÑÓĞ¼ÇÂ¼µÄ(ÈÕÆÚ+Ö÷³µ+ÖØÁ¿)¼ü
       let existingKeys = new Set();
       try {
-        const { data, error } = await supabaseClient.from('records').select('date, plate_main, weight');
-        if (!error && data) existingKeys = new Set(data.map(x => (x.date || '') + '|' + (x.plate_main || '') + '|' + (x.weight || '')));
-      } catch (err) { console.error('æ‹‰å–å·²æœ‰è®°å½•å¤±è´¥:', err); }
+        const { data, error } = await supabaseClient.from('records').select('date, plate_main, weight, delivery_type');
+        if (!error && data) existingKeys = new Set(data.map(x => (x.date || '') + '|' + (x.plate_main || '') + '|' + (x.weight || '') + '|' + (x.delivery_type || '')));
+      } catch (err) { console.error('À­È¡ÒÑÓĞ¼ÇÂ¼Ê§°Ü:', err); }
       const seenKeys = new Set();
       for (let i = 1; i < rows.length; i++) {
         const r = rows[i];
-        const date = normalizeDate(get('æ—¥æœŸ', r));
-        const plate = get('ä¸»è½¦', r);
+        const date = normalizeDate(get('ÈÕÆÚ', r));
+        const plate = get('Ö÷³µ', r);
         if (!date || !plate) { skipped++; continue; }
-        const weightVal = get('è¿‡ç£…é‡é‡', r);
-        const dupKey = (date || '') + '|' + (plate || '') + '|' + (weightVal || '');
+        const weightVal = get('¹ı°õÖØÁ¿', r);
+        const dtypeVal = get('ÀàĞÍ', r);
+        const dupKey = (date || '') + '|' + (plate || '') + '|' + (weightVal || '') + '|' + (dtypeVal || '');
         if (existingKeys.has(dupKey) || seenKeys.has(dupKey)) { duplicate++; continue; }
         seenKeys.add(dupKey);
-        const isPaidRaw = get('å·²æ”¯ä»˜', r);
-        const isPaid = (isPaidRaw === 'æ˜¯' || isPaidRaw === 'true' || isPaidRaw === '1');
-        const mc = parseInt(get('ä¿®æ”¹æ¬¡æ•°', r)) || 0;
+        const isPaidRaw = get('ÒÑÖ§¸¶', r);
+        const isPaid = (isPaidRaw === 'ÊÇ' || isPaidRaw === 'true' || isPaidRaw === '1');
+        const mc = parseInt(get('ĞŞ¸Ä´ÎÊı', r)) || 0;
         const rec = {
           date: date,
           plate_main: plate,
-          plate_trailer: get('æŒ‚è½¦', r) || null,
-          name: get('å§“å', r) || null,
-          phone: get('æ‰‹æœºå·', r) || null,
-          id_card: get('èº«ä»½è¯å·', r) || null,
-          from_location: get('è£…è´§åœ°', r) || null,
-          to_location: get('æ”¶è´§åœ°', r) || null,
-          goods: get('è´§ç‰©', r) || null,
-          freight: get('è¿è´¹', r) || null,
-          weigh_fee: get('è¿‡ç£…è´¹', r) || null,
-          weight: get('è¿‡ç£…é‡é‡', r) || null,
-          note: get('å¤‡æ³¨', r) || null,
+          plate_trailer: get('¹Ò³µ', r) || null,
+          name: get('ĞÕÃû', r) || null,
+          phone: get('ÊÖ»úºÅ', r) || null,
+          id_card: get('Éí·İÖ¤ºÅ', r) || null,
+          from_location: get('×°»õµØ', r) || null,
+          to_location: get('ÊÕ»õµØ', r) || null,
+          goods: get('»õÎï', r) || null,
+          freight: get('ÔË·Ñ', r) || null,
+          weigh_fee: get('¹ı°õ·Ñ', r) || null,
+          weight: get('¹ı°õÖØÁ¿', r) || null,
+          note: get('±¸×¢', r) || null,
           is_paid: isPaid,
           modified_fields: '[]',
           modified_count: mc
         };
-        // ä»…å½“ç±»å‹ä¸ºé€€è´§/ä¸ç»Ÿè®¡æ—¶å¸¦ä¸Š delivery_type(é¿å… schema cache æŠ¥é”™)
-        const tval = get('ç±»å‹', r);
-        if (tval === 'é€€è´§') rec.delivery_type = 'é€€è´§';
-        else if (tval === 'ä¸ç»Ÿè®¡') rec.delivery_type = 'ä¸ç»Ÿè®¡';
+        // ½öµ±ÀàĞÍÎªÍË»õ/²»Í³¼ÆÊ±´øÉÏ delivery_type(±ÜÃâ schema cache ±¨´í)
+        const tval = get('ÀàĞÍ', r);
+        if (tval === 'ÍË»õ') rec.delivery_type = 'ÍË»õ';
+        else if (tval === '²»Í³¼Æ') rec.delivery_type = '²»Í³¼Æ';
         const camel = { date: rec.date, plateMain: rec.plate_main, plateTrailer: rec.plate_trailer, name: rec.name, phone: rec.phone, weight: rec.weight, weighFee: rec.weigh_fee, from: rec.from_location, to: rec.to_location, goods: rec.goods, freight: rec.freight };
         rec.notice = generateNotice(camel);
         records.push(rec);
       }
-      if (records.length === 0) { toast(duplicate > 0 ? 'å…¨éƒ¨ ' + duplicate + ' æ¡éƒ½æ˜¯é‡å¤è®°å½•ï¼Œæœªå¯¼å…¥' : 'æ²¡æœ‰å¯å¯¼å…¥çš„æœ‰æ•ˆè®°å½•ï¼ˆéœ€æœ‰æ—¥æœŸå’Œä¸»è½¦ï¼‰', false, true); return; }
-      toast('æ­£åœ¨å¯¼å…¥ ' + records.length + ' æ¡...', true);
+      if (records.length === 0) { toast(duplicate > 0 ? 'È«²¿ ' + duplicate + ' Ìõ¶¼ÊÇÖØ¸´¼ÇÂ¼£¬Î´µ¼Èë' : 'Ã»ÓĞ¿Éµ¼ÈëµÄÓĞĞ§¼ÇÂ¼£¨ĞèÓĞÈÕÆÚºÍÖ÷³µ£©', false, true); return; }
+      toast('ÕıÔÚµ¼Èë ' + records.length + ' Ìõ...', true);
       const BATCH = 100;
       for (let i = 0; i < records.length; i += BATCH) {
         const batch = records.slice(i, i + BATCH);
         let { error } = await supabaseClient.from('records').insert(batch);
-        // é€šç”¨é‡è¯•:åˆ—ä¸å­˜åœ¨åˆ™ä»æ‰€æœ‰è®°å½•ä¸­ç§»é™¤è¯¥åˆ—åé‡è¯•(æœ€å¤š3æ¬¡)
+        // Í¨ÓÃÖØÊÔ:ÁĞ²»´æÔÚÔò´ÓËùÓĞ¼ÇÂ¼ÖĞÒÆ³ı¸ÃÁĞºóÖØÊÔ(×î¶à3´Î)
         let retryCount = 0;
         while (error && /Could not find the '([\w_]+)' column/i.test(error.message) && retryCount < 3) {
           const m = error.message.match(/Could not find the '([\w_]+)' column/i);
           const colName = m[1];
           for (const rec of batch) delete rec[colName];
-          console.warn('å¯¼å…¥:åˆ— ' + colName + ' ä¸å­˜åœ¨,å·²ç§»é™¤é‡è¯•');
+          console.warn('µ¼Èë:ÁĞ ' + colName + ' ²»´æÔÚ,ÒÑÒÆ³ıÖØÊÔ');
           const retry = await supabaseClient.from('records').insert(batch);
           error = retry.error;
           retryCount++;
         }
-        if (error) { toast('å¯¼å…¥å¤±è´¥:' + error.message, false, true); return; }
+        if (error) { toast('µ¼ÈëÊ§°Ü:' + error.message, false, true); return; }
       }
-      toast('æˆåŠŸå¯¼å…¥ ' + records.length + ' æ¡' + (duplicate > 0 ? 'ï¼ˆè·³è¿‡ ' + duplicate + ' æ¡é‡å¤ï¼‰' : '') + (skipped > 0 ? 'ï¼ˆè·³è¿‡ ' + skipped + ' è¡Œç©ºæ•°æ®ï¼‰' : ''), true);
+      toast('³É¹¦µ¼Èë ' + records.length + ' Ìõ' + (duplicate > 0 ? '£¨Ìø¹ı ' + duplicate + ' ÌõÖØ¸´£©' : '') + (skipped > 0 ? '£¨Ìø¹ı ' + skipped + ' ĞĞ¿ÕÊı¾İ£©' : ''), true);
       loadRecords();
 }
 
-// ===== æ¸…ç©ºå…¨éƒ¨ï¼ˆç‹¬ç«‹å¯†ç ä¿æŠ¤ï¼Œé»˜è®¤å¯†ç  clear9999ï¼‰ =====
+// ===== Çå¿ÕÈ«²¿£¨¶ÀÁ¢ÃÜÂë±£»¤£¬Ä¬ÈÏÃÜÂë clear9999£© =====
 const CLEAR_PASSWORD_HASH = 'a00b9fa3bfc91d81481eba0e8119ce0bdd6be6aafb5eabc159de92753d9485e8';
 let clearPwdVerified = false;
 async function clearAllRecords() {
-  // ç¬¬ä¸€æ­¥: éªŒè¯ç‹¬ç«‹å¯†ç 
+  // µÚÒ»²½: ÑéÖ¤¶ÀÁ¢ÃÜÂë
   if (!clearPwdVerified) {
-    const pwd = prompt('æ¸…ç©ºå…¨éƒ¨æ•°æ®éœ€è¦è¾“å…¥ç‹¬ç«‹å¯†ç (ä¸æ˜¯ç™»å½•å¯†ç ):');
+    const pwd = prompt('Çå¿ÕÈ«²¿Êı¾İĞèÒªÊäÈë¶ÀÁ¢ÃÜÂë(²»ÊÇµÇÂ¼ÃÜÂë):');
     if (!pwd) return;
     const hash = await sha256(pwd);
     if (hash !== CLEAR_PASSWORD_HASH) {
-      alert('å¯†ç é”™è¯¯!æ¸…ç©ºå–æ¶ˆ');
+      alert('ÃÜÂë´íÎó!Çå¿ÕÈ¡Ïû');
       return;
     }
     clearPwdVerified = true;
   }
-  // ç¬¬äºŒæ­¥: äºŒæ¬¡ç¡®è®¤(é˜²è¯¯ç‚¹)
-  if (!confirm('âš ï¸ æœ€åç¡®è®¤: è¿™å°†åˆ é™¤æ‰€æœ‰è®°å½•(å«å·²æ”¯ä»˜/æœªæ”¯ä»˜/å›æ”¶ç«™),ä¸å¯æ¢å¤!\n\nä½ ç¡®å®šè¦æ¸…ç©ºå…¨éƒ¨æ•°æ®å—?')) {
+  // µÚ¶ş²½: ¶ş´ÎÈ·ÈÏ(·ÀÎóµã)
+  if (!confirm('?? ×îºóÈ·ÈÏ: Õâ½«É¾³ıËùÓĞ¼ÇÂ¼(º¬ÒÑÖ§¸¶/Î´Ö§¸¶/»ØÊÕÕ¾),²»¿É»Ö¸´!\n\nÄãÈ·¶¨ÒªÇå¿ÕÈ«²¿Êı¾İÂğ?')) {
     return;
   }
-  // ç¬¬ä¸‰æ­¥: æ‰§è¡Œ
-  toast('æ­£åœ¨æ¸…ç©º...', true);
+  // µÚÈı²½: Ö´ĞĞ
+  toast('ÕıÔÚÇå¿Õ...', true);
   const { error } = await supabaseClient.from('records').delete().not('id', 'is', null);
-  if (error) { toast('æ¸…ç©ºå¤±è´¥:' + error.message, false, true); clearPwdVerified = false; return; }
-  toast('å·²æ¸…ç©ºå…¨éƒ¨è®°å½•', true);
+  if (error) { toast('Çå¿ÕÊ§°Ü:' + error.message, false, true); clearPwdVerified = false; return; }
+  toast('ÒÑÇå¿ÕÈ«²¿¼ÇÂ¼', true);
   currentRecords = []; renderList();
   clearPwdVerified = false;
 }
@@ -1650,10 +1651,10 @@ let cancelPaidId = null;
 let cancelPaidNewValue = null;
 
 async function togglePaid(id, newPaid) {
-  // å¦‚æœæ˜¯å–æ¶ˆå‹¾é€‰ï¼ˆnewPaid=falseï¼‰ï¼Œéœ€è¦ä¸¤æ­¥ç¡®è®¤
+  // Èç¹ûÊÇÈ¡Ïû¹´Ñ¡£¨newPaid=false£©£¬ĞèÒªÁ½²½È·ÈÏ
   if (newPaid === false) {
     if (cancelPaidStep === 0 || cancelPaidId !== id) {
-      // ç¬¬ä¸€æ­¥ç¡®è®¤
+      // µÚÒ»²½È·ÈÏ
       cancelPaidStep = 1;
       cancelPaidId = id;
       cancelPaidNewValue = newPaid;
@@ -1662,15 +1663,15 @@ async function togglePaid(id, newPaid) {
     }
   }
   
-  // æ‰§è¡Œæ›´æ–°
+  // Ö´ĞĞ¸üĞÂ
   try {
     const { error } = await supabaseClient.from('records').update({ is_paid: newPaid }).eq('id', id);
     if (error) {
       if (error.message && error.message.includes('is_paid')) {
-        toast('æ”¯ä»˜åŠŸèƒ½æš‚ä¸å¯ç”¨ï¼Œè¯·è”ç³»ç®¡ç†å‘˜', false, true);
+        toast('Ö§¸¶¹¦ÄÜÔİ²»¿ÉÓÃ£¬ÇëÁªÏµ¹ÜÀíÔ±', false, true);
         return;
       }
-      toast('æ›´æ–°å¤±è´¥:' + error.message, false, true);
+      toast('¸üĞÂÊ§°Ü:' + error.message, false, true);
       return;
     }
     cancelPaidStep = 0;
@@ -1678,7 +1679,7 @@ async function togglePaid(id, newPaid) {
     hideCancelPaidConfirm();
     loadRecords();
   } catch (e) {
-    toast('æ›´æ–°å¤±è´¥ï¼Œè¯·åˆ·æ–°é¡µé¢é‡è¯•', false, true);
+    toast('¸üĞÂÊ§°Ü£¬ÇëË¢ĞÂÒ³ÃæÖØÊÔ', false, true);
   }
 }
 
@@ -1697,15 +1698,15 @@ function hideCancelPaidConfirm() {
 
 function doCancelPaidStep1() {
   if (cancelPaidStep === 1) {
-    // ç¬¬äºŒæ­¥ï¼šæ›´å¼ºçƒˆçš„è­¦å‘Š
+    // µÚ¶ş²½£º¸üÇ¿ÁÒµÄ¾¯¸æ
     cancelPaidStep = 2;
-    document.getElementById('cancelPaidIcon').textContent = 'ğŸš«';
-    document.getElementById('cancelPaidTitle').textContent = 'å†æ¬¡ç¡®è®¤å–æ¶ˆå·²æ”¯ä»˜!';
-    document.getElementById('cancelPaidDesc').textContent = 'è¿™æ˜¯æœ€åä¸€æ¬¡ç¡®è®¤ï¼Œå–æ¶ˆåè¯¥è®°å½•çš„å·²æ”¯ä»˜çŠ¶æ€å°†è¢«æ¸…é™¤ï¼Œè¿è´¹å°†ä¸å†è®¡å…¥å·²æ”¯ä»˜åˆè®¡!';
-    document.getElementById('cancelPaidBtn1').textContent = 'ç¡®è®¤å–æ¶ˆï¼ˆä¸å¯æ’¤é”€ï¼‰';
+    document.getElementById('cancelPaidIcon').textContent = '??';
+    document.getElementById('cancelPaidTitle').textContent = 'ÔÙ´ÎÈ·ÈÏÈ¡ÏûÒÑÖ§¸¶!';
+    document.getElementById('cancelPaidDesc').textContent = 'ÕâÊÇ×îºóÒ»´ÎÈ·ÈÏ£¬È¡Ïûºó¸Ã¼ÇÂ¼µÄÒÑÖ§¸¶×´Ì¬½«±»Çå³ı£¬ÔË·Ñ½«²»ÔÙ¼ÆÈëÒÑÖ§¸¶ºÏ¼Æ!';
+    document.getElementById('cancelPaidBtn1').textContent = 'È·ÈÏÈ¡Ïû£¨²»¿É³·Ïú£©';
     document.getElementById('cancelPaidBtn1').className = 'confirm-btn danger';
   } else if (cancelPaidStep === 2) {
-    // çœŸæ­£æ‰§è¡Œ
+    // ÕæÕıÖ´ĞĞ
     togglePaid(cancelPaidId, cancelPaidNewValue);
   }
 }
@@ -1722,22 +1723,22 @@ function renderDetail(r, changedKeys) {
   const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
   const hasWeight = r.weight && r.weight.trim();
   const hasWeighFee = r.weigh_fee && r.weigh_fee.trim();
-  const detailMap = { date: 'æ—¥æœŸ', plate_main: 'ä¸»è½¦è½¦ç‰Œ', plate_trailer: 'æŒ‚è½¦è½¦ç‰Œ', name: 'å§“å', phone: 'æ‰‹æœºå·', id_card: 'èº«ä»½è¯å·', from_location: 'è£…è´§åœ°', to_location: 'æ”¶è´§åœ°', goods: 'è´§ç‰©', freight: 'è¿è´¹', weight: 'è¿‡ç£…é‡é‡', weigh_fee: 'è¿‡ç£…è´¹' };
+  const detailMap = { date: 'ÈÕÆÚ', plate_main: 'Ö÷³µ³µÅÆ', plate_trailer: '¹Ò³µ³µÅÆ', name: 'ĞÕÃû', phone: 'ÊÖ»úºÅ', id_card: 'Éí·İÖ¤ºÅ', from_location: '×°»õµØ', to_location: 'ÊÕ»õµØ', goods: '»õÎï', freight: 'ÔË·Ñ', weight: '¹ı°õÖØÁ¿', weigh_fee: '¹ı°õ·Ñ' };
   const fields = [
-    ['æ—¥æœŸ', formatDateCN(r.date), 'date'],
-    ['ä¸»è½¦è½¦ç‰Œ', r.plate_main, 'plate_main'],
-    ['æŒ‚è½¦è½¦ç‰Œ', r.plate_trailer || '-', 'plate_trailer'],
-    ['å§“å', r.name || 'æœªå¡«', 'name'],
-    ['æ‰‹æœºå·', r.phone || 'æœªå¡«', 'phone'],
-    ['èº«ä»½è¯å·', r.id_card || 'æœªå¡«', 'id_card'],
-    ['è£…è´§åœ°', r.from_location || 'æœªå¡«', 'from_location'],
-    ['æ”¶è´§åœ°', r.to_location || 'æœªå¡«', 'to_location'],
-    ['è´§ç‰©', r.goods || 'æœªå¡«', 'goods'],
-    ['è¿è´¹', r.freight ? r.freight + ' å…ƒ' : 'æœªå¡«', 'freight'],
-    ['è¿‡ç£…é‡é‡', r.weight ? r.weight + ' å…¬æ–¤' : 'å¾…è¡¥é‡é‡', 'weight'],
-    ['è¿‡ç£…è´¹', r.weigh_fee ? r.weigh_fee + ' å…ƒ' : 'å¾…è¡¥è¿‡ç£…è´¹', 'weigh_fee'],
-    ['ç±»å‹', r.delivery_type || 'é€è´§', 'delivery_type'],
-    ['å¤‡æ³¨', r.note || '-', 'note']
+    ['ÈÕÆÚ', formatDateCN(r.date), 'date'],
+    ['Ö÷³µ³µÅÆ', r.plate_main, 'plate_main'],
+    ['¹Ò³µ³µÅÆ', r.plate_trailer || '-', 'plate_trailer'],
+    ['ĞÕÃû', r.name || 'Î´Ìî', 'name'],
+    ['ÊÖ»úºÅ', r.phone || 'Î´Ìî', 'phone'],
+    ['Éí·İÖ¤ºÅ', r.id_card || 'Î´Ìî', 'id_card'],
+    ['×°»õµØ', r.from_location || 'Î´Ìî', 'from_location'],
+    ['ÊÕ»õµØ', r.to_location || 'Î´Ìî', 'to_location'],
+    ['»õÎï', r.goods || 'Î´Ìî', 'goods'],
+    ['ÔË·Ñ', r.freight ? r.freight + ' Ôª' : 'Î´Ìî', 'freight'],
+    ['¹ı°õÖØÁ¿', r.weight ? r.weight + ' ¹«½ï' : '´ı²¹ÖØÁ¿', 'weight'],
+    ['¹ı°õ·Ñ', r.weigh_fee ? r.weigh_fee + ' Ôª' : '´ı²¹¹ı°õ·Ñ', 'weigh_fee'],
+    ['ÀàĞÍ', r.delivery_type || 'ËÍ»õ', 'delivery_type'],
+    ['±¸×¢', r.note || '-', 'note']
   ];
   const changedSet = new Set(changedKeys || []);
   document.getElementById('detailItems').innerHTML = fields.map(([label, val, key]) => {
@@ -1750,7 +1751,7 @@ function renderDetail(r, changedKeys) {
   hideEdit();
 }
 
-// ===== å®Œæ•´ä¿®æ”¹åŠŸèƒ½ =====
+// ===== ÍêÕûĞŞ¸Ä¹¦ÄÜ =====
 function openFullEdit() {
   if (!currentDetail) return;
   const r = currentDetail;
@@ -1765,7 +1766,7 @@ function openFullEdit() {
   document.getElementById('mFreight').value = r.freight || '';
   document.getElementById('mWeighFee').value = r.weigh_fee || '';
   document.getElementById('mWeight').value = r.weight || '';
-  // è´§ç‰©æŒ‰é’® (ç”¨IDç²¾ç¡®é€‰æ‹©ç¬¬ä¸€ä¸ªgoods-btnsï¼Œé¿å…å’Œç±»å‹æŒ‰é’®æ··æ·†)
+  // »õÎï°´Å¥ (ÓÃID¾«È·Ñ¡ÔñµÚÒ»¸ögoods-btns£¬±ÜÃâºÍÀàĞÍ°´Å¥»ìÏı)
   const goods = r.goods || '';
   const goodsBtns = document.querySelector('#fullEditForm .goods-btns');
   if (goodsBtns) {
@@ -1773,14 +1774,14 @@ function openFullEdit() {
       b.classList.toggle('active', b.textContent.trim() === goods);
     });
   }
-  // ç±»å‹æŒ‰é’®(é€è´§/é€€è´§)
-  const dtype = r.delivery_type || 'é€è´§';
+  // ÀàĞÍ°´Å¥(ËÍ»õ/ÍË»õ)
+  const dtype = r.delivery_type || 'ËÍ»õ';
   document.getElementById('mDeliveryType').value = dtype;
   document.querySelectorAll('#mTypeBtns .goods-btn').forEach(b => {
     b.classList.toggle('active', b.textContent.trim() === dtype);
   });
   const otherInput = document.getElementById('mGoodsOther');
-  if (goods && !['ç›˜æ‰£', 'å¥—æ‰£'].includes(goods)) {
+  if (goods && !['ÅÌ¿Û', 'Ì×¿Û'].includes(goods)) {
     otherInput.style.display = 'block';
     otherInput.value = goods;
   } else {
@@ -1793,7 +1794,7 @@ function openFullEdit() {
     name: r.name, phone: r.phone, from_location: r.from_location,
     to_location: r.to_location, goods: r.goods, freight: r.freight,
     weigh_fee: r.weigh_fee, weight: r.weight, date: r.date,
-    delivery_type: r.delivery_type || 'é€è´§'
+    delivery_type: r.delivery_type || 'ËÍ»õ'
   };
 }
 
@@ -1804,7 +1805,7 @@ function selectModalGoods(btn, name) {
   if (goodsBtns) goodsBtns.querySelectorAll('.goods-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const otherInput = document.getElementById('mGoodsOther');
-  if (name === 'å…¶ä»–') {
+  if (name === 'ÆäËû') {
     otherInput.style.display = 'block';
   } else {
     otherInput.style.display = 'none';
@@ -1824,15 +1825,15 @@ function closeFullEdit() {
 
 async function saveFullEdit() {
   if (!currentDetail) return;
-  // é€‰ä¸­çš„è´§ç‰© (ç²¾ç¡®é€‰æ‹©è´§ç‰©åŒºåŸŸçš„activeæŒ‰é’®ï¼Œæ’é™¤ç±»å‹æŒ‰é’®)
+  // Ñ¡ÖĞµÄ»õÎï (¾«È·Ñ¡Ôñ»õÎïÇøÓòµÄactive°´Å¥£¬ÅÅ³ıÀàĞÍ°´Å¥)
   const goodsBtnsContainer = document.querySelector('#fullEditForm .goods-btns');
   const activeGoods = goodsBtnsContainer ? goodsBtnsContainer.querySelector('.goods-btn.active') : null;
   let goods = activeGoods ? activeGoods.textContent.trim() : '';
-  if (goods === 'å…¶ä»–') {
+  if (goods === 'ÆäËû') {
     const other = document.getElementById('mGoodsOther').value.trim();
-    goods = other || 'å…¶ä»–';
+    goods = other || 'ÆäËû';
   }
-  const deliveryType = document.getElementById('mDeliveryType').value || 'é€è´§';
+  const deliveryType = document.getElementById('mDeliveryType').value || 'ËÍ»õ';
   const newData = {
     date: document.getElementById('mDate').value,
     plate_main: document.getElementById('mPlateMain').value.trim(),
@@ -1848,13 +1849,13 @@ async function saveFullEdit() {
     weight: document.getElementById('mWeight').value.trim(),
     delivery_type: deliveryType
   };
-  // æ‰¾è¢«ä¿®æ”¹çš„å­—æ®µ
+  // ÕÒ±»ĞŞ¸ÄµÄ×Ö¶Î
   const changedFields = [];
   const fieldLabels = {
-    date: 'æ—¥æœŸ', plate_main: 'ä¸»è½¦è½¦ç‰Œ', plate_trailer: 'æŒ‚è½¦è½¦ç‰Œ',
-    name: 'å§“å', phone: 'æ‰‹æœºå·', from_location: 'è£…è´§åœ°',
-    to_location: 'æ”¶è´§åœ°', goods: 'è´§ç‰©', freight: 'è¿è´¹',
-    weigh_fee: 'è¿‡ç£…è´¹', weight: 'è¿‡ç£…é‡é‡', delivery_type: 'ç±»å‹'
+    date: 'ÈÕÆÚ', plate_main: 'Ö÷³µ³µÅÆ', plate_trailer: '¹Ò³µ³µÅÆ',
+    name: 'ĞÕÃû', phone: 'ÊÖ»úºÅ', from_location: '×°»õµØ',
+    to_location: 'ÊÕ»õµØ', goods: '»õÎï', freight: 'ÔË·Ñ',
+    weigh_fee: '¹ı°õ·Ñ', weight: '¹ı°õÖØÁ¿', delivery_type: 'ÀàĞÍ'
   };
   Object.keys(fieldLabels).forEach(k => {
     const oldVal = (modalEditOriginal[k] || '').toString().trim();
@@ -1863,7 +1864,7 @@ async function saveFullEdit() {
       changedFields.push({ key: k, label: fieldLabels[k], oldVal, newVal });
     }
   });
-  // åŒæ­¥æ›´æ–°é€šçŸ¥æ–‡å­—
+  // Í¬²½¸üĞÂÍ¨ÖªÎÄ×Ö
   newData.notice = generateNotice({
     date: newData.date, plateMain: newData.plate_main, plateTrailer: newData.plate_trailer,
     name: newData.name, phone: newData.phone, idCard: newData.id_card,
@@ -1871,15 +1872,15 @@ async function saveFullEdit() {
     freight: newData.freight, weight: newData.weight, weighFee: newData.weigh_fee,
     deliveryType: newData.delivery_type, note: currentDetail.note
   });
-  // è®°å½•ä¿®æ”¹å†å²
+  // ¼ÇÂ¼ĞŞ¸ÄÀúÊ·
   const existingModified = currentDetail.modified_fields || [];
   const newModifiedKeys = changedFields.map(f => f.key);
   const allModified = [...new Set([...existingModified, ...newModifiedKeys])];
   newData.modified_fields = allModified;
   newData.modified_count = (currentDetail.modified_count || 0) + changedFields.length;
   const { error } = await supabaseClient.from('records').update(newData).eq('id', currentDetail.id);
-  if (error) { toast('ä¿å­˜å¤±è´¥:' + error.message, false, true); return; }
-  // åˆ·æ–°å½“å‰è®°å½•
+  if (error) { toast('±£´æÊ§°Ü:' + error.message, false, true); return; }
+  // Ë¢ĞÂµ±Ç°¼ÇÂ¼
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
   if (data) {
     currentDetail = data;
@@ -1887,50 +1888,50 @@ async function saveFullEdit() {
   }
   closeFullEdit();
   loadRecords();
-  // é¡¶éƒ¨æç¤º
+  // ¶¥²¿ÌáÊ¾
   if (changedFields.length > 0) {
-    const msg = 'å·²ä¿®æ”¹ ' + changedFields.length + ' é¡¹:' + changedFields.map(f => f.label).join('ã€');
+    const msg = 'ÒÑĞŞ¸Ä ' + changedFields.length + ' Ïî:' + changedFields.map(f => f.label).join('¡¢');
     showModifyBanner(msg, changedFields);
   } else {
-    toast('æœªä¿®æ”¹ä»»ä½•å­—æ®µ', true);
+    toast('Î´ĞŞ¸ÄÈÎºÎ×Ö¶Î', true);
   }
 }
 
 function showModifyBanner(msg, changedFields) {
   const banner = document.getElementById('modifyBanner');
   const text = document.getElementById('modifyBannerText');
-  text.innerHTML = 'âš ï¸ ' + msg;
+  text.innerHTML = '?? ' + msg;
   banner.classList.add('show');
-  // æ°¸ä¹…æ˜¾ç¤ºï¼Œä¸è‡ªåŠ¨éšè—
+  // ÓÀ¾ÃÏÔÊ¾£¬²»×Ô¶¯Òş²Ø
 }
 
 function parseModifiedFields(r) {
-  // æ•°æ®åº“ modified_fields å¯èƒ½æ˜¯ JSON å­—ç¬¦ä¸²æˆ–æ•°ç»„
+  // Êı¾İ¿â modified_fields ¿ÉÄÜÊÇ JSON ×Ö·û´®»òÊı×é
   const mf = r.modified_fields;
   if (!mf) return [];
   if (Array.isArray(mf)) return mf;
   try { return JSON.parse(mf); } catch(e) { return []; }
 }
 function renderDetailWithChanges(r, changedFields) {
-  // åˆå¹¶æœ¬æ¬¡ä¿®æ”¹å’Œæ•°æ®åº“å·²è®°å½•çš„ä¿®æ”¹
+  // ºÏ²¢±¾´ÎĞŞ¸ÄºÍÊı¾İ¿âÒÑ¼ÇÂ¼µÄĞŞ¸Ä
   const dbModified = parseModifiedFields(r);
   const currentChanged = changedFields.map(f => f.key);
   const allChanged = [...new Set([...dbModified, ...currentChanged])];
   renderDetail(r, allChanged);
 }
 function renderDetailChanged(r) {
-  // ä½¿ç”¨æ•°æ®åº“è®°å½•çš„ä¿®æ”¹å­—æ®µæ°¸ä¹…æ ‡çº¢
+  // Ê¹ÓÃÊı¾İ¿â¼ÇÂ¼µÄĞŞ¸Ä×Ö¶ÎÓÀ¾Ã±êºì
   renderDetail(r, parseModifiedFields(r));
 }
 
-// ===== ç¼–è¾‘/è¡¥å¡« =====
+// ===== ±à¼­/²¹Ìî =====
 function toggleEdit() {
   const section = document.getElementById('editSection');
   const btn = document.getElementById('editToggleBtn');
   if (section.classList.contains('show')) { hideEdit(); }
   else {
     section.classList.add('show');
-    btn.textContent = 'âœï¸ æ”¶èµ·';
+    btn.textContent = '?? ÊÕÆğ';
     document.getElementById('eWeight').value = currentDetail.weight || '';
     document.getElementById('eWeighFee').value = currentDetail.weigh_fee || '';
   }
@@ -1938,15 +1939,15 @@ function toggleEdit() {
 
 function hideEdit() {
   document.getElementById('editSection').classList.remove('show');
-  document.getElementById('editToggleBtn').textContent = 'âœï¸ è¡¥å¡«';
+  document.getElementById('editToggleBtn').textContent = '?? ²¹Ìî';
 }
 
 async function saveEdit() {
   if (!currentDetail) return;
   const weight = document.getElementById('eWeight').value.trim();
   const weigh_fee = document.getElementById('eWeighFee').value.trim();
-  // è¡¥å¡«ä¸è®°å½•ä¿®æ”¹çŠ¶æ€
-  // åŒæ­¥æ›´æ–°é€šçŸ¥æ–‡å­—
+  // ²¹Ìî²»¼ÇÂ¼ĞŞ¸Ä×´Ì¬
+  // Í¬²½¸üĞÂÍ¨ÖªÎÄ×Ö
   const r = {
     date: currentDetail.date, plateMain: currentDetail.plate_main, plateTrailer: currentDetail.plate_trailer,
     name: currentDetail.name, phone: currentDetail.phone, idCard: currentDetail.id_card,
@@ -1957,34 +1958,34 @@ async function saveEdit() {
     weight: weight, weigh_fee: weigh_fee,
     notice: generateNotice(r)
   }).eq('id', currentDetail.id);
-  if (error) { toast('ä¿å­˜å¤±è´¥:' + error.message, false, true); return; }
-  toast('å·²ä¿å­˜ âœ“', true);
-  // åˆ·æ–°å½“å‰è®°å½•
+  if (error) { toast('±£´æÊ§°Ü:' + error.message, false, true); return; }
+  toast('ÒÑ±£´æ ?', true);
+  // Ë¢ĞÂµ±Ç°¼ÇÂ¼
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
   if (data) { currentDetail = data; renderDetailChanged(currentDetail); }
   loadRecords();
   hideEdit();
 }
 
-// ===== åˆ é™¤(ä¸¤æ­¥ç¡®è®¤)=====
+// ===== É¾³ı(Á½²½È·ÈÏ)=====
 function confirmDelete() {
   deleteStep = 1;
-  document.getElementById('deleteIcon').textContent = 'âš ï¸';
-  document.getElementById('deleteTitle').textContent = 'ç¡®å®šè¦åˆ é™¤è¿™æ¡è®°å½•å—?';
-  document.getElementById('deleteDesc').textContent = 'å°†ç§»å…¥å›æ”¶ç«™,å¯åœ¨å›æ”¶ç«™æ¢å¤ã€‚';
-  document.getElementById('deleteBtn1').textContent = 'ç¡®å®šåˆ é™¤';
+  document.getElementById('deleteIcon').textContent = '??';
+  document.getElementById('deleteTitle').textContent = 'È·¶¨ÒªÉ¾³ıÕâÌõ¼ÇÂ¼Âğ?';
+  document.getElementById('deleteDesc').textContent = '½«ÒÆÈë»ØÊÕÕ¾,¿ÉÔÚ»ØÊÕÕ¾»Ö¸´¡£';
+  document.getElementById('deleteBtn1').textContent = 'È·¶¨É¾³ı';
   document.getElementById('deleteBtn1').className = 'confirm-btn primary';
   document.getElementById('deleteConfirm').classList.add('show');
 }
 
 function doDeleteStep1() {
   if (deleteStep === 1) {
-    // ç¬¬äºŒæ­¥:æ›´å¼ºçƒˆçš„è­¦å‘Š
+    // µÚ¶ş²½:¸üÇ¿ÁÒµÄ¾¯¸æ
     deleteStep = 2;
-    document.getElementById('deleteIcon').textContent = 'ğŸš«';
-    document.getElementById('deleteTitle').textContent = 'å†æ¬¡ç¡®è®¤åˆ é™¤!';
-    document.getElementById('deleteDesc').textContent = 'å°†ç§»å…¥å›æ”¶ç«™,ä¹‹åå¯åœ¨å›æ”¶ç«™æ¢å¤,ç¡®è®¤å—?';
-    document.getElementById('deleteBtn1').textContent = 'ç¡®è®¤åˆ é™¤(ä¸å¯æ’¤é”€)';
+    document.getElementById('deleteIcon').textContent = '??';
+    document.getElementById('deleteTitle').textContent = 'ÔÙ´ÎÈ·ÈÏÉ¾³ı!';
+    document.getElementById('deleteDesc').textContent = '½«ÒÆÈë»ØÊÕÕ¾,Ö®ºó¿ÉÔÚ»ØÊÕÕ¾»Ö¸´,È·ÈÏÂğ?';
+    document.getElementById('deleteBtn1').textContent = 'È·ÈÏÉ¾³ı(²»¿É³·Ïú)';
     document.getElementById('deleteBtn1').className = 'confirm-btn primary step2';
   } else if (deleteStep === 2) {
     doDelete();
@@ -1994,10 +1995,10 @@ function doDeleteStep1() {
 async function doDelete() {
   if (!currentDetail) return;
   hideDeleteConfirm();
-  // è½¯åˆ é™¤:æ ‡è®°ä¸ºå·²åˆ é™¤,ç§»å…¥å›æ”¶ç«™(å¯æ¢å¤)
+  // ÈíÉ¾³ı:±ê¼ÇÎªÒÑÉ¾³ı,ÒÆÈë»ØÊÕÕ¾(¿É»Ö¸´)
   const { error } = await supabaseClient.from('records').update({ deleted: true, deleted_at: new Date().toISOString() }).eq('id', currentDetail.id);
-  if (error) { toast('åˆ é™¤å¤±è´¥:' + error.message + 'ï¼ˆå¦‚æç¤ºç¼ºdeletedåˆ—,è¯·å…ˆåœ¨SupabaseåŠ åˆ—ï¼‰', false, true); return; }
-  toast('å·²ç§»å…¥å›æ”¶ç«™', true);
+  if (error) { toast('É¾³ıÊ§°Ü:' + error.message + '£¨ÈçÌáÊ¾È±deletedÁĞ,ÇëÏÈÔÚSupabase¼ÓÁĞ£©', false, true); return; }
+  toast('ÒÑÒÆÈë»ØÊÕÕ¾', true);
   setTimeout(() => showList(), 600);
 }
 
@@ -2006,23 +2007,23 @@ function hideDeleteConfirm() {
   deleteStep = 0;
 }
 
-// ===== å›æ”¶ç«™(è½¯åˆ é™¤æ¢å¤)=====
+// ===== »ØÊÕÕ¾(ÈíÉ¾³ı»Ö¸´)=====
 function renderRecycle() {
-  const list = getFilteredRecords(); // showRecycle æ—¶è¿”å›å·²åˆ åˆ—è¡¨
+  const list = getFilteredRecords(); // showRecycle Ê±·µ»ØÒÑÉ¾ÁĞ±í
   const el = document.getElementById('recordList');
   const cnt = document.getElementById('recordCount');
-  if (cnt) cnt.textContent = list.length + ' æ¡(å›æ”¶ç«™)';
+  if (cnt) cnt.textContent = list.length + ' Ìõ(»ØÊÕÕ¾)';
   const s1 = document.getElementById('summaryBar'); if (s1) s1.style.display = 'none';
   const s2 = document.getElementById('summaryBar2'); if (s2) s2.style.display = 'none';
-  if (list.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">ğŸ—‘</div>å›æ”¶ç«™æ˜¯ç©ºçš„<br>å·²åˆ é™¤çš„è®°å½•ä¼šåœ¨è¿™é‡Œä¿ç•™,å¯æ¢å¤</div>'; return; }
+  if (list.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">??</div>»ØÊÕÕ¾ÊÇ¿ÕµÄ<br>ÒÑÉ¾³ıµÄ¼ÇÂ¼»áÔÚÕâÀï±£Áô,¿É»Ö¸´</div>'; return; }
   el.innerHTML = list.map(r => {
     const plateHtml = r.plate_trailer
-      ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+æŒ‚' + r.plate_trailer + '</span>'
+      ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+¹Ò' + r.plate_trailer + '</span>'
       : '<span class="plate-main">' + r.plate_main + '</span>';
     return '<div class="record-card recycle-card">' +
       '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
-      '<div class="bottom"><span class="goods-tag">' + (r.goods || 'å¾…å¡«') + '</span><span style="color:#999;font-size:12px;margin-left:8px">åˆ äº ' + (r.deleted_at ? r.deleted_at.substring(0,10) : 'æœªçŸ¥') + '</span></div>' +
-      '<div style="margin-top:8px"><button class="filter-btn-export" onclick="event.stopPropagation();restoreRecord(\'' + r.id + '\')">â™»ï¸ æ¢å¤</button></div>' +
+      '<div class="bottom"><span class="goods-tag">' + (r.goods || '´ıÌî') + '</span><span style="color:#999;font-size:12px;margin-left:8px">É¾ÓÚ ' + (r.deleted_at ? r.deleted_at.substring(0,10) : 'Î´Öª') + '</span></div>' +
+      '<div style="margin-top:8px"><button class="filter-btn-export" onclick="event.stopPropagation();restoreRecord(\'' + r.id + '\')">?? »Ö¸´</button></div>' +
       '</div>';
   }).join('');
 }
@@ -2038,20 +2039,20 @@ function updateRecycleBtn() {
   const btn = document.getElementById('recycleBtn');
   if (!btn) return;
   const n = (currentRecords || []).filter(r => r.deleted === true).length;
-  btn.textContent = 'ğŸ—‘ å›æ”¶ç«™(' + n + ')';
+  btn.textContent = '?? »ØÊÕÕ¾(' + n + ')';
 }
 
 async function restoreRecord(id) {
   const { data, error } = await supabaseClient.from('records').update({ deleted: false, deleted_at: null }).eq('id', id).select();
-  if (error) { toast('æ¢å¤å¤±è´¥:' + error.message + 'ï¼ˆå¦‚æç¤ºç¼ºdeletedåˆ—,è¯·å…ˆåœ¨SupabaseåŠ åˆ—ï¼‰', false, true); return; }
-  if (!data || data.length === 0) { toast('æ¢å¤å¤±è´¥:è®°å½•ä¸å­˜åœ¨æˆ–æœªè¢«ä¿®æ”¹', false, true); return; }
-  toast('å·²æ¢å¤', true);
+  if (error) { toast('»Ö¸´Ê§°Ü:' + error.message + '£¨ÈçÌáÊ¾È±deletedÁĞ,ÇëÏÈÔÚSupabase¼ÓÁĞ£©', false, true); return; }
+  if (!data || data.length === 0) { toast('»Ö¸´Ê§°Ü:¼ÇÂ¼²»´æÔÚ»òÎ´±»ĞŞ¸Ä', false, true); return; }
+  toast('ÒÑ»Ö¸´', true);
   updateRecycleBtn();
   renderList();
   loadRecords();
 }
 
-// ===== å¸æœºä¿¡æ¯è‡ªåŠ¨å¡«å……(åŒè½¦ç‰Œå¸¦å‡ºå†å²å¸æœº)=====
+// ===== Ë¾»úĞÅÏ¢×Ô¶¯Ìî³ä(Í¬³µÅÆ´ø³öÀúÊ·Ë¾»ú)=====
 function debounceAutoFill() {
   if (autoFillTimer) clearTimeout(autoFillTimer);
   autoFillTimer = setTimeout(autoFillDriver, 600);
@@ -2061,7 +2062,7 @@ function autoFillDriver() {
   const plateEl = document.getElementById('fPlateMain');
   if (!plateEl) return;
   const plate = (plateEl.value || '').trim().toUpperCase();
-  if (plate.length < 5) return; // è½¦ç‰Œå¤ªçŸ­ä¸è¯†åˆ«
+  if (plate.length < 5) return; // ³µÅÆÌ«¶Ì²»Ê¶±ğ
   const matches = (currentRecords || [])
     .filter(r => !r.deleted && r.plate_main && r.plate_main.replace(/\s/g,'').toUpperCase() === plate.replace(/\s/g,'').toUpperCase())
     .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
@@ -2070,7 +2071,7 @@ function autoFillDriver() {
   const nameEl = document.getElementById('fName');
   const phoneEl = document.getElementById('fPhone');
   const idEl = document.getElementById('fIdCard');
-  // åªåœ¨ä¸ºç©ºæ—¶è‡ªåŠ¨å¡«,é¿å…è¦†ç›–æ‰‹åŠ¨è¾“å…¥
+  // Ö»ÔÚÎª¿ÕÊ±×Ô¶¯Ìî,±ÜÃâ¸²¸ÇÊÖ¶¯ÊäÈë
   if (nameEl && !nameEl.value.trim() && last.name) nameEl.value = last.name;
   if (phoneEl && !phoneEl.value.trim() && last.phone) phoneEl.value = last.phone;
   if (idEl && !idEl.value.trim() && last.id_card) idEl.value = last.id_card;
@@ -2089,8 +2090,8 @@ function copyDetailNotice() {
 }
 
 function copyText(text) {
-  if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => toast('å·²å¤åˆ¶,å»å¾®ä¿¡ç¾¤ç²˜è´´å‘é€', true)); }
-  else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('å·²å¤åˆ¶,å»å¾®ä¿¡ç¾¤ç²˜è´´å‘é€', true); }
+  if (navigator.clipboard) { navigator.clipboard.writeText(text).then(() => toast('ÒÑ¸´ÖÆ,È¥Î¢ĞÅÈºÕ³Ìù·¢ËÍ', true)); }
+  else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('ÒÑ¸´ÖÆ,È¥Î¢ĞÅÈºÕ³Ìù·¢ËÍ', true); }
 }
 
 function formatDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
@@ -2098,7 +2099,7 @@ function formatDateCN(dateStr) {
   if (!dateStr) return '';
   const m = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
   if (!m) return dateStr;
-  return m[1] + 'å¹´' + parseInt(m[2]) + 'æœˆ' + parseInt(m[3]) + 'æ—¥';
+  return m[1] + 'Äê' + parseInt(m[2]) + 'ÔÂ' + parseInt(m[3]) + 'ÈÕ';
 }
 
 function toast(msg, green, red) {
@@ -2109,12 +2110,12 @@ function toast(msg, green, red) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// åˆå§‹åŒ– (ä»…åœ¨å¯†ç éªŒè¯åæˆ–å·²éªŒè¯è¿‡æ‰åˆå§‹åŒ–)
+// ³õÊ¼»¯ (½öÔÚÃÜÂëÑéÖ¤ºó»òÒÑÑéÖ¤¹ı²Å³õÊ¼»¯)
 if (localStorage.getItem(GATE_KEY) === '1') {
   initSupabase();
 }
 </script>
-<div class="version-footer">è£…è´§ç™»è®° v1.6.7 | å¼€å‘è€…: sea9413 Â· <span id="offlineBadge" style="display:none"></span> Â· <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">ä½¿ç”¨è¯´æ˜</a> Â· <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">é‡æ–°ç™»å½•</a></div>
+<div class="version-footer">×°»õµÇ¼Ç v1.6.8 | ¿ª·¢Õß: sea9413 ¡¤ <span id="offlineBadge" style="display:none"></span> ¡¤ <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">Ê¹ÓÃËµÃ÷</a> ¡¤ <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">ÖØĞÂµÇÂ¼</a></div>
 </body>
 </html>
 
