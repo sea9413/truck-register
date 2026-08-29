@@ -471,6 +471,11 @@ async function checkGate() {
   const hash = await sha256(pwd);
   if (hash === PASSWORD_HASH) {
     localStorage.setItem(GATE_KEY, '1');
+    // 由登录密码派生身份证加密密钥(AES-GCM),缓存在本机
+    try {
+      aesKey = await deriveAesKey(pwd);
+      await storeAesKey(aesKey);
+    } catch (e) { console.error('加密密钥生成失败:', e); }
     document.getElementById('gateModal').classList.remove('show');
     document.getElementById('gatePassword').value = '';
     document.getElementById('gateError').textContent = '';
@@ -482,12 +487,119 @@ async function checkGate() {
   }
 }
 
-// 如果已验证过密码（30天内），自动跳过密码门
+// ===== 身份证加密存储 (AES-GCM 256,密钥由登录密码派生) =====
+// 设计:数据库里只存密文 enc:v1:<iv>:<密文>;输密码进入后页面照常显示明文。
+// 威胁模型:防止有人拿到公开的数据库接口地址直接批量拉取司机身份证号。
+const AES_KEY_STORE = 'truck_aes_key_v1';
+const PBKDF2_SALT = 'truck-reg-static-salt-v1'; // 固定盐,一经发布不可修改,否则旧密文全部无法解密
+const ENC_PREFIX = 'enc:v1:';
+let aesKey = null; // CryptoKey,仅在本机内存中
+
+function hasStoredAesKey() { return !!localStorage.getItem(AES_KEY_STORE); }
+
+async function deriveAesKey(password) {
+  const enc = new TextEncoder();
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(password), 'PBKDF2', false, ['deriveKey']);
+  return await crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: enc.encode(PBKDF2_SALT), iterations: 100000, hash: 'SHA-256' },
+    baseKey, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']
+  );
+}
+
+async function storeAesKey(key) {
+  const raw = await crypto.subtle.exportKey('raw', key);
+  localStorage.setItem(AES_KEY_STORE, Array.from(new Uint8Array(raw)).map(b => b.toString(16).padStart(2, '0')).join(''));
+}
+
+async function loadAesKey() {
+  const hex = localStorage.getItem(AES_KEY_STORE);
+  if (!hex) return null;
+  const bytes = new Uint8Array((hex.match(/.{2}/g) || []).map(h => parseInt(h, 16)));
+  return await crypto.subtle.importKey('raw', bytes, { name: 'AES-GCM', length: 256 }, true, ['encrypt', 'decrypt']);
+}
+
+function bufToB64(buf) { return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(buf)))); }
+function b64ToBytes(b64) { return Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
+
+function isEncryptedIdCard(s) { return typeof s === 'string' && s.indexOf(ENC_PREFIX) === 0; }
+
+// 明文 → 密文(写库前调用)
+async function encryptIdCard(plain) {
+  if (!plain) return plain;
+  if (!aesKey) return plain; // 无密钥时降级明文(理论上不会发生,密码门必过)
+  try {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, aesKey, new TextEncoder().encode(plain));
+    return ENC_PREFIX + bufToB64(iv) + ':' + bufToB64(ct);
+  } catch (e) { console.error('身份证加密失败:', e); return plain; }
+}
+
+// 密文 → 明文(读库后调用);旧明文数据原样返回
+async function decryptIdCard(stored) {
+  if (!stored) return stored;
+  if (!isEncryptedIdCard(stored)) return stored;
+  if (!aesKey) return '🔒(请重新登录后查看)';
+  try {
+    const parts = stored.substring(ENC_PREFIX.length).split(':');
+    const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(parts[0]) }, aesKey, b64ToBytes(parts[1]));
+    return new TextDecoder().decode(pt);
+  } catch (e) { console.warn('身份证解密失败(密钥不匹配?)'); return '🔒(无法解密)'; }
+}
+
+// 一次性迁移:把历史上的明文身份证加密后写回数据库(每次加载时自动检查,无明文则零开销)
+let idMigrationRunning = false;
+async function migratePlaintextIdCards() {
+  if (!aesKey || !navigator.onLine || idMigrationRunning) return;
+  const targets = (currentRecords || []).filter(r => r.id_card && !isEncryptedIdCard(r.id_card) && /^\d{15}$|^\d{17}[\dXx]$/.test(r.id_card.trim()));
+  if (targets.length === 0) return;
+  idMigrationRunning = true;
+  let done = 0;
+  for (const r of targets) {
+    const enc = await encryptIdCard(r.id_card.trim());
+    const { error } = await supabaseClient.from('records').update({ id_card: enc }).eq('id', r.id);
+    if (!error) done++;
+  }
+  idMigrationRunning = false;
+  if (done > 0) toast('🔒 已自动加密 ' + done + ' 条历史身份证号', true);
+}
+
+// 正式版换登录密码时用(浏览器控制台执行): reEncryptIdCards('旧密码','新密码')
+// 作用:用旧密码解密全部身份证 → 用新密码重新加密写回。换密码前必须执行,否则旧密文无法解密。
+window.reEncryptIdCards = async function (oldPwd, newPwd) {
+  const oldKey = await deriveAesKey(oldPwd);
+  const newKey = await deriveAesKey(newPwd);
+  const { data, error } = await supabaseClient.from('records').select('id, id_card').not('id_card', 'is', null);
+  if (error) { console.error('拉取记录失败:', error); return; }
+  let n = 0;
+  for (const r of (data || [])) {
+    let plain = r.id_card;
+    if (isEncryptedIdCard(plain)) {
+      try {
+        const parts = plain.substring(ENC_PREFIX.length).split(':');
+        const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64ToBytes(parts[0]) }, oldKey, b64ToBytes(parts[1]));
+        plain = new TextDecoder().decode(pt);
+      } catch (e) { console.warn('跳过无法解密的记录 id=' + r.id + '(可能已是新密码加密)'); continue; }
+    }
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, newKey, new TextEncoder().encode(plain));
+    const enc = ENC_PREFIX + bufToB64(iv) + ':' + bufToB64(ct);
+    const { error: ue } = await supabaseClient.from('records').update({ id_card: enc }).eq('id', r.id);
+    if (!ue) n++;
+  }
+  console.log('身份证重加密完成:', n, '条');
+  return n;
+};
+
+// 如果已验证过密码（30天内）且本机已有加密密钥，自动跳过密码门
 (function autoCheckGate() {
-  if (localStorage.getItem(GATE_KEY) === '1') {
+  if (localStorage.getItem(GATE_KEY) === '1' && hasStoredAesKey()) {
     document.getElementById('gateModal').classList.remove('show');
   } else {
     document.getElementById('gateModal').classList.add('show');
+    if (localStorage.getItem(GATE_KEY) === '1') {
+      // 老版本升级:已免密但本机还没有加密密钥,需要再输一次密码生成密钥
+      document.getElementById('gateError').textContent = '🔒 新版启用身份证加密,请再输入一次密码';
+    }
     setTimeout(() => document.getElementById('gatePassword').focus(), 100);
     // 拦截原来的自动初始化
     window._gatePassed = false;
@@ -935,9 +1047,11 @@ async function doSubmit() {
     deliveryType: deliveryType,
     note: document.getElementById('fNote').value.trim()
   };
+  // 身份证号加密后再写库(离线队列同样存密文,同步时无需处理)
+  const encIdCard = await encryptIdCard(r.idCard);
   const record = {
     date: r.date, plate_main: r.plateMain, plate_trailer: r.plateTrailer,
-    name: r.name, phone: r.phone, id_card: r.idCard,
+    name: r.name, phone: r.phone, id_card: encIdCard,
     from_location: r.from, to_location: r.to, goods: r.goods,
     freight: r.freight, weight: r.weight, weigh_fee: r.weighFee,
     notice: generateNotice(r)
@@ -1156,6 +1270,14 @@ async function loadRecords() {
       return;
     }
     currentRecords = data || [];
+    // 身份证号:密文→明文(仅在本机内存中,数据库仍是密文)
+    if (aesKey) {
+      for (const r of currentRecords) {
+        if (r.id_card && isEncryptedIdCard(r.id_card)) r.id_card = await decryptIdCard(r.id_card);
+      }
+    }
+    // 自动迁移历史明文身份证(有明文才执行,平时零开销)
+    migratePlaintextIdCards();
     updateRecycleBtn();
     renderList();
   } catch (e) {
@@ -1575,7 +1697,7 @@ async function processImportedRows(rows) {
           plate_trailer: get('挂车', r) || null,
           name: get('姓名', r) || null,
           phone: get('手机号', r) || null,
-          id_card: get('身份证号', r) || null,
+          id_card: (await encryptIdCard(get('身份证号', r))) || null,
           from_location: get('装货地', r) || null,
           to_location: get('收货地', r) || null,
           goods: get('货物', r) || null,
@@ -1878,11 +2000,14 @@ async function saveFullEdit() {
   const allModified = [...new Set([...existingModified, ...newModifiedKeys])];
   newData.modified_fields = allModified;
   newData.modified_count = (currentDetail.modified_count || 0) + changedFields.length;
+  // 身份证号加密后写库
+  newData.id_card = await encryptIdCard(newData.id_card);
   const { error } = await supabaseClient.from('records').update(newData).eq('id', currentDetail.id);
   if (error) { toast('保存失败:' + error.message, false, true); return; }
   // 刷新当前记录
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
   if (data) {
+    data.id_card = await decryptIdCard(data.id_card);
     currentDetail = data;
     renderDetailWithChanges(data, changedFields);
   }
@@ -1962,7 +2087,7 @@ async function saveEdit() {
   toast('已保存 ✓', true);
   // 刷新当前记录
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
-  if (data) { currentDetail = data; renderDetailChanged(currentDetail); }
+  if (data) { data.id_card = await decryptIdCard(data.id_card); currentDetail = data; renderDetailChanged(currentDetail); }
   loadRecords();
   hideEdit();
 }
@@ -2110,12 +2235,15 @@ function toast(msg, green, red) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-// 初始化 (仅在密码验证后或已验证过才初始化)
-if (localStorage.getItem(GATE_KEY) === '1') {
-  initSupabase();
-}
+// 初始化 (仅在密码验证后或已验证过才初始化;先恢复加密密钥再拉数据)
+(async function init() {
+  if (localStorage.getItem(GATE_KEY) === '1' && hasStoredAesKey()) {
+    try { aesKey = await loadAesKey(); } catch (e) { console.error('密钥恢复失败:', e); }
+    initSupabase();
+  }
+})();
 </script>
-<div class="version-footer">装货登记 v1.6.9 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.7.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
