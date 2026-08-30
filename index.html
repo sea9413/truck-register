@@ -189,6 +189,35 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 .detail-item .value.changed { color: #d32f2f; font-weight: 700; }
 /* 版本号 */
 .version-footer { text-align: center; padding: 20px; font-size: 12px; color: #999; margin-top: 10px; }
+
+/* ===== 操作日志 / 识别样本弹窗（v1.7.2）===== */
+.log-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.log-table th, .log-table td { padding: 8px 6px; border-bottom: 1px solid #eee; text-align: left; vertical-align: top; }
+.log-table th { background: #f7f9fc; color: #555; font-weight: 600; }
+.log-action { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 600; }
+.log-create { background: #e8f5e9; color: #2e7d32; }
+.log-update { background: #e3f2fd; color: #1565c0; }
+.log-delete { background: #ffebee; color: #c62828; }
+.log-restore { background: #fff3e0; color: #e65100; }
+.log-paid { background: #f3e5f5; color: #6a1b9a; }
+.log-clear { background: #ffebee; color: #b71c1c; }
+.log-time { color: #888; white-space: nowrap; font-size: 12px; }
+.sample-card { border: 1px solid #ffe0b2; background: #fffdf7; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+.sample-raw { background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 8px; font-size: 13px; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; max-height: 180px; overflow-y: auto; }
+.sample-meta { color: #888; font-size: 12px; }
+
+/* ===== 手机端优化（v1.7.2）：触摸目标 / 防键盘遮挡 / 防 iOS 自动缩放 ===== */
+@media (max-width: 600px) {
+  /* 输入框字号 ≥16px：否则 iOS 聚焦时会自动放大整个页面 */
+  input, textarea, select { font-size: 16px !important; }
+  /* 触摸目标不小于 44px（苹果人机规范），手指点得更准 */
+  .filter-bar button, .goods-btn, .submit-btn, .action-btn, .back-btn, .confirm-btn, .rec-candidate, .add-btn { min-height: 44px; }
+  .goods-btn { padding: 13px 8px; font-size: 15px; }
+  .add-btn { font-size: 16px; }
+  .log-table { font-size: 12px; }
+  .log-table th, .log-table td { padding: 6px 4px; }
+  .version-footer { line-height: 2; }
+}
 .offline-badge { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; margin: 0 6px; animation: pulse 2s ease-in-out infinite; }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.6; } }
 </style>
@@ -319,14 +348,14 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
       <div class="field-label">车牌号码</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fPlateMain" placeholder="主车:粤******" oninput="debounceAutoFill()">
-        <input type="text" id="fPlateTrailer" placeholder="挂车:粤****挂">
+        <input type="text" id="fPlateMain" placeholder="主车:粤******" autocapitalize="characters" oninput="debounceAutoFill()">
+        <input type="text" id="fPlateTrailer" placeholder="挂车:粤****挂" autocapitalize="characters">
       </div>
 
       <div class="field-label">司机姓名</div>
       <div class="two-col" style="margin-bottom:10px">
         <input type="text" id="fName" placeholder="姓名:未输入">
-        <input type="tel" id="fPhone" placeholder="手机:188****8888">
+        <input type="tel" id="fPhone" inputmode="tel" placeholder="手机:188****8888">
       </div>
 
       <div class="addr-label">装货地 ----- 收货地</div>
@@ -357,12 +386,12 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
       <div class="field-label">运输费(元)</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="number" id="fFreight" placeholder="运费(元)">
-        <input type="number" id="fWeighFee" placeholder="过磅费(元)">
+        <input type="number" id="fFreight" inputmode="decimal" placeholder="运费(元)">
+        <input type="number" id="fWeighFee" inputmode="decimal" placeholder="过磅费(元)">
       </div>
 
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:0">
-        <input type="number" id="fWeight" placeholder="过磅(公斤)" style="flex:1" oninput="updateTon()">
+        <input type="number" id="fWeight" inputmode="decimal" placeholder="过磅(公斤)" style="flex:1" oninput="updateTon()">
         <span id="tonDisplay" style="font-size:16px;color:#333;white-space:nowrap;font-weight:500"></span>
       </div>
       <textarea id="fNote" placeholder="备注：其他情况说明（如：茂南图书馆装套扣，回茂名仓库换货，送开平鹏峰）" style="width:100%;min-height:56px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:8px;resize:vertical;font-family:inherit"></textarea>
@@ -382,15 +411,15 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <input type="date" id="mDate">
       <div class="field-label">车牌号码</div>
       <div class="two-col">
-        <input type="text" id="mPlateMain" placeholder="主车">
-        <input type="text" id="mPlateTrailer" placeholder="挂车">
+        <input type="text" id="mPlateMain" placeholder="主车" autocapitalize="characters">
+        <input type="text" id="mPlateTrailer" placeholder="挂车" autocapitalize="characters">
       </div>
       <div class="field-label">司机信息</div>
       <div class="two-col">
         <input type="text" id="mName" placeholder="姓名">
-        <input type="tel" id="mPhone" placeholder="手机号">
+        <input type="tel" id="mPhone" inputmode="tel" placeholder="手机号">
       </div>
-      <input type="text" id="mIdCard" placeholder="身份证号">
+      <input type="text" id="mIdCard" inputmode="numeric" placeholder="身份证号" maxlength="18">
       <div class="field-label">装货地 - 收货地</div>
       <div class="two-col">
         <input type="text" id="mFrom" placeholder="装货地">
@@ -412,11 +441,11 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <input type="hidden" id="mDeliveryType" value="">
       <div class="field-label">运费(元)</div>
       <div class="two-col">
-        <input type="number" id="mFreight" placeholder="运费">
-        <input type="number" id="mWeighFee" placeholder="过磅费">
+        <input type="number" id="mFreight" inputmode="decimal" placeholder="运费">
+        <input type="number" id="mWeighFee" inputmode="decimal" placeholder="过磅费">
       </div>
       <div class="field-label">过磅重量(公斤)</div>
-      <input type="number" id="mWeight" placeholder="过磅重量">
+      <input type="number" id="mWeight" inputmode="decimal" placeholder="过磅重量">
     </div>
     <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">💾 保存修改</button>
     <button class="cancel-btn" onclick="closeFullEdit()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">取消</button>
@@ -446,6 +475,36 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
     <div class="confirm-desc" id="cancelPaidDesc">车牌 <span id="cancelPaidPlate" style="font-weight:600;color:#333"></span> 的已支付状态将被取消，该记录的运费将不再计入已支付合计。</div>
     <button class="confirm-btn primary" id="cancelPaidBtn1" onclick="doCancelPaidStep1()">确定取消</button>
     <button class="confirm-btn secondary" id="cancelPaidBtn2" onclick="hideCancelPaidConfirm()">保留已支付</button>
+  </div>
+</div>
+
+<!-- ===== 操作人姓名（v1.7.2）===== -->
+<div class="confirm-overlay" id="operatorModal" style="z-index:9998">
+  <div class="confirm-box" style="max-width:340px;text-align:center;padding:26px 24px">
+    <div style="font-size:36px;margin-bottom:6px">👤</div>
+    <div class="confirm-title" style="margin-bottom:6px">你叫什么名字?</div>
+    <div style="color:#666;font-size:13px;margin-bottom:16px;line-height:1.6">登记和修改会记上你的名字,<br>以后出问题能查到是谁操作的</div>
+    <input type="text" id="operatorInput" placeholder="请输入姓名" maxlength="10" style="width:100%;padding:12px;font-size:16px;border:2px solid #ddd;border-radius:8px;text-align:center" onkeydown="if(event.key==='Enter')saveOperator()">
+    <button class="save-btn" onclick="saveOperator()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:10px;cursor:pointer">确定</button>
+    <button onclick="closeOperator()" style="width:100%;background:#f0f0f0;color:#666;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">稍后再说</button>
+  </div>
+</div>
+
+<!-- ===== 操作日志（v1.7.2）===== -->
+<div class="confirm-overlay" id="logsModal">
+  <div class="confirm-box" style="max-width:92%; width:640px; max-height:85vh; overflow-y:auto; text-align:left">
+    <div class="confirm-title" style="margin-bottom:12px">📜 操作日志 <span style="font-size:12px;color:#888;font-weight:400">最近 100 条</span></div>
+    <div id="logsContent"><div class="loading">加载中...</div></div>
+    <button class="cancel-btn" onclick="closeLogs()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:8px;font-size:15px;margin-top:12px;cursor:pointer">关闭</button>
+  </div>
+</div>
+
+<!-- ===== 识别失败样本（v1.7.2）===== -->
+<div class="confirm-overlay" id="failuresModal">
+  <div class="confirm-box" style="max-width:92%; width:640px; max-height:85vh; overflow-y:auto; text-align:left">
+    <div class="confirm-title" style="margin-bottom:12px">🔬 识别失败样本 <span style="font-size:12px;color:#888;font-weight:400">攒够一批照着补规则</span></div>
+    <div id="failuresContent"><div class="loading">加载中...</div></div>
+    <button class="cancel-btn" onclick="closeFailures()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:8px;font-size:15px;margin-top:12px;cursor:pointer">关闭</button>
   </div>
 </div>
 
@@ -1048,6 +1107,10 @@ function doRecognize() {
   }
   resultEl.innerHTML = '<div class="rec-summary"><div class="rec-row">' + filledHtml + '</div>' + emptyHtml + toCandidatesHtml + '</div>';
   resultEl.style.display = 'block';
+  // v1.7.2 识别不准的原文攒起来:整段没识别出 / 关键字段(车牌·姓名·手机)缺 2 个以上
+  const keyMissing = ['plateMain', 'name', 'phone'].filter(k => !r[k]);
+  if (r.allEmpty) reportRecognizeFailure(text, 'all_empty', keyMissing, r);
+  else if (keyMissing.length >= 2) reportRecognizeFailure(text, 'missing_key', keyMissing, r);
   // 整段没识别 → 弹窗提示(兜底)
   if (r.allEmpty) {
     setTimeout(() => {
@@ -1123,7 +1186,8 @@ async function doSubmit() {
     name: r.name, phone: r.phone, id_card: encIdCard,
     from_location: r.from, to_location: r.to, goods: r.goods,
     freight: r.freight, weight: r.weight, weigh_fee: r.weighFee,
-    notice: generateNotice(r)
+    notice: generateNotice(r),
+    operator: getOperator() || null
   };
   // 以下是可选字段(可能在某些版本不存在,自动去重)
   if (r.note) record.note = r.note;
@@ -1161,6 +1225,7 @@ async function doSubmit() {
     toast('提交失败:' + error.message, false, true);
     return;
   }
+  writeLog('create', null, r.plateMain, '新增登记' + (r.name ? ' · ' + r.name : ''));
   toast('已登记 ✓', true);
   resetForm();
   setTimeout(() => { loadRecords(); showList(); }, 600);
@@ -1211,6 +1276,7 @@ async function syncOfflineQueue() {
       remain.push(rec);
     } else {
       synced++;
+      writeLog('create', null, cleanRec.plate_main, '离线补登');
     }
   }
   saveOfflineQueue(remain);
@@ -1297,7 +1363,14 @@ function showHelp() {
     <li><b>清空密码</b>:清空全部数据时单独要,独立于登录密码</li>
     <li>点页面底部「<b>重新登录</b>」可退出当前账号</li>
   </ul>
-  <h4 style="margin:12px 0 4px;color:#1565c0">九、常见问题</h4>
+  <h4 style="margin:12px 0 4px;color:#1565c0">九、操作人与日志</h4>
+  <ul style="margin:0 0 8px;padding-left:22px">
+    <li><b>你的名字</b>:首次打开会让你填一次,之后每次登记/修改都会记上你的名字(页面底部点名字可随时改)</li>
+    <li><b>操作日志</b>:底部「📜 操作日志」能查到谁在什么时候新增/修改/删除了哪条记录,改了什么一目了然</li>
+    <li><b>识别样本</b>:识别不准的原文会自动攒进「🔬 识别样本」,攒够一批后照着优化识别规则</li>
+    <li>详情页最下面一行「操作人」显示这条记录是谁录的</li>
+  </ul>
+  <h4 style="margin:12px 0 4px;color:#1565c0">十、常见问题</h4>
   <p><b>Q: 识别没填上字段?</b><br>
     A: 司机信息格式太特殊,手动补填即可,不影响其他字段保存。</p>
   <p><b>Q: 同一司机第二次来怎么自动带出姓名手机?</b><br>
@@ -1838,8 +1911,10 @@ async function clearAllRecords() {
   }
   // 第三步: 执行
   toast('正在清空...', true);
+  const totalCount = (currentRecords || []).length;
   const { error } = await supabaseClient.from('records').delete().not('id', 'is', null);
   if (error) { toast('清空失败:' + error.message, false, true); clearPwdVerified = false; return; }
+  writeLog('clear', null, null, '清空全部 ' + totalCount + ' 条记录');
   toast('已清空全部记录', true);
   currentRecords = []; renderList();
   clearPwdVerified = false;
@@ -1873,6 +1948,8 @@ async function togglePaid(id, newPaid) {
       toast('更新失败:' + error.message, false, true);
       return;
     }
+    const paidRec = (currentRecords || []).find(x => x.id === id);
+    writeLog('paid', id, paidRec ? paidRec.plate_main : '', newPaid ? '标记已支付' : '取消已支付');
     cancelPaidStep = 0;
     cancelPaidId = null;
     hideCancelPaidConfirm();
@@ -1937,7 +2014,8 @@ function renderDetail(r, changedKeys) {
     ['过磅重量', r.weight ? r.weight + ' 公斤' : '待补重量', 'weight'],
     ['过磅费', r.weigh_fee ? r.weigh_fee + ' 元' : '待补过磅费', 'weigh_fee'],
     ['类型', r.delivery_type || '送货', 'delivery_type'],
-    ['备注', r.note || '-', 'note']
+    ['备注', r.note || '-', 'note'],
+    ['操作人', r.operator || '未署名', 'operator']
   ];
   const changedSet = new Set(changedKeys || []);
   document.getElementById('detailItems').innerHTML = fields.map(([label, val, key]) => {
@@ -2077,10 +2155,21 @@ async function saveFullEdit() {
   const allModified = [...new Set([...existingModified, ...newModifiedKeys])];
   newData.modified_fields = allModified;
   newData.modified_count = (currentDetail.modified_count || 0) + changedFields.length;
+  newData.operator = getOperator() || null;
   // 身份证号加密后写库
   newData.id_card = await encryptIdCard(newData.id_card);
-  const { error } = await supabaseClient.from('records').update(newData).eq('id', currentDetail.id);
+  let { error } = await supabaseClient.from('records').update(newData).eq('id', currentDetail.id);
+  // operator 列还没建(没跑 database.sql 第 6 块) → 去掉该字段重试,绝不让"改记录"失败
+  if (error && /Could not find the 'operator' column/i.test(error.message)) {
+    delete newData.operator;
+    const retry = await supabaseClient.from('records').update(newData).eq('id', currentDetail.id);
+    error = retry.error;
+  }
   if (error) { toast('保存失败:' + error.message, false, true); return; }
+  writeLog('update', currentDetail.id, newData.plate_main,
+    changedFields.length
+      ? changedFields.map(f => f.label + ': ' + (f.oldVal || '空') + '→' + (f.newVal || '空')).join('；')
+      : '打开修改但未改动');
   // 刷新当前记录
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
   if (data) {
@@ -2156,11 +2245,19 @@ async function saveEdit() {
     from: currentDetail.from_location, to: currentDetail.to_location, goods: currentDetail.goods,
     freight: currentDetail.freight, weight: weight, weighFee: weigh_fee
   };
-  const { error } = await supabaseClient.from('records').update({
+  const patch = {
     weight: weight, weigh_fee: weigh_fee,
-    notice: generateNotice(r)
-  }).eq('id', currentDetail.id);
+    notice: generateNotice(r),
+    operator: getOperator() || null
+  };
+  let { error } = await supabaseClient.from('records').update(patch).eq('id', currentDetail.id);
+  if (error && /Could not find the 'operator' column/i.test(error.message)) {
+    delete patch.operator;
+    const retry = await supabaseClient.from('records').update(patch).eq('id', currentDetail.id);
+    error = retry.error;
+  }
   if (error) { toast('保存失败:' + error.message, false, true); return; }
+  writeLog('update', currentDetail.id, currentDetail.plate_main, '补填过磅: ' + (weight || '-') + '公斤 / ' + (weigh_fee || '-') + '元');
   toast('已保存 ✓', true);
   // 刷新当前记录
   const { data } = await supabaseClient.from('records').select('*').eq('id', currentDetail.id).single();
@@ -2200,6 +2297,7 @@ async function doDelete() {
   // 软删除:标记为已删除,移入回收站(可恢复)
   const { error } = await supabaseClient.from('records').update({ deleted: true, deleted_at: new Date().toISOString() }).eq('id', currentDetail.id);
   if (error) { toast('删除失败:' + error.message + '（如提示缺deleted列,请先在Supabase加列）', false, true); return; }
+  writeLog('delete', currentDetail.id, currentDetail.plate_main, '移入回收站');
   toast('已移入回收站', true);
   setTimeout(() => showList(), 600);
 }
@@ -2272,6 +2370,7 @@ async function restoreRecord(id) {
   const { data, error } = await supabaseClient.from('records').update({ deleted: false, deleted_at: null }).eq('id', id).select();
   if (error) { toast('恢复失败:' + error.message + '（如提示缺deleted列,请先在Supabase加列）', false, true); return; }
   if (!data || data.length === 0) { toast('恢复失败:记录不存在或未被修改', false, true); return; }
+  writeLog('restore', id, (data && data[0] ? data[0].plate_main : ''), '从回收站恢复');
   toast('已恢复', true);
   updateRecycleBtn();
   renderList();
@@ -2336,6 +2435,174 @@ function toast(msg, green, red) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
+// ===== 操作人（v1.7.2）：谁录的、谁改的 =====
+const OPERATOR_KEY = 'truck_operator_name';
+function getOperator() {
+  try { return localStorage.getItem(OPERATOR_KEY) || ''; } catch (e) { return ''; }
+}
+function setOperatorName(name) {
+  try { localStorage.setItem(OPERATOR_KEY, name); } catch (e) {}
+  updateOperatorBadge();
+}
+function updateOperatorBadge() {
+  const el = document.getElementById('operatorName');
+  if (el) el.textContent = '👤 ' + (getOperator() || '设置姓名');
+}
+const OPERATOR_SKIP_KEY = 'truck_operator_skip_date';
+// 没名字就问一次;点过「稍后再说」的当天不再打扰,底部栏随时可以自己填
+function ensureOperator() {
+  updateOperatorBadge();
+  if (getOperator()) return;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    if (localStorage.getItem(OPERATOR_SKIP_KEY) === today) return;
+  } catch (e) {}
+  askOperator();
+}
+function askOperator() {
+  const input = document.getElementById('operatorInput');
+  if (input) input.value = getOperator();
+  const modal = document.getElementById('operatorModal');
+  if (modal) modal.classList.add('show');
+  setTimeout(() => { if (input) input.focus(); }, 300);
+}
+function saveOperator() {
+  const v = (document.getElementById('operatorInput').value || '').trim();
+  if (!v) { toast('请输入姓名', false, true); return; }
+  setOperatorName(v);
+  document.getElementById('operatorModal').classList.remove('show');
+  toast('已设置操作人:' + v, true);
+}
+function closeOperator() {
+  try { localStorage.setItem(OPERATOR_SKIP_KEY, new Date().toISOString().slice(0, 10)); } catch (e) {}
+  const modal = document.getElementById('operatorModal');
+  if (modal) modal.classList.remove('show');
+  updateOperatorBadge();
+}
+
+// ===== 操作日志（v1.7.2）：出事能查到是谁干的 =====
+// 日志写失败绝不影响主流程:表没建 / 离线 / 权限问题都只记一条警告
+async function writeLog(action, recordId, plate, detail) {
+  try {
+    if (!navigator.onLine) return;
+    await supabaseClient.from('operation_logs').insert([{
+      operator: getOperator() || '未署名',
+      action: action,
+      record_id: recordId || null,
+      record_plate: plate || null,
+      detail: detail || ''
+    }]);
+  } catch (e) {
+    console.warn('写操作日志失败(不影响使用):', e);
+  }
+}
+const LOG_ACTION_LABEL = { create: '新增', update: '修改', delete: '删除', restore: '恢复', paid: '支付', clear: '清空', import: '导入' };
+async function showLogs() {
+  const modal = document.getElementById('logsModal');
+  const box = document.getElementById('logsContent');
+  if (!modal || !box) return;
+  modal.classList.add('show');
+  box.innerHTML = '<div class="loading">加载中...</div>';
+  try {
+    const { data, error } = await supabaseClient.from('operation_logs').select('*').order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    if (!data || data.length === 0) { box.innerHTML = '<div class="empty">还没有操作日志<br>登记 / 修改 / 删除记录后,这里会自动留痕</div>'; return; }
+    box.innerHTML = '<table class="log-table"><thead><tr><th>时间</th><th>操作人</th><th>动作</th><th>车牌</th><th>详情</th></tr></thead><tbody>' +
+      data.map(l => {
+        const t = l.created_at ? String(l.created_at).replace('T', ' ').substring(0, 16) : '';
+        return '<tr>' +
+          '<td class="log-time">' + escapeHtml(t) + '</td>' +
+          '<td>' + escapeHtml(l.operator || '-') + '</td>' +
+          '<td><span class="log-action log-' + escapeHtml(l.action || '') + '">' + escapeHtml(LOG_ACTION_LABEL[l.action] || l.action || '-') + '</span></td>' +
+          '<td>' + escapeHtml(l.record_plate || '-') + '</td>' +
+          '<td>' + escapeHtml(l.detail || '') + '</td>' +
+        '</tr>';
+      }).join('') + '</tbody></table>';
+  } catch (e) {
+    box.innerHTML = '<div class="empty">加载失败:' + escapeHtml(e.message || '') + '<br><br>如果提示找不到表,请先在 Supabase 跑一次 database.sql 的【第 6 块】</div>';
+  }
+}
+function closeLogs() { document.getElementById('logsModal').classList.remove('show'); }
+
+// ===== 识别失败样本（v1.7.2）：攒够一批照着补规则 =====
+// 同一段原文一次会话只上报一次,避免反复点识别把表刷满
+const reportedSamples = new Set();
+async function reportRecognizeFailure(rawText, reason, missingFields, parsed) {
+  try {
+    if (!navigator.onLine) return;
+    const text = (rawText || '').trim();
+    if (!text) return;
+    const key = reason + '|' + text.slice(0, 300);
+    if (reportedSamples.has(key)) return;
+    reportedSamples.add(key);
+    await supabaseClient.from('recognize_failures').insert([{
+      operator: getOperator() || '未署名',
+      raw_text: text.slice(0, 2000),
+      reason: reason,
+      missing_fields: (missingFields || []).join(','),
+      parsed_json: JSON.stringify(parsed || {})
+    }]);
+  } catch (e) {
+    console.warn('上报识别样本失败(不影响使用):', e);
+  }
+}
+async function showFailures() {
+  const modal = document.getElementById('failuresModal');
+  const box = document.getElementById('failuresContent');
+  if (!modal || !box) return;
+  modal.classList.add('show');
+  box.innerHTML = '<div class="loading">加载中...</div>';
+  try {
+    const { data, error } = await supabaseClient.from('recognize_failures').select('*').order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    if (!data || data.length === 0) { box.innerHTML = '<div class="empty">还没有失败样本<br>说明识别都挺准的 👍</div>'; return; }
+    const unresolved = data.filter(d => !d.resolved).length;
+    box.innerHTML = '<div style="color:#666;font-size:13px;margin-bottom:10px">共 ' + data.length + ' 条,其中 ' + unresolved + ' 条待处理</div>' +
+      data.map(f => {
+        const t = f.created_at ? String(f.created_at).replace('T', ' ').substring(0, 16) : '';
+        const reasonTxt = f.reason === 'all_empty' ? '整段没识别出' : '关键字段缺失';
+        return '<div class="sample-card">' +
+          '<div class="sample-meta">' + escapeHtml(t) + ' · ' + escapeHtml(f.operator || '-') + ' · ' + escapeHtml(reasonTxt) +
+          (f.missing_fields ? ' · 缺: ' + escapeHtml(f.missing_fields) : '') + '</div>' +
+          '<div class="sample-raw">' + escapeHtml(f.raw_text || '') + '</div>' +
+        '</div>';
+      }).join('');
+  } catch (e) {
+    box.innerHTML = '<div class="empty">加载失败:' + escapeHtml(e.message || '') + '<br><br>如果提示找不到表,请先在 Supabase 跑一次 database.sql 的【第 6 块】</div>';
+  }
+}
+function closeFailures() { document.getElementById('failuresModal').classList.remove('show'); }
+
+// ===== 手机端体验（v1.7.2）=====
+function isMobileDevice() {
+  return window.innerWidth <= 600 || /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+}
+// 聚焦输入框时滚到屏幕中间,避免被软键盘挡住（只在手机端启用,桌面端不受影响）
+function setupMobileInputFocus() {
+  if (!isMobileDevice()) return;
+  const scrollActiveIntoView = () => {
+    const el = document.activeElement;
+    if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA')) {
+      setTimeout(() => { try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) {} }, 300);
+    }
+  };
+  document.addEventListener('focusin', scrollActiveIntoView);
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', scrollActiveIntoView);
+  }
+}
+// 身份证前 17 位用数字键盘;第 18 位可能是字母 X → 自动切成文本键盘
+function setupIdCardKeyboard() {
+  const el = document.getElementById('mIdCard');
+  if (!el) return;
+  const sync = () => {
+    const len = (el.value || '').replace(/\s/g, '').length;
+    el.setAttribute('inputmode', len >= 17 ? 'text' : 'numeric');
+  };
+  el.addEventListener('input', sync);
+  sync();
+}
+
 // 初始化 (仅在密码验证后或已验证过才初始化;先恢复加密密钥再拉数据)
 (async function init() {
   if (window._supabaseLoadFailed) {
@@ -2345,10 +2612,13 @@ function toast(msg, green, red) {
   if (gateIsValid() && hasStoredAesKey()) {
     try { aesKey = await loadAesKey(); } catch (e) { console.error('密钥恢复失败:', e); }
     initSupabase();
+    ensureOperator();         // 没名字就问一次(底部栏可随时改)
+    setupMobileInputFocus();  // 手机端:聚焦输入框时防软键盘遮挡
+    setupIdCardKeyboard();    // 手机端:身份证前17位数字键盘,末位X自动切文本
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.7.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.7.2 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
