@@ -1065,7 +1065,7 @@ function doRecognize() {
   const text = document.getElementById('pasteArea').value;
   if (!text.trim()) return;
   const r = recognize(text);
-  document.getElementById('fDate').value = r.date;
+  document.getElementById('fDate').value = toDateInputValue(r.date);
   if (r.date) {
     const d = new Date(r.date);
     document.getElementById('fDate').style.color = '#1a7af8';
@@ -2040,7 +2040,7 @@ function renderDetail(r, changedKeys) {
 function openFullEdit() {
   if (!currentDetail) return;
   const r = currentDetail;
-  document.getElementById('mDate').value = r.date || '';
+  document.getElementById('mDate').value = toDateInputValue(r.date);
   document.getElementById('mPlateMain').value = r.plate_main || '';
   document.getElementById('mPlateTrailer').value = r.plate_trailer || '';
   document.getElementById('mName').value = r.name || '';
@@ -2120,7 +2120,8 @@ async function saveFullEdit() {
   }
   const deliveryType = document.getElementById('mDeliveryType').value || '送货';
   const newData = {
-    date: document.getElementById('mDate').value,
+    // 日期框万一空了(格式不被浏览器接受),保留原日期,绝不把日期写空
+    date: document.getElementById('mDate').value || (currentDetail ? currentDetail.date : ''),
     plate_main: document.getElementById('mPlateMain').value.trim(),
     plate_trailer: document.getElementById('mPlateTrailer').value.trim(),
     name: document.getElementById('mName').value.trim(),
@@ -2428,6 +2429,16 @@ function copyText(text) {
   else { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); toast('已复制,去微信群粘贴发送', true); }
 }
 
+// 转成 <input type="date"> 能识别的 YYYY-MM-DD:
+// 库里的日期可能是 Excel 导入的 2026-8-13(不补零),直接赋给 date 输入框会被浏览器
+// 拒绝并置空,导致"打开修改弹窗→保存"后日期丢失(v1.7.5 修复)
+function toDateInputValue(s) {
+  if (!s) return '';
+  const m = String(s).match(/(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})/);
+  if (!m) return '';
+  return m[1] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[3]).padStart(2, '0');
+}
+
 function formatDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function formatDateCN(dateStr) {
   if (!dateStr) return '';
@@ -2627,7 +2638,7 @@ function setupIdCardKeyboard() {
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.7.4 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.7.5 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
