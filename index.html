@@ -1272,7 +1272,7 @@ function showHelp() {
     <li><b>补填过磅</b>:详情页点「✏️ 补填」补重量/过磅费</li>
     <li><b>修改</b>:详情页点「📝 修改」可改任意字段,改过的字段会<b>标红加粗</b></li>
     <li><b>删除</b>:详情页点「🗑 删除」移到回收站(可恢复)</li>
-    <li><b>回收站</b>:列表页点「🗑 回收站(N)」查看已删记录,点「♻️ 恢复」还原</li>
+    <li><b>回收站</b>:列表页点「🗑 回收站(N)」查看已删记录,点「♻️ 恢复」还原;<b>超过 30 天未恢复的记录会自动清除</b></li>
   </ul>
   <h4 style="margin:12px 0 4px;color:#1565c0">五、已支付状态</h4>
   <p>详情页勾「☐ 已支付」表示运费已结清。取消勾选需要<b>两次确认</b>(防误点)。</p>
@@ -1303,7 +1303,7 @@ function showHelp() {
   <p><b>Q: 同一司机第二次来怎么自动带出姓名手机?</b><br>
     A: 输入主车车牌后 0.5 秒,工具会从历史记录里查同车牌最近一条,自动填上姓名/手机/身份证。</p>
   <p><b>Q: 误删了怎么找回?</b><br>
-    A: 列表页「🗑 回收站」里点「♻️ 恢复」,记录会回到列表。</p>
+    A: 列表页「🗑 回收站」里点「♻️ 恢复」,记录会回到列表。<b>注意:回收站记录只保留 30 天,超过 30 天会自动清除、无法找回。</b></p>
   <p><b>Q: 卸载浏览器会丢数据吗?</b><br>
     A: 云端数据不丢,只丢未同步的离线队列。尽量联网后再卸载。</p>
   <p style="margin-top:16px;color:#888;font-size:12px">📞 需要帮?问开发者。</p>
@@ -1349,6 +1349,8 @@ async function loadRecords() {
     }
     // 自动迁移历史明文身份证(有明文才执行,平时零开销)
     migratePlaintextIdCards();
+    // 回收站自动清理:超过 30 天未恢复的记录永久删除
+    await cleanupExpiredTrash();
     updateRecycleBtn();
     renderList();
   } catch (e) {
@@ -2207,6 +2209,29 @@ function hideDeleteConfirm() {
   deleteStep = 0;
 }
 
+// ===== 回收站自动清理:超过 30 天不恢复则永久删除 =====
+const TRASH_TTL_DAYS = 30;
+async function cleanupExpiredTrash() {
+  try {
+    // 只在在线时清理;离线时跳过,联网后下次加载再清
+    if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
+    const cutoff = Date.now() - TRASH_TTL_DAYS * 24 * 60 * 60 * 1000;
+    const expired = (currentRecords || []).filter(r => r.deleted === true && r.deleted_at && Date.parse(r.deleted_at) < cutoff);
+    if (expired.length === 0) return;
+    const ids = expired.map(r => r.id);
+    const { error } = await supabaseClient.from('records').delete().in('id', ids);
+    if (error) {
+      // 清理失败(离线/RLS未放开)不阻断使用,下次打开页面会再尝试
+      console.error('自动清理回收站失败:', error.message);
+      return;
+    }
+    currentRecords = currentRecords.filter(r => !ids.includes(r.id));
+    toast('已自动清理 ' + expired.length + ' 条超过 30 天的回收站记录');
+  } catch (e) {
+    console.error('自动清理回收站异常:', e);
+  }
+}
+
 // ===== 回收站(软删除恢复)=====
 function renderRecycle() {
   const list = getFilteredRecords(); // showRecycle 时返回已删列表
@@ -2215,7 +2240,7 @@ function renderRecycle() {
   if (cnt) cnt.textContent = list.length + ' 条(回收站)';
   const s1 = document.getElementById('summaryBar'); if (s1) s1.style.display = 'none';
   const s2 = document.getElementById('summaryBar2'); if (s2) s2.style.display = 'none';
-  if (list.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🗑</div>回收站是空的<br>已删除的记录会在这里保留,可恢复</div>'; return; }
+  if (list.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🗑</div>回收站是空的<br>已删除的记录会保留 30 天,超期自动清除</div>'; return; }
   el.innerHTML = list.map(r => {
     const rid = escapeHtml(r.id);
     const plateHtml = r.plate_trailer
@@ -2323,7 +2348,7 @@ function toast(msg, green, red) {
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.7.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.7.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
