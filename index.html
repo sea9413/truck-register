@@ -260,10 +260,11 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <div class="filter-row">
         <div class="location-selector">
           <select id="locationFilter" onchange="setLocationFilter(this.value)" title="按类型筛选记录">
-            <option value="all">全部类型</option>
+            <option value="all">送货+退货</option>
             <option value="delivery">送货</option>
             <option value="return">退货</option>
             <option value="nostat">不统计</option>
+            <option value="every">全部类型</option>
             <option value="other">其他类型</option>
           </select>
         </div>
@@ -1461,10 +1462,11 @@ function getFilteredRecords() {
       (r.to_location && r.to_location.toLowerCase().includes(kw))
     );
   }
-  if (locationFilter !== 'all') {
-    // 类型筛选(v1.7.3):trim 去空格 + 其他类型兜底,保证账一定对得上
+  if (locationFilter !== 'every') {
+    // 类型筛选(v1.7.4): all=送货+退货; every=全部类型; other=兜底
     const dt = r => ((r.delivery_type || '').toString().trim() || '送货');
-    if (locationFilter === 'delivery') list = list.filter(r => dt(r) === '送货');
+    if (locationFilter === 'all') list = list.filter(r => { const t = dt(r); return t === '送货' || t === '退货'; });
+    else if (locationFilter === 'delivery') list = list.filter(r => dt(r) === '送货');
     else if (locationFilter === 'return') list = list.filter(r => dt(r) === '退货');
     else if (locationFilter === 'nostat') list = list.filter(r => dt(r) === '不统计');
     else if (locationFilter === 'other') list = list.filter(r => !['送货','退货','不统计'].includes(dt(r)));
@@ -2625,7 +2627,7 @@ function setupIdCardKeyboard() {
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.7.3 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.7.4 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
