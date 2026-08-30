@@ -1491,7 +1491,8 @@ function getFilteredRecords() {
 // 把任意日期格式转成时间戳用于排序(支持 2026-8-13 / 2026年8月13日 / 2026-08-13)
 function parseDateTs(s) {
   if (!s) return 0;
-  const m = String(s).match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
+  // v1.7.6:分隔符支持 - 年 / . 四种,否则 2026/8/13 会被当成无效日期、在筛选中漏掉
+  const m = String(s).match(/(\d{4})[-年/.](\d{1,2})[-月/.](\d{1,2})/);
   if (m) return new Date(+m[1], +m[2] - 1, +m[3]).getTime();
   return 0;
 }
@@ -1499,7 +1500,7 @@ function parseDateTs(s) {
 // 把任意日期格式归一为 YYYY-MM（用于月份分组）
 function parseYm(s) {
   if (!s) return '9999-12'; // 空日期放到最后
-  const m = String(s).match(/(\d{4})[-年](\d{1,2})/);
+  const m = String(s).match(/(\d{4})[-年/.](\d{1,2})/);
   if (m) {
     const y = m[1];
     const mo = String(parseInt(m[2], 10)).padStart(2, '0'); // 7 -> 07
@@ -1513,14 +1514,14 @@ function renderList() {
   const display = getFilteredRecords();
   document.getElementById('recordCount').textContent = display.length + ' 条';
   // 计算汇总
-  const totalFreight = display.reduce((sum, r) => sum + (parseFloat(r.freight) || 0), 0);
-  const totalPaid = display.reduce((sum, r) => sum + ((r.is_paid === true) ? (parseFloat(r.freight) || 0) : 0), 0);
-  const totalWeighFee = display.reduce((sum, r) => sum + (parseFloat(r.weigh_fee) || 0), 0);
+  const totalFreight = display.reduce((sum, r) => sum + parseNum(r.freight), 0);
+  const totalPaid = display.reduce((sum, r) => sum + ((r.is_paid === true) ? parseNum(r.freight) : 0), 0);
+  const totalWeighFee = display.reduce((sum, r) => sum + parseNum(r.weigh_fee), 0);
   // 送货/退货重量汇总（公斤→吨）。“不统计”类型不计入送/退货重量
   const getDt = r => ((r.delivery_type || '').toString().trim() || '送货');
-  const totalDeliveryWeight = display.filter(r => getDt(r) === '送货').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
-  const totalReturnWeight = display.filter(r => getDt(r) === '退货').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
-  const totalNostatWeight = display.filter(r => getDt(r) === '不统计').reduce((sum, r) => sum + (parseFloat(r.weight) || 0), 0);
+  const totalDeliveryWeight = display.filter(r => getDt(r) === '送货').reduce((sum, r) => sum + parseNum(r.weight), 0);
+  const totalReturnWeight = display.filter(r => getDt(r) === '退货').reduce((sum, r) => sum + parseNum(r.weight), 0);
+  const totalNostatWeight = display.filter(r => getDt(r) === '不统计').reduce((sum, r) => sum + parseNum(r.weight), 0);
   const summaryEl = document.getElementById('summaryBar');
   if (summaryEl) {
     summaryEl.innerHTML = '已支付/运费合计:' + totalPaid.toFixed(0) + '/' + totalFreight.toFixed(0) + '元 | 过磅费合计:' + totalWeighFee.toFixed(0) + '元';
@@ -1570,7 +1571,7 @@ function renderList() {
     else typeTag = '<span class="goods-tag" style="background:#fff3e0;color:#e65100">其他</span>';
     const freightStr = r.freight ? '运费:' + escapeHtml(r.freight) + '元' : '';
     const weighFeeStr = r.weigh_fee ? '过磅费:' + escapeHtml(r.weigh_fee) + '元' : '';
-    const weightStr = r.weight ? '重量:' + (parseFloat(r.weight) / 1000).toFixed(3) + '吨' : '';
+    const weightStr = r.weight ? '重量:' + (parseNum(r.weight) / 1000).toFixed(3) + '吨' : '';
     const isPaid = (r.is_paid === true);
     const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + rid + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
     const feeStr = freightStr || weighFeeStr || weightStr ? '<div class="fee-line">' + [freightStr, weighFeeStr, weightStr].filter(Boolean).join(' ') + paidCheck + '</div>' : '<div class="fee-line">' + paidCheck + '</div>';
@@ -1589,7 +1590,7 @@ function renderList() {
   };
   el.innerHTML = sortedKeys.map(ym => {
     const rows = groups[ym];
-    const mfreight = rows.reduce((s,r) => s+(parseFloat(r.freight)||0), 0);
+    const mfreight = rows.reduce((s,r) => s+parseNum(r.freight), 0);
     const collapsed = collapsedMonths[ym] ? ' collapsed' : '';
     return '<div class="month-group">' +
       '<div class="month-header' + collapsed + '" data-ym="' + ym + '" onclick="toggleMonth(\'' + ym + '\')">' +
@@ -1666,7 +1667,7 @@ function exportCSV() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('已导出 ' + list.length + ' 条记录', true);
+  toast('已导出 ' + list.length + ' 条记录(含明文身份证,请妥善保管)', true);
 }
 
 // 备份全部:导出 currentRecords 全部(含回收站),用于本地存档
@@ -1692,7 +1693,7 @@ function exportAllCSV() {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  toast('已备份全部 ' + list.length + ' 条记录', true);
+  toast('已备份全部 ' + list.length + ' 条记录(含明文身份证,请妥善保管)', true);
 }
 
 // 检测中文文本是否乱码(连续问号或乱码字符过多)
@@ -2110,6 +2111,12 @@ function closeFullEdit() {
 
 async function saveFullEdit() {
   if (!currentDetail) return;
+  // v1.7.6:密钥没恢复时不让改带身份证的记录,否则 encryptIdCard 会降级、
+  // 把已加密的身份证以明文写回数据库(不可逆的安全问题)
+  if (!aesKey && (document.getElementById('mIdCard').value || '').trim()) {
+    toast('⚠️ 加密密钥未恢复,请重新登录后再修改(否则身份证会明文存储)', false, true);
+    return;
+  }
   // 选中的货物 (精确选择货物区域的active按钮，排除类型按钮)
   const goodsBtnsContainer = document.querySelector('#fullEditForm .goods-btns');
   const activeGoods = goodsBtnsContainer ? goodsBtnsContainer.querySelector('.goods-btn.active') : null;
@@ -2439,10 +2446,18 @@ function toDateInputValue(s) {
   return m[1] + '-' + String(m[2]).padStart(2, '0') + '-' + String(m[3]).padStart(2, '0');
 }
 
+// 解析金额/重量:先去掉千分位逗号和空格再解析。
+// 否则 parseFloat('1,200') 会得到 1(解析到逗号就停),运费汇总会严重偏低(v1.7.6 修复)
+function parseNum(v) {
+  if (v == null) return 0;
+  const n = parseFloat(String(v).replace(/[,，\s]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
 function formatDate(d) { return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); }
 function formatDateCN(dateStr) {
   if (!dateStr) return '';
-  const m = dateStr.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const m = dateStr.match(/(\d{4})[-年/.](\d{1,2})[-月/.](\d{1,2})/);
   if (!m) return dateStr;
   return m[1] + '年' + parseInt(m[2]) + '月' + parseInt(m[3]) + '日';
 }
@@ -2638,7 +2653,7 @@ function setupIdCardKeyboard() {
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.7.5 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.7.6 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
