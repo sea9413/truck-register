@@ -93,7 +93,7 @@ CREATE POLICY "Allow anonymous delete" ON records
 
 
 -- ===== 第 6 块：验收（跑完上面几块后执行，看结果对不对）=====
--- 列数应为 24
+-- 列数应为 22（15 个基础列 + v1.2~v1.6 陆续新增的 7 个列）
 select count(*) as column_count
 from information_schema.columns
 where table_name = 'records';
