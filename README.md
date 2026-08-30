@@ -27,3 +27,23 @@ https://sea9413.github.io/truck-register/
 - 前端：HTML + CSS + JavaScript
 - 数据库：Supabase
 - 部署：GitHub Pages
+
+## 数据库升级
+
+改过 `database.sql` 之后，到 Supabase → SQL Editor 把**整段**重新执行一次即可。它补齐了这些列，以及被遗漏的权限：
+
+| 补的内容 | 不补会怎样 |
+| --- | --- |
+| `delivery_type` / `note` / `is_paid` / `modified_fields` / `modified_count` / `deleted` / `deleted_at` | 类型筛选、支付状态、修改标红、回收站全部失效 |
+| UPDATE / DELETE 的 RLS 策略 | **修改记录、删除、回收站恢复、清空全部都会失败**（只有 SELECT + INSERT 时数据库会静默拒绝写操作） |
+
+整段脚本可重复执行：已存在的列、索引、策略都会自动跳过，不影响已有数据。
+
+## 安全说明
+
+前端的密码门只能防随手访问，不是真正的鉴权 —— anon key 和 RLS 策略都在前端源码里，任何人拿到都能读写数据。因此：
+
+- 身份证号在写库前用登录密码派生的 AES-GCM 密钥加密，数据库里只有密文
+- **改登录密码前**，必须先在浏览器控制台执行 `await reEncryptIdCards('旧密码','新密码')`，否则历史身份证号将永久无法解密
+- `database.sql` 里的固定盐 `PBKDF2_SALT` 一经发布不可修改，否则所有旧密文失效
+- 导出的 CSV 里身份证号是**明文**（为了能重新导入），备份文件要妥善保存

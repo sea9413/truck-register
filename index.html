@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>装货登记</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="document.getElementById('recordList').innerHTML='<div class=empty><div class=empty-icon>❌</div>Supabase 脚本加载失败</div>'"></script>
+<!-- 加载失败时只置标志位:此时 <body> 还没解析,直接取 recordList 会拿到 null 而报错。
+     真正的提示统一在 initSupabase() 里用 showFatalError() 输出。 -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js" onerror="window._supabaseLoadFailed=true"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -450,6 +452,19 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 <div class="toast" id="toast"></div>
 
 <script>
+// ===== HTML 转义 =====
+// 所有拼进 innerHTML 的记录字段(车牌/姓名/地址/备注/货物…)都必须先过这里。
+// 否则一条内容里带 <img src=x onerror=...> 的记录,会在所有同事的手机上执行脚本。
+function escapeHtml(v) {
+  if (v === null || v === undefined) return '';
+  return String(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // Supabase 配置（等 supabase 全局变量就绪后初始化）
 const SUPABASE_URL = 'https://gdyiottosunwjothghaz.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_OMPVS-R2K3r9o8vx0VCx1A_SAd4iomg';
@@ -458,6 +473,18 @@ const SUPABASE_KEY = 'sb_publishable_OMPVS-R2K3r9o8vx0VCx1A_SAd4iomg';
 // 密码 "123456" 的 SHA-256 哈希 (可随时改 passwordHash 换密码)
 const PASSWORD_HASH = '398a15bc9bdc4db26d1d21dda9bf0e6e018ae388020e0e1398f5ecc9789c18e0';
 const GATE_KEY = 'truck_gate_ok_v2';
+const GATE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 免登录有效期 30 天
+
+// 免登录状态存"上次通过验证的时间戳";老版本存的是字符串 '1',读到时顺手升级成时间戳
+function gateIsValid() {
+  const raw = localStorage.getItem(GATE_KEY);
+  if (!raw) return false;
+  if (raw === '1') { localStorage.setItem(GATE_KEY, String(Date.now())); return true; }
+  const t = parseInt(raw, 10);
+  if (!isFinite(t)) return false;
+  return (Date.now() - t) < GATE_TTL_MS;
+}
+function gateMarkPassed() { localStorage.setItem(GATE_KEY, String(Date.now())); }
 
 async function sha256(text) {
   const buf = new TextEncoder().encode(text);
@@ -470,7 +497,7 @@ async function checkGate() {
   if (!pwd) return;
   const hash = await sha256(pwd);
   if (hash === PASSWORD_HASH) {
-    localStorage.setItem(GATE_KEY, '1');
+    gateMarkPassed();
     // 由登录密码派生身份证加密密钥(AES-GCM),缓存在本机
     try {
       aesKey = await deriveAesKey(pwd);
@@ -592,11 +619,12 @@ window.reEncryptIdCards = async function (oldPwd, newPwd) {
 
 // 如果已验证过密码（30天内）且本机已有加密密钥，自动跳过密码门
 (function autoCheckGate() {
-  if (localStorage.getItem(GATE_KEY) === '1' && hasStoredAesKey()) {
+  const gatePassed = gateIsValid();
+  if (gatePassed && hasStoredAesKey()) {
     document.getElementById('gateModal').classList.remove('show');
   } else {
     document.getElementById('gateModal').classList.add('show');
-    if (localStorage.getItem(GATE_KEY) === '1') {
+    if (gatePassed) {
       // 老版本升级:已免密但本机还没有加密密钥,需要再输一次密码生成密钥
       document.getElementById('gateError').textContent = '🔒 新版启用身份证加密,请再输入一次密码';
     }
@@ -606,9 +634,34 @@ window.reEncryptIdCards = async function (oldPwd, newPwd) {
   }
 })();
 
+// 页面级致命错误提示(统一走这里,保证元素一定存在,不会因为取到 null 而二次报错)
+// 传入的 msg 会原样当 HTML 用,所以其中的动态内容(报错信息等)必须由调用方先 escapeHtml
+function showFatalError(msg) {
+  const el = document.getElementById('recordList');
+  if (el) el.innerHTML = '<div class="empty"><div class="empty-icon">❌</div>' + msg + '</div>';
+  const cnt = document.getElementById('recordCount');
+  if (cnt) cnt.textContent = '加载失败';
+}
+
+let supabaseInitRetry = 0;
+const SUPABASE_INIT_MAX_RETRY = 50; // 50 × 100ms = 最多等 5 秒
+
 function initSupabase() {
   if (typeof supabase === 'undefined') {
-    console.warn('supabase 全局变量还未就绪，等待中...');
+    // CDN 明确报了加载失败(如断网/被墙)就直接提示,不要无意义地空等
+    if (window._supabaseLoadFailed) {
+      console.error('supabase 脚本加载失败');
+      showFatalError('Supabase 脚本加载失败<br>请检查网络后刷新页面');
+      return;
+    }
+    // 脚本还在路上:限时重试,超出就提示,避免原来的无限 setTimeout 空转
+    if (supabaseInitRetry >= SUPABASE_INIT_MAX_RETRY) {
+      console.error('supabase 全局变量等待超时');
+      showFatalError('Supabase 脚本加载超时<br>请检查网络后刷新页面');
+      return;
+    }
+    supabaseInitRetry++;
+    console.warn('supabase 全局变量还未就绪，等待中... (' + supabaseInitRetry + ')');
     setTimeout(initSupabase, 100);
     return;
   }
@@ -623,7 +676,7 @@ function initSupabase() {
     }
   } catch (e) {
     console.error('Supabase 初始化失败:', e);
-    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>Supabase初始化失败:<br>' + e.message + '</div>';
+    showFatalError('Supabase 初始化失败:<br>' + escapeHtml(e.message));
   }
 }
 
@@ -672,10 +725,17 @@ function resetForm() {
   document.getElementById('fDate').value = today.getFullYear() + '-' + String(today.getMonth()+1).padStart(2,'0') + '-' + String(today.getDate()).padStart(2,'0');
   ['fPlateMain','fPlateTrailer','fName','fPhone','fIdCard','fFrom','fTo','fFreight','fWeight','fWeighFee','fNote'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
   document.getElementById('fIdCard').readOnly = true;
-  document.querySelectorAll('.goods-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('#goodsBtns .goods-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('otherWrap').classList.remove('show');
   document.getElementById('fGoodsOther').value = '';
   selectedGoods = '';
+  // 类型按钮也必须一起复位:原来只清了货物按钮(#goodsBtns 外的 .goods-btn 也被清了 active),
+  // 结果三个类型按钮全部不高亮,但 deliveryType 变量还停在上一单选的值,
+  // 用户以为默认是送货,提交后却存成了上次的"退货"/"不统计"
+  deliveryType = '送货';
+  document.querySelectorAll('#typeBtns .goods-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.trim() === '送货');
+  });
 }
 
 function checkPaste() {
@@ -752,6 +812,14 @@ function recognize(rawText) {
         break;
       }
     }
+  }
+  // 5. 兜底:车牌后紧跟的中文姓名(司机最常见的写法 "粤K12345 张三" / "粤K12345,张三")
+  //    (?![汉字]) 保证取到的是一个完整词而不是地名串的前半截,
+  //    例:"粤K12345 茂名仓库退回广州" 里 茂名仓库/茂名仓/茂名 后面都还是汉字,整条不匹配;
+  //    再用地名常用字二次过滤,双保险,避免把装货地当成司机姓名填进表里。
+  if (!result.name) {
+    const m = allText.match(new RegExp(plateOneRe + '[\\s,，]*([\\u4e00-\\u9fa5]{2,4})(?![\\u4e00-\\u9fa5])'));
+    if (m && !excludeNames.includes(m[1]) && !/[装卸送退回库仓场站路区市省县镇村队号线桥工业园]/.test(m[1])) result.name = m[1];
   }
 
   // 运费
@@ -969,13 +1037,14 @@ function doRecognize() {
   ];
   const filled = fieldList.filter(f => f.val);
   const empty = fieldList.filter(f => !f.val);
-  const fieldChip = (f, isFilled) => '<span class="rec-field ' + (isFilled ? 'filled' : 'empty') + '" onclick="focusField(\'' + f.key + '\')">' + f.label + (f.val ? ' ' + f.val : '') + '</span>';
+  const fieldChip = (f, isFilled) => '<span class="rec-field ' + (isFilled ? 'filled' : 'empty') + '" onclick="focusField(\'' + escapeHtml(f.key) + '\')">' + f.label + (f.val ? ' ' + escapeHtml(f.val) : '') + '</span>';
   const filledHtml = filled.length ? '<span style="color:#2e7d32">✅</span>' + filled.map(f => fieldChip(f, true)).join('') : '<span style="color:#999">⭕ 全部未识别</span>';
   const emptyHtml = empty.length ? '<div class="rec-row"><span style="color:#999">⭕</span>' + empty.map(f => fieldChip(f, false)).join('') + '</div>' : '';
   // 多卸货点候选按钮
   let toCandidatesHtml = '';
   if (r.toCandidates && r.toCandidates.length >= 2) {
-    toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">📍 多收货地候选(点选切换):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" onclick="pickToCandidate(\'' + c.replace(/'/g, "\\'") + '\')">' + c + '</button>').join('') + '</div>';
+    // 地址原文带引号/尖括号都不能破坏标签结构:用 data-addr 传值,onclick 不再内嵌用户输入
+    toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">📍 多收货地候选(点选切换):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" data-addr="' + escapeHtml(c) + '" onclick="pickToCandidate(this.dataset.addr)">' + escapeHtml(c) + '</button>').join('') + '</div>';
   }
   resultEl.innerHTML = '<div class="rec-summary"><div class="rec-row">' + filledHtml + '</div>' + emptyHtml + toCandidatesHtml + '</div>';
   resultEl.style.display = 'block';
@@ -1006,7 +1075,7 @@ function focusField(id) {
 // 多收货地候选按钮:点哪个填哪个
 function pickToCandidate(addr) {
   document.getElementById('fTo').value = addr;
-  document.querySelectorAll('.rec-candidate').forEach(b => b.classList.toggle('active', b.textContent === addr));
+  document.querySelectorAll('.rec-candidate').forEach(b => b.classList.toggle('active', b.dataset.addr === addr));
   toast('已填收货地:' + addr, true);
 }
 
@@ -1266,7 +1335,9 @@ async function loadRecords() {
     const { data, error } = await supabaseClient.from('records').select('*').order('created_at', { ascending: false });
     if (error) {
       console.error('加载记录出错:', error);
-      document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>加载失败:<br>' + (error.message || JSON.stringify(error)) + '</div>';
+      // 常见原因:RLS 没开 UPDATE 策略 / 缺列,提示里给出排查方向
+      const hint = /row-level security|permission denied/i.test(error.message || '') ? '<br><br>提示:Supabase 的 RLS 策略可能没放开,请重跑 database.sql' : '';
+      showFatalError('加载失败:<br>' + escapeHtml(error.message || JSON.stringify(error)) + hint);
       return;
     }
     currentRecords = data || [];
@@ -1282,7 +1353,7 @@ async function loadRecords() {
     renderList();
   } catch (e) {
     console.error('loadRecords异常:', e);
-    document.getElementById('recordList').innerHTML = '<div class="empty"><div class="empty-icon">❌</div>加载异常:<br>' + e.message + '</div>';
+    showFatalError('加载异常:<br>' + escapeHtml(e.message));
   }
 }
 
@@ -1298,8 +1369,12 @@ function getFilteredRecords() {
     return del;
   }
   let list = (currentRecords || []).filter(r => !r.deleted);
-  if (filterStartDate) list = list.filter(r => (r.date || '') >= filterStartDate);
-  if (filterEndDate) list = list.filter(r => (r.date || '') <= filterEndDate);
+  // 必须按时间戳比:库里的日期可能是导入的 2026-8-13(不补零),
+  // 直接字符串比对 2026-8-13 >= 2026-08-13 会因为 '8' > '0' 而误判,导致筛选漏记录
+  const tsStart = filterStartDate ? parseDateTs(filterStartDate) : 0;
+  const tsEnd = filterEndDate ? parseDateTs(filterEndDate) : 0;
+  if (tsStart) list = list.filter(r => parseDateTs(r.date) >= tsStart);
+  if (tsEnd) list = list.filter(r => { const ts = parseDateTs(r.date); return ts > 0 && ts <= tsEnd; });
   if (filterKeyword) {
     const kw = filterKeyword.toLowerCase();
     list = list.filter(r =>
@@ -1394,10 +1469,10 @@ function renderList() {
     return bm - am;
   });
   const cardHtml = r => {
-    const plate = r.plate_trailer ? r.plate_main + '+' + r.plate_trailer : r.plate_main;
+    const rid = escapeHtml(r.id);
     const plateHtml = r.plate_trailer
-      ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+挂' + r.plate_trailer + '</span>'
-      : '<span class="plate-main">' + r.plate_main + '</span>';
+      ? '<span class="plate-main">' + escapeHtml(r.plate_main) + '</span><span class="plate-trailer">+挂' + escapeHtml(r.plate_trailer) + '</span>'
+      : '<span class="plate-main">' + escapeHtml(r.plate_main) + '</span>';
     const hasWeight = r.weight && r.weight.trim();
     const hasWeighFee = r.weigh_fee && r.weigh_fee.trim();
     const badges = [];
@@ -1405,27 +1480,27 @@ function renderList() {
     if (!hasWeighFee) badges.push('<span class="badge-pending">待补过磅费</span>');
     if ((r.modified_count || 0) > 0) badges.push('<span class="badge-modified">已修改</span>');
     const badgeStr = badges.join('');
-    const goods = r.goods || '待填';
+    const goods = escapeHtml(r.goods || '待填');
     let typeTag;
     if (r.delivery_type === '退货') typeTag = '<span class="goods-tag" style="background:#ffebee;color:#c62828">退货</span>';
     else if (r.delivery_type === '不统计') typeTag = '<span class="goods-tag" style="background:#eceff1;color:#607d8b">不统计</span>';
     else typeTag = '<span class="goods-tag" style="background:#e8f5e9;color:#2e7d32">送货</span>';
-    const freightStr = r.freight ? '运费:' + r.freight + '元' : '';
-    const weighFeeStr = r.weigh_fee ? '过磅费:' + r.weigh_fee + '元' : '';
+    const freightStr = r.freight ? '运费:' + escapeHtml(r.freight) + '元' : '';
+    const weighFeeStr = r.weigh_fee ? '过磅费:' + escapeHtml(r.weigh_fee) + '元' : '';
     const weightStr = r.weight ? '重量:' + (parseFloat(r.weight) / 1000).toFixed(3) + '吨' : '';
     const isPaid = (r.is_paid === true);
-    const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + r.id + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
+    const paidCheck = '<label class="is_paid-check" onclick="event.stopPropagation();togglePaid(\'' + rid + '\', ' + (isPaid ? 'false' : 'true') + ')"><input type="checkbox" ' + (isPaid ? 'checked' : '') + '>已支付</label>';
     const feeStr = freightStr || weighFeeStr || weightStr ? '<div class="fee-line">' + [freightStr, weighFeeStr, weightStr].filter(Boolean).join(' ') + paidCheck + '</div>' : '<div class="fee-line">' + paidCheck + '</div>';
-    const toStr = r.to_location ? '<span>→ ' + r.to_location + '</span>' : '';
-    const routeStr = (r.from_location || r.to_location) ? '<div class="route-line">装:' + (r.from_location || '待填') + ' → ' + (r.to_location || '待填') + '</div>' : '';
-    return '<div class="record-card" onclick="showRecordDetail(\'' + r.id + '\')">' +
-      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
+    const routeStr = (r.from_location || r.to_location) ? '<div class="route-line">装:' + escapeHtml(r.from_location || '待填') + ' → ' + escapeHtml(r.to_location || '待填') + '</div>' : '';
+    return '<div class="record-card" onclick="showRecordDetail(\'' + rid + '\')">' +
+      '<div class="top"><span class="date">' + escapeHtml(formatDateCN(r.date)) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
       feeStr +
       '<div class="bottom"><span class="goods-tag">' + goods + '</span>' + typeTag + badgeStr + '</div>' +
       routeStr +
       '</div>';
   };
   const monthLabel = ym => {
+    if (ym === '9999-12') return '未填日期'; // parseYm 对空日期的兜底分组
     const [y, m] = ym.split('-');
     return y + '年' + parseInt(m) + '月';
   };
@@ -1866,7 +1941,7 @@ function renderDetail(r, changedKeys) {
   document.getElementById('detailItems').innerHTML = fields.map(([label, val, key]) => {
     const isPending = (key === 'weight' && !hasWeight) || (key === 'weigh_fee' && !hasWeighFee);
     const isChanged = changedSet.has(key);
-    return '<div class="detail-item"><span class="label">' + label + '</span><span class="value' + (isPending ? ' pending' : '') + (isChanged ? ' changed' : '') + '">' + val + '</span></div>';
+    return '<div class="detail-item"><span class="label">' + label + '</span><span class="value' + (isPending ? ' pending' : '') + (isChanged ? ' changed' : '') + '">' + escapeHtml(val) + '</span></div>';
   }).join('');
   document.getElementById('eWeight').value = r.weight || '';
   document.getElementById('eWeighFee').value = r.weigh_fee || '';
@@ -2025,7 +2100,7 @@ async function saveFullEdit() {
 function showModifyBanner(msg, changedFields) {
   const banner = document.getElementById('modifyBanner');
   const text = document.getElementById('modifyBannerText');
-  text.innerHTML = '⚠️ ' + msg;
+  text.textContent = '⚠️ ' + msg;
   banner.classList.add('show');
   // 永久显示，不自动隐藏
 }
@@ -2142,13 +2217,14 @@ function renderRecycle() {
   const s2 = document.getElementById('summaryBar2'); if (s2) s2.style.display = 'none';
   if (list.length === 0) { el.innerHTML = '<div class="empty"><div class="empty-icon">🗑</div>回收站是空的<br>已删除的记录会在这里保留,可恢复</div>'; return; }
   el.innerHTML = list.map(r => {
+    const rid = escapeHtml(r.id);
     const plateHtml = r.plate_trailer
-      ? '<span class="plate-main">' + r.plate_main + '</span><span class="plate-trailer">+挂' + r.plate_trailer + '</span>'
-      : '<span class="plate-main">' + r.plate_main + '</span>';
+      ? '<span class="plate-main">' + escapeHtml(r.plate_main) + '</span><span class="plate-trailer">+挂' + escapeHtml(r.plate_trailer) + '</span>'
+      : '<span class="plate-main">' + escapeHtml(r.plate_main) + '</span>';
     return '<div class="record-card recycle-card">' +
-      '<div class="top"><span class="date">' + formatDateCN(r.date) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
-      '<div class="bottom"><span class="goods-tag">' + (r.goods || '待填') + '</span><span style="color:#999;font-size:12px;margin-left:8px">删于 ' + (r.deleted_at ? r.deleted_at.substring(0,10) : '未知') + '</span></div>' +
-      '<div style="margin-top:8px"><button class="filter-btn-export" onclick="event.stopPropagation();restoreRecord(\'' + r.id + '\')">♻️ 恢复</button></div>' +
+      '<div class="top"><span class="date">' + escapeHtml(formatDateCN(r.date)) + '</span><span class="plate-wrap">' + plateHtml + '</span></div>' +
+      '<div class="bottom"><span class="goods-tag">' + escapeHtml(r.goods || '待填') + '</span><span style="color:#999;font-size:12px;margin-left:8px">删于 ' + escapeHtml(r.deleted_at ? r.deleted_at.substring(0,10) : '未知') + '</span></div>' +
+      '<div style="margin-top:8px"><button class="filter-btn-export" onclick="event.stopPropagation();restoreRecord(\'' + rid + '\')">♻️ 恢复</button></div>' +
       '</div>';
   }).join('');
 }
@@ -2237,7 +2313,11 @@ function toast(msg, green, red) {
 
 // 初始化 (仅在密码验证后或已验证过才初始化;先恢复加密密钥再拉数据)
 (async function init() {
-  if (localStorage.getItem(GATE_KEY) === '1' && hasStoredAesKey()) {
+  if (window._supabaseLoadFailed) {
+    showFatalError('Supabase 脚本加载失败<br>请检查网络后刷新页面');
+    return;
+  }
+  if (gateIsValid() && hasStoredAesKey()) {
     try { aesKey = await loadAesKey(); } catch (e) { console.error('密钥恢复失败:', e); }
     initSupabase();
   }
