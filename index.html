@@ -368,8 +368,8 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
       <div class="addr-label">装货地 ----- 收货地</div>
       <div class="two-col" style="margin-bottom:10px">
-        <input type="text" id="fFrom" placeholder="装货地:">
-        <input type="text" id="fTo" placeholder="收货地:">
+        <input type="text" id="fFrom" placeholder="装货地:" onblur="normalizeLocationInput('fFrom')">
+        <input type="text" id="fTo" placeholder="收货地:" onblur="normalizeLocationInput('fTo')">
       </div>
 
       <div class="form-group" style="margin-bottom:10px">
@@ -430,8 +430,8 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <input type="text" id="mIdCard" inputmode="numeric" placeholder="身份证号" maxlength="18">
       <div class="field-label">装货地 - 收货地</div>
       <div class="two-col">
-        <input type="text" id="mFrom" placeholder="装货地">
-        <input type="text" id="mTo" placeholder="收货地">
+        <input type="text" id="mFrom" placeholder="装货地" onblur="normalizeLocationInput('mFrom')">
+        <input type="text" id="mTo" placeholder="收货地" onblur="normalizeLocationInput('mTo')">
       </div>
       <div class="field-label">货物</div>
       <div class="goods-btns">
@@ -513,6 +513,15 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
     <button class="modal-close" onclick="closeFailures()" title="关闭">×</button>
     <div class="confirm-title" style="margin-bottom:12px; padding-right:34px">🔬 识别失败样本 <span style="font-size:12px;color:#888;font-weight:400">攒够一批照着补规则</span></div>
     <div id="failuresContent"><div class="loading">加载中...</div></div>
+  </div>
+</div>
+
+<!-- ===== 地点名称库（v1.8.0）===== -->
+<div class="confirm-overlay" id="locationModal">
+  <div class="confirm-box" style="max-width:92%; width:560px; max-height:85vh; overflow-y:auto; text-align:left; position:relative">
+    <button class="modal-close" onclick="closeLocationLib()" title="关闭">×</button>
+    <div class="confirm-title" style="margin-bottom:12px; padding-right:34px">📍 地点名称库</div>
+    <div id="locationLibContent"><div class="loading">加载中...</div></div>
   </div>
 </div>
 
@@ -1082,8 +1091,12 @@ function doRecognize() {
   document.getElementById('fName').value = r.name;
   document.getElementById('fPhone').value = r.phone;
   document.getElementById('fIdCard').value = r.idCard;
-  document.getElementById('fFrom').value = r.from;
-  document.getElementById('fTo').value = r.to;
+  // v1.8.0 地点名称标准化:司机的各种写法 → 预设标准名
+  const fromRaw = r.from || '', toRaw = r.to || '';
+  const fromStd = normalizeLocation(fromRaw);
+  const toStd = normalizeLocation(toRaw);
+  document.getElementById('fFrom').value = fromStd;
+  document.getElementById('fTo').value = toStd;
   document.getElementById('fFreight').value = r.freight;
   document.getElementById('fWeight').value = r.weight || '';
   if (r.weight) updateTon();
@@ -1100,7 +1113,7 @@ function doRecognize() {
     {label:'挂车', val:r.plateTrailer, key:'fPlateTrailer'}, {label:'姓名', val:r.name, key:'fName'},
     {label:'手机', val:r.phone, key:'fPhone'}, {label:'身份证', val:r.idCard, key:'fIdCard'},
     {label:'运费', val:r.freight ? r.freight + '元' : '', key:'fFreight'},
-    {label:'装货地', val:r.from, key:'fFrom'}, {label:'收货地', val:r.to, key:'fTo'},
+    {label:'装货地', val:fromStd, key:'fFrom'}, {label:'收货地', val:toStd, key:'fTo'},
     {label:'货物', val:r.goods, key:'goods'}, {label:'备注', val:r.note, key:'fNote'}
   ];
   const filled = fieldList.filter(f => f.val);
@@ -1114,7 +1127,15 @@ function doRecognize() {
     // 地址原文带引号/尖括号都不能破坏标签结构:用 data-addr 传值,onclick 不再内嵌用户输入
     toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">📍 多收货地候选(点选切换):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" data-addr="' + escapeHtml(c) + '" onclick="pickToCandidate(this.dataset.addr)">' + escapeHtml(c) + '</button>').join('') + '</div>';
   }
-  resultEl.innerHTML = '<div class="rec-summary"><div class="rec-row">' + filledHtml + '</div>' + emptyHtml + toCandidatesHtml + '</div>';
+  // 地点标准化对照:只有真的被改了才显示,方便一眼核对
+  let locHint = '';
+  const locParts = [];
+  if (fromRaw && fromStd !== fromRaw) locParts.push('装货地 ' + fromRaw + ' → ' + fromStd);
+  if (toRaw && toStd !== toRaw) locParts.push('收货地 ' + toRaw + ' → ' + toStd);
+  if (locParts.length) {
+    locHint = '<div class="rec-row"><span style="color:#1565c0">📍 名称已统一：</span>' + locParts.map(escapeHtml).join(' ｜ ') + '</div>';
+  }
+  resultEl.innerHTML = '<div class="rec-summary"><div class="rec-row">' + filledHtml + '</div>' + emptyHtml + toCandidatesHtml + locHint + '</div>';
   resultEl.style.display = 'block';
   // v1.7.2 识别不准的原文攒起来:整段没识别出 / 关键字段(车牌·姓名·手机)缺 2 个以上
   const keyMissing = ['plateMain', 'name', 'phone'].filter(k => !r[k]);
@@ -1146,7 +1167,7 @@ function focusField(id) {
 
 // 多收货地候选按钮:点哪个填哪个
 function pickToCandidate(addr) {
-  document.getElementById('fTo').value = addr;
+  document.getElementById('fTo').value = normalizeLocation(addr);
   document.querySelectorAll('.rec-candidate').forEach(b => b.classList.toggle('active', b.dataset.addr === addr));
   toast('已填收货地:' + addr, true);
 }
@@ -1179,8 +1200,8 @@ async function doSubmit() {
     name: document.getElementById('fName').value.trim(),
     phone: document.getElementById('fPhone').value.trim(),
     idCard: document.getElementById('fIdCard').value.trim(),
-    from: from,
-    to: document.getElementById('fTo').value.trim(),
+    from: normalizeLocation(from),
+    to: normalizeLocation(document.getElementById('fTo').value.trim()),
     goods: goodsDisplay,
     freight: document.getElementById('fFreight').value.trim(),
     weight: document.getElementById('fWeight').value.trim(),
@@ -2158,8 +2179,8 @@ async function saveFullEdit() {
     name: document.getElementById('mName').value.trim(),
     phone: document.getElementById('mPhone').value.trim(),
     id_card: document.getElementById('mIdCard').value.trim(),
-    from_location: document.getElementById('mFrom').value.trim(),
-    to_location: document.getElementById('mTo').value.trim(),
+    from_location: normalizeLocation(document.getElementById('mFrom').value.trim()),
+    to_location: normalizeLocation(document.getElementById('mTo').value.trim()),
     goods: goods,
     freight: document.getElementById('mFreight').value.trim(),
     weigh_fee: document.getElementById('mWeighFee').value.trim(),
@@ -2662,6 +2683,174 @@ function setupIdCardKeyboard() {
   sync();
 }
 
+// ===== 地点名称标准化（v1.8.0）=====
+// 司机写法五花八门(如 沉香工地 / 茂名沉香工地 / 电白沉香工地),
+// 登记时统一换成预设标准名,统计和筛选才准。
+// 内置兜底库:云端 location_aliases 表没建/连不上时用,保证功能始终可用。
+const DEFAULT_LOCATION_LIB = [
+  { standard: '茂名沉香工地',     aliases: ['茂名沉香工地', '沉香工地', '电白沉香工地'] },
+  { standard: '茂南消防基地',     aliases: ['茂南消防基地', '消防基地'] },
+  { standard: '茂名博贺展示中心', aliases: ['茂名博贺展示中心', '博贺展示中心', '茂名展示中心'] },
+  { standard: '茂名仓库',         aliases: ['茂名仓库', '茂南仓库', '茂名国基仓库'] },
+  { standard: '茂南国民市场',     aliases: ['茂南国民市场', '国民市场'] },
+  { standard: '广州胜华',         aliases: ['广州胜华'] },
+  { standard: '开平鹏峰',         aliases: ['开平鹏峰'] },
+  { standard: '马踏工地',         aliases: ['马踏工地'] },
+  { standard: '茂南图书馆',       aliases: ['茂南图书馆'] },
+  { standard: '茂南石油学院',     aliases: ['茂南石油学院'] },
+  { standard: '广东长远建材',     aliases: ['广东长远建材'] },
+  { standard: '茂南亿宝工地',     aliases: ['茂南亿宝工地'] }
+];
+let locationLib = DEFAULT_LOCATION_LIB.map(x => ({ standard: x.standard, aliases: x.aliases.slice() }));
+let locationLibFromDb = false; // 当前用的是云端库还是内置库
+
+// 加载地点库:先用内置兜底,再尝试云端覆盖(多设备共享)
+async function loadLocationLib() {
+  try {
+    if (navigator.onLine) {
+      const { data, error } = await supabaseClient
+        .from('location_aliases').select('standard_name, alias')
+        .order('sort_order', { ascending: false });
+      if (!error && data && data.length > 0) {
+        const map = {};
+        data.forEach(row => {
+          const s = (row.standard_name || '').trim();
+          const a = (row.alias || '').trim();
+          if (!s || !a) return;
+          if (!map[s]) map[s] = [];
+          if (map[s].indexOf(a) === -1) map[s].push(a);
+        });
+        const list = Object.keys(map).map(k => ({ standard: k, aliases: map[k] }));
+        if (list.length > 0) { locationLib = list; locationLibFromDb = true; }
+      }
+    }
+  } catch (e) {
+    console.warn('加载地点库失败,继续用内置:', e);
+  }
+}
+
+// 地点标准化:精确匹配 > 最长包含匹配;都匹配不到就返回原文(绝不硬猜)
+function normalizeLocation(input) {
+  const text = (input || '').trim();
+  if (!text || locationLib.length === 0) return text;
+  // 1. 精确匹配
+  for (const item of locationLib) {
+    for (const a of item.aliases) {
+      if (a === text) return item.standard;
+    }
+  }
+  // 2. 最长包含匹配:只做"输入里含有别名",不做"别名含有输入"
+  //    —— 否则输入"茂名"这种太短的词会被胡乱匹配到某个具体地点
+  let best = '', bestLen = 0;
+  for (const item of locationLib) {
+    for (const a of item.aliases) {
+      if (a.length > bestLen && text.indexOf(a) !== -1) {
+        best = item.standard;
+        bestLen = a.length;
+      }
+    }
+  }
+  return best || text;
+}
+
+// 输入框失焦时才统一,不干扰打字过程
+function normalizeLocationInput(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const raw = (el.value || '').trim();
+  if (!raw) return;
+  const std = normalizeLocation(raw);
+  if (std !== raw) {
+    el.value = std;
+    toast('📍 已统一为「' + std + '」', true);
+  }
+}
+
+// ===== 地点名称库管理（v1.8.0）=====
+async function showLocationLib() {
+  const modal = document.getElementById('locationModal');
+  if (!modal) return;
+  modal.classList.add('show');
+  const box = document.getElementById('locationLibContent');
+  if (box) box.innerHTML = '<div class="loading">加载中...</div>';
+  await loadLocationLib();
+  renderLocationLib();
+}
+function closeLocationLib() {
+  const modal = document.getElementById('locationModal');
+  if (modal) modal.classList.remove('show');
+}
+function renderLocationLib() {
+  const box = document.getElementById('locationLibContent');
+  if (!box) return;
+  const srcTip = locationLibFromDb
+    ? '<div style="color:#2e7d32;font-size:12px;margin-bottom:10px">✅ 正在用云端地点库，多设备共享</div>'
+    : '<div style="color:#e65100;font-size:12px;margin-bottom:10px">⚠️ 当前用内置地点库。想自己维护并多设备同步，请在 Supabase 跑一次 database.sql 的【第 7 块】</div>';
+  let html = srcTip +
+    '<div style="font-size:12px;color:#888;margin-bottom:10px">司机写法会自动匹配到标准名，登记记录里存的一律是标准名，筛选和统计才准。</div>';
+  html += locationLib.map((item, i) =>
+    '<div class="sample-card">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
+        '<b style="color:#1565c0">' + escapeHtml(item.standard) + '</b>' +
+        '<button onclick="removeLocationStandard(' + i + ')" style="background:none;border:none;color:#c0392b;font-size:13px;cursor:pointer;padding:4px 8px">删除</button>' +
+      '</div>' +
+      '<div class="sample-meta">别名：' + item.aliases.map(escapeHtml).join('、') + '</div>' +
+    '</div>'
+  ).join('');
+  html += '<div style="border-top:1px solid #eee;margin-top:14px;padding-top:12px">' +
+    '<div style="font-weight:600;margin-bottom:8px">➕ 添加地点</div>' +
+    '<input type="text" id="locNewStandard" placeholder="标准名，如：茂名沉香工地" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:8px">' +
+    '<input type="text" id="locNewAliases" placeholder="司机可能的写法，多个用逗号隔开" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:8px">' +
+    '<button onclick="addLocationAlias()" style="width:100%;background:#1a7af8;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;min-height:44px">保存</button>' +
+  '</div>';
+  box.innerHTML = html;
+}
+async function addLocationAlias() {
+  const stdEl = document.getElementById('locNewStandard');
+  const aliasEl = document.getElementById('locNewAliases');
+  const std = (stdEl.value || '').trim();
+  if (!std) { toast('请填标准名', false, true); return; }
+  const aliases = (aliasEl.value || '').split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+  if (aliases.length === 0) { toast('请至少填一个司机可能的写法', false, true); return; }
+  // 先更新内存,保证立刻可用
+  let item = locationLib.find(x => x.standard === std);
+  if (!item) { item = { standard: std, aliases: [] }; locationLib.push(item); }
+  aliases.forEach(a => { if (item.aliases.indexOf(a) === -1) item.aliases.push(a); });
+  // 再同步云端(失败也不影响本机使用)
+  if (locationLibFromDb && navigator.onLine) {
+    try {
+      const rows = aliases.map(a => ({ standard_name: std, alias: a, sort_order: 0 }));
+      const { error } = await supabaseClient
+        .from('location_aliases').upsert(rows, { onConflict: 'alias,standard_name', ignoreDuplicates: true });
+      if (error) throw error;
+    } catch (e) {
+      console.warn('地点库同步云端失败(仅本机生效):', e);
+      toast('已加到本机，但同步云端失败', false, true);
+    }
+  }
+  stdEl.value = '';
+  aliasEl.value = '';
+  renderLocationLib();
+  toast('已添加「' + std + '」', true);
+}
+async function removeLocationStandard(index) {
+  const item = locationLib[index];
+  if (!item) return;
+  if (!confirm('确定删除地点「' + item.standard + '」及其全部别名？\n\n删除后，司机再写这些写法时就不会自动统一了。')) return;
+  if (locationLibFromDb && navigator.onLine) {
+    try {
+      const { error } = await supabaseClient.from('location_aliases').delete().eq('standard_name', item.standard);
+      if (error) throw error;
+    } catch (e) {
+      console.warn('云端删除地点失败:', e);
+      toast('云端删除失败，仅从本机移除', false, true);
+    }
+  }
+  locationLib.splice(index, 1);
+  renderLocationLib();
+  toast('已删除「' + item.standard + '」', true);
+}
+
 // 初始化 (仅在密码验证后或已验证过才初始化;先恢复加密密钥再拉数据)
 (async function init() {
   if (window._supabaseLoadFailed) {
@@ -2674,10 +2863,11 @@ function setupIdCardKeyboard() {
     ensureOperator();         // 没名字就问一次(底部栏可随时改)
     setupMobileInputFocus();  // 手机端:聚焦输入框时防软键盘遮挡
     setupIdCardKeyboard();    // 手机端:身份证前17位数字键盘,末位X自动切文本
+    loadLocationLib();        // 地点名称库(后台加载;内置库已先兜底,不阻塞首屏)
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.7.8 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.8.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 

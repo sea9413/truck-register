@@ -147,22 +147,81 @@ DROP POLICY IF EXISTS "Allow anonymous delete failures" ON recognize_failures;
 CREATE POLICY "Allow anonymous delete failures" ON recognize_failures FOR DELETE USING (true);
 
 
--- ===== 第 7 块：验收（跑完上面几块后执行，看结果对不对）=====
+-- ===== 第 7 块：v1.8.0 地点名称库（司机原始写法 → 标准名）=====
+
+-- 每行是一条「别名 → 标准名」映射。同一个标准名可以有多行别名。
+-- 例：standard_name='茂名沉香工地' 对应三行 alias：
+--     '茂名沉香工地' / '沉香工地' / '电白沉香工地'
+CREATE TABLE IF NOT EXISTS location_aliases (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  standard_name TEXT NOT NULL,   -- 标准名：登记、统计、筛选统一用这个
+  alias TEXT NOT NULL,           -- 司机可能写出来的原始写法
+  sort_order INTEGER DEFAULT 0,  -- 排序用，大的在前
+  UNIQUE (alias, standard_name)  -- 同一标准名下别名不重复
+);
+
+CREATE INDEX IF NOT EXISTS idx_loc_alias    ON location_aliases (alias);
+CREATE INDEX IF NOT EXISTS idx_loc_standard ON location_aliases (standard_name);
+
+-- 权限策略（和 records 一致：anon 可读可写）
+ALTER TABLE location_aliases ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anonymous read loc" ON location_aliases;
+CREATE POLICY "Allow anonymous read loc" ON location_aliases FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow anonymous insert loc" ON location_aliases;
+CREATE POLICY "Allow anonymous insert loc" ON location_aliases FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous update loc" ON location_aliases;
+CREATE POLICY "Allow anonymous update loc" ON location_aliases FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous delete loc" ON location_aliases;
+CREATE POLICY "Allow anonymous delete loc" ON location_aliases FOR DELETE USING (true);
+
+-- 预置一批常用地点（根据 2026-09-01 提供的 23 条真实司机信息整理）
+-- 已确认：电白沉香工地 = 茂名沉香工地；茂名/茂南/国基仓库 同一个；
+--         博贺展示中心 = 茂名展示中心 = 茂名博贺展示中心
+INSERT INTO location_aliases (standard_name, alias, sort_order) VALUES
+  ('茂名沉香工地',     '茂名沉香工地',     100),
+  ('茂名沉香工地',     '沉香工地',         100),
+  ('茂名沉香工地',     '电白沉香工地',     100),
+  ('茂南消防基地',     '茂南消防基地',      90),
+  ('茂南消防基地',     '消防基地',          90),
+  ('茂名博贺展示中心', '茂名博贺展示中心',   80),
+  ('茂名博贺展示中心', '博贺展示中心',      80),
+  ('茂名博贺展示中心', '茂名展示中心',      80),
+  ('茂名仓库',         '茂名仓库',          70),
+  ('茂名仓库',         '茂南仓库',          70),
+  ('茂名仓库',         '茂名国基仓库',      70),
+  ('茂南国民市场',     '茂南国民市场',      60),
+  ('茂南国民市场',     '国民市场',          60),
+  ('广州胜华',         '广州胜华',          50),
+  ('开平鹏峰',         '开平鹏峰',          50),
+  ('马踏工地',         '马踏工地',          40),
+  ('茂南图书馆',       '茂南图书馆',        40),
+  ('茂南石油学院',     '茂南石油学院',      30),
+  ('广东长远建材',     '广东长远建材',      30),
+  ('茂南亿宝工地',     '茂南亿宝工地',      30)
+ON CONFLICT (alias, standard_name) DO NOTHING;
+
+
+-- ===== 第 8 块：验收（跑完上面几块后执行，看结果对不对）=====
 -- records 列数应为 23（原 22 列 + operator）
 select count(*) as records_column_count
 from information_schema.columns
 where table_name = 'records';
 
--- 应有 3 张表：records / operation_logs / recognize_failures
+-- 应有 4 张表：records / operation_logs / recognize_failures / location_aliases
 select table_name
 from information_schema.tables
 where table_schema = 'public'
-  and table_name in ('records','operation_logs','recognize_failures')
+  and table_name in ('records','operation_logs','recognize_failures','location_aliases')
 order by table_name;
 
--- 三张表各自的策略数都应为 4（SELECT / INSERT / UPDATE / DELETE）
+-- 四张表各自的策略数都应为 4（SELECT / INSERT / UPDATE / DELETE）
 select tablename, count(*) as policy_count
 from pg_policies
-where tablename in ('records','operation_logs','recognize_failures')
+where tablename in ('records','operation_logs','recognize_failures','location_aliases')
 group by tablename
 order by tablename;
+
+-- 地点库应有 20 条映射、13 个标准名
+select count(*) as 映射条数, count(distinct standard_name) as 标准名个数
+from location_aliases;
