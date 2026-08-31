@@ -746,7 +746,8 @@ var supabaseClient;
 
 let currentRecords = [];
 let filterStartDate = '';
-let collapsedMonths = {}; // { '2026-08': true }
+let collapsedMonths = {}; // 用户手动点过的月份: { '2026-08': true }  true=折叠
+let defaultExpandedYm = ''; // 本次渲染默认展开的月份(v1.7.7:只展开当前月,其余折叠)
 let filterEndDate = '';
 let filterKeyword = '';
 let locationFilter = 'all'; // 'all' | 'from' | 'to'
@@ -1550,6 +1551,12 @@ function renderList() {
     if (by !== ay) return by - ay;
     return bm - am;
   });
+  // v1.7.7:默认只展开当前月;筛选结果里没有当前月时,退而展开最新一个月
+  // (9999-12 是"未填日期"的兜底分组,不算真实月份)
+  const realKeys = sortedKeys.filter(k => k !== '9999-12');
+  defaultExpandedYm = (sortedKeys.indexOf(currentYm()) !== -1)
+    ? currentYm()
+    : (realKeys[0] || sortedKeys[0] || '');
   const cardHtml = r => {
     const rid = escapeHtml(r.id);
     const plateHtml = r.plate_trailer
@@ -1591,7 +1598,7 @@ function renderList() {
   el.innerHTML = sortedKeys.map(ym => {
     const rows = groups[ym];
     const mfreight = rows.reduce((s,r) => s+parseNum(r.freight), 0);
-    const collapsed = collapsedMonths[ym] ? ' collapsed' : '';
+    const collapsed = isMonthCollapsed(ym) ? ' collapsed' : '';
     return '<div class="month-group">' +
       '<div class="month-header' + collapsed + '" data-ym="' + ym + '" onclick="toggleMonth(\'' + ym + '\')">' +
       '<span><span class="month-toggle">▼</span> ' + monthLabel(ym) + ' <span class="month-count">' + rows.length + '条 · 运费' + mfreight.toFixed(0) + '元</span></span>' +
@@ -1601,12 +1608,23 @@ function renderList() {
   }).join('');
 }
 
+// 当前年月 YYYY-MM
+function currentYm() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+}
+// 月份是否折叠:用户手动点过的以用户为准;没点过的默认折叠,只留当前月展开
+function isMonthCollapsed(ym) {
+  if (collapsedMonths[ym] !== undefined) return collapsedMonths[ym];
+  return ym !== defaultExpandedYm;
+}
 function toggleMonth(ym) {
-  collapsedMonths[ym] = !collapsedMonths[ym];
+  collapsedMonths[ym] = !isMonthCollapsed(ym);
+  const nowCollapsed = isMonthCollapsed(ym);
   const hdr = document.querySelector('.month-header[data-ym="' + ym + '"]');
   const recs = document.querySelector('.month-records[data-ym="' + ym + '"]');
-  if (hdr) hdr.classList.toggle('collapsed', collapsedMonths[ym]);
-  if (recs) recs.classList.toggle('collapsed', collapsedMonths[ym]);
+  if (hdr) hdr.classList.toggle('collapsed', nowCollapsed);
+  if (recs) recs.classList.toggle('collapsed', nowCollapsed);
 }
 
 function applyFilter() {
@@ -2653,7 +2671,7 @@ function setupIdCardKeyboard() {
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.7.6 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.7.7 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
