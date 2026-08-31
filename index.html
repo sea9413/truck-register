@@ -1017,9 +1017,11 @@ function recognize(rawText) {
     const m = allText.match(/送([\u4e00-\u9fa5]{2,15})/);
     if (m && !goodsWordRe.test(m[1])) result.to = m[1];
   }
-  // 优先级5: 全文匹配"X退回/送至Y"
+  // 优先级5: 全文匹配"X退回/送至Y"，或"X送Y"（v1.8.1 修复"电白沉香工地送茂南亿宝工地"漏识别）
   if (!result.from || !result.to) {
-    const fullLine = allText.match(/([\u4e00-\u9fa5]{2,20})(?:退回|送至|→)([\u4e00-\u9fa5]{2,20})/);
+    let fullLine = allText.match(/([\u4e00-\u9fa5]{2,20})(?:退回|送至|→)([\u4e00-\u9fa5]{2,20})/);
+    // 单"送"（不带"至"）单独匹配
+    if (!fullLine) fullLine = allText.match(/([\u4e00-\u9fa5]{2,20})送(?!至)([\u4e00-\u9fa5]{2,20})/);
     if (fullLine) {
       if (!result.from) result.from = fullLine[1];
       if (!result.to && !goodsWordRe.test(fullLine[2])) result.to = fullLine[2];
@@ -2787,18 +2789,29 @@ function renderLocationLib() {
     ? '<div style="color:#2e7d32;font-size:12px;margin-bottom:10px">✅ 正在用云端地点库，多设备共享</div>'
     : '<div style="color:#e65100;font-size:12px;margin-bottom:10px">⚠️ 当前用内置地点库。想自己维护并多设备同步，请在 Supabase 跑一次 database.sql 的【第 7 块】</div>';
   let html = srcTip +
-    '<div style="font-size:12px;color:#888;margin-bottom:10px">司机写法会自动匹配到标准名，登记记录里存的一律是标准名，筛选和统计才准。</div>';
-  html += locationLib.map((item, i) =>
-    '<div class="sample-card">' +
+    '<div style="font-size:12px;color:#888;margin-bottom:10px">司机写法会自动匹配到标准名，登记记录里存的一律是标准名，筛选和统计才准。<br>💡 标准名可直接点编辑；每个别名有 × 可单独删除；旁边「+ 加别名」可补新写法。</div>';
+  html += locationLib.map((item, i) => {
+    const aliasChips = item.aliases.map((a, j) =>
+      '<span style="display:inline-block;background:#f0f0f0;border:1px solid #ddd;border-radius:12px;padding:2px 8px;margin:2px 4px;font-size:13px">' +
+      escapeHtml(a) +
+      ' <span style="color:#c0392b;cursor:pointer;font-weight:bold;margin-left:4px" onclick="removeOneAlias(' + i + ',' + j + ')" title="删除该别名">×</span>' +
+      '</span>'
+    ).join('');
+    return '<div class="sample-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
-        '<b style="color:#1565c0">' + escapeHtml(item.standard) + '</b>' +
-        '<button onclick="removeLocationStandard(' + i + ')" style="background:none;border:none;color:#c0392b;font-size:13px;cursor:pointer;padding:4px 8px">删除</button>' +
+        '<input type="text" id="locStd_' + i + '" value="' + escapeHtml(item.standard) + '" style="flex:1;border:1px solid #eee;border-radius:4px;padding:6px 8px;font-size:14px;font-weight:600;color:#1565c0" onblur="saveStandardName(' + i + ', this.value)" onkeydown="if(event.key===\'Enter\'){this.blur()}">' +
+        '<button onclick="removeLocationStandard(' + i + ')" style="background:none;border:none;color:#c0392b;font-size:13px;cursor:pointer;padding:4px 8px" title="删除整个标准名（含所有别名）">删整组</button>' +
       '</div>' +
-      '<div class="sample-meta">别名：' + item.aliases.map(escapeHtml).join('、') + '</div>' +
-    '</div>'
-  ).join('');
+      '<div class="sample-meta" style="margin-top:8px">' +
+        '<div style="color:#888;font-size:12px;margin-bottom:4px">别名（' + item.aliases.length + ' 个）：</div>' +
+        '<div>' + aliasChips +
+        '<span style="display:inline-block;border:1px dashed #90caf9;border-radius:12px;padding:2px 10px;margin:2px 4px;font-size:13px;color:#1565c0;cursor:pointer;background:#fff" onclick="promptAddAlias(' + i + ')">+ 加别名</span>' +
+        '</div>' +
+      '</div>' +
+    '</div>';
+  }).join('');
   html += '<div style="border-top:1px solid #eee;margin-top:14px;padding-top:12px">' +
-    '<div style="font-weight:600;margin-bottom:8px">➕ 添加地点</div>' +
+    '<div style="font-weight:600;margin-bottom:8px">➕ 添加新地点</div>' +
     '<input type="text" id="locNewStandard" placeholder="标准名，如：茂名沉香工地" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:8px">' +
     '<input type="text" id="locNewAliases" placeholder="司机可能的写法，多个用逗号隔开" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:16px;margin-bottom:8px">' +
     '<button onclick="addLocationAlias()" style="width:100%;background:#1a7af8;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;min-height:44px">保存</button>' +
@@ -2851,6 +2864,81 @@ async function removeLocationStandard(index) {
   toast('已删除「' + item.standard + '」', true);
 }
 
+// 给某个已存在的标准名加单个别名
+function promptAddAlias(index) {
+  const alias = prompt('输入新别名（司机可能的写法）:');
+  if (!alias) return;
+  addOneAlias(index, alias.trim());
+}
+async function addOneAlias(index, alias) {
+  const item = locationLib[index];
+  if (!item || !alias) return;
+  if (item.aliases.indexOf(alias) !== -1) {
+    toast('别名「' + alias + '」已存在', false, true);
+    renderLocationLib();
+    return;
+  }
+  item.aliases.push(alias);
+  if (locationLibFromDb && navigator.onLine) {
+    try {
+      const { error } = await supabaseClient.from('location_aliases')
+        .insert([{ standard_name: item.standard, alias: alias, sort_order: 0 }]);
+      if (error) throw error;
+    } catch (e) {
+      console.warn('加别名失败:', e);
+      toast('加别名同步云端失败', false, true);
+    }
+  }
+  toast('已加别名「' + alias + '」', true);
+  renderLocationLib();
+}
+// 删除单个别名
+async function removeOneAlias(index, aliasIndex) {
+  const item = locationLib[index];
+  const alias = item && item.aliases[aliasIndex];
+  if (!item || !alias) return;
+  if (!confirm('删除别名「' + alias + '」？')) return;
+  item.aliases.splice(aliasIndex, 1);
+  if (locationLibFromDb && navigator.onLine) {
+    try {
+      const { error } = await supabaseClient.from('location_aliases')
+        .delete().eq('standard_name', item.standard).eq('alias', alias);
+      if (error) throw error;
+    } catch (e) {
+      console.warn('删别名失败:', e);
+      toast('删别名同步云端失败', false, true);
+    }
+  }
+  toast('已删除别名「' + alias + '」', true);
+  renderLocationLib();
+}
+// 编辑标准名
+function saveStandardName(index, newVal) {
+  const item = locationLib[index];
+  if (!item) return;
+  const newName = (newVal || '').trim();
+  if (!newName || newName === item.standard) { renderLocationLib(); return; }
+  if (locationLib.some((it, idx) => idx !== index && it.standard === newName)) {
+    toast('标准名「' + newName + '」已存在', false, true);
+    renderLocationLib();
+    return;
+  }
+  const oldName = item.standard;
+  item.standard = newName;
+  if (locationLibFromDb && navigator.onLine) {
+    supabaseClient.from('location_aliases').update({ standard_name: newName }).eq('standard_name', oldName)
+      .then(({ error }) => {
+        if (error) {
+          console.warn('改标准名失败:', error);
+          toast('改标准名同步云端失败', false, true);
+          item.standard = oldName; // 回滚
+        }
+      });
+  }
+  toast('已改标准名为「' + newName + '」', true);
+  renderLocationLib();
+}
+
 // 初始化 (仅在密码验证后或已验证过才初始化;先恢复加密密钥再拉数据)
 (async function init() {
   if (window._supabaseLoadFailed) {
@@ -2867,7 +2955,7 @@ async function removeLocationStandard(index) {
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.8.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.8.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
