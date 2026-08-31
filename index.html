@@ -205,6 +205,10 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 .sample-card { border: 1px solid #ffe0b2; background: #fffdf7; border-radius: 8px; padding: 10px; margin-bottom: 10px; }
 .sample-raw { background: #fff; border: 1px solid #eee; border-radius: 6px; padding: 8px; font-size: 13px; white-space: pre-wrap; word-break: break-all; margin: 6px 0 0; max-height: 180px; overflow-y: auto; }
 .sample-meta { color: #888; font-size: 12px; }
+/* 弹窗右上角关闭 X（和使用说明一致） */
+.modal-close { position: absolute; top: 6px; right: 10px; background: none; border: none; font-size: 26px; line-height: 1; cursor: pointer; color: #999; padding: 4px 8px; }
+.modal-close:hover { color: #333; }
+.modal-close:active { color: #1565c0; }
 
 /* ===== 手机端优化（v1.7.2）：触摸目标 / 防键盘遮挡 / 防 iOS 自动缩放 ===== */
 @media (max-width: 600px) {
@@ -212,6 +216,8 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
   input, textarea, select { font-size: 16px !important; }
   /* 触摸目标不小于 44px（苹果人机规范），手指点得更准 */
   .filter-bar button, .goods-btn, .submit-btn, .action-btn, .back-btn, .confirm-btn, .rec-candidate, .add-btn { min-height: 44px; }
+  /* 右上角 X 放大到 44px,手指点得准 */
+  .modal-close { min-width: 44px; min-height: 44px; font-size: 30px; padding: 0; right: 4px; top: 2px; }
   .goods-btn { padding: 13px 8px; font-size: 15px; }
   .add-btn { font-size: 16px; }
   .log-table { font-size: 12px; }
@@ -494,19 +500,19 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 
 <!-- ===== 操作日志（v1.7.2）===== -->
 <div class="confirm-overlay" id="logsModal">
-  <div class="confirm-box" style="max-width:92%; width:640px; max-height:85vh; overflow-y:auto; text-align:left">
-    <div class="confirm-title" style="margin-bottom:12px">📜 操作日志 <span style="font-size:12px;color:#888;font-weight:400">最近 100 条</span></div>
+  <div class="confirm-box" style="max-width:92%; width:640px; max-height:85vh; overflow-y:auto; text-align:left; position:relative">
+    <button class="modal-close" onclick="closeLogs()" title="关闭">×</button>
+    <div class="confirm-title" style="margin-bottom:12px; padding-right:34px">📜 操作日志 <span style="font-size:12px;color:#888;font-weight:400">最近 100 条</span></div>
     <div id="logsContent"><div class="loading">加载中...</div></div>
-    <button class="cancel-btn" onclick="closeLogs()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:8px;font-size:15px;margin-top:12px;cursor:pointer">关闭</button>
   </div>
 </div>
 
 <!-- ===== 识别失败样本（v1.7.2）===== -->
 <div class="confirm-overlay" id="failuresModal">
-  <div class="confirm-box" style="max-width:92%; width:640px; max-height:85vh; overflow-y:auto; text-align:left">
-    <div class="confirm-title" style="margin-bottom:12px">🔬 识别失败样本 <span style="font-size:12px;color:#888;font-weight:400">攒够一批照着补规则</span></div>
+  <div class="confirm-box" style="max-width:92%; width:640px; max-height:85vh; overflow-y:auto; text-align:left; position:relative">
+    <button class="modal-close" onclick="closeFailures()" title="关闭">×</button>
+    <div class="confirm-title" style="margin-bottom:12px; padding-right:34px">🔬 识别失败样本 <span style="font-size:12px;color:#888;font-weight:400">攒够一批照着补规则</span></div>
     <div id="failuresContent"><div class="loading">加载中...</div></div>
-    <button class="cancel-btn" onclick="closeFailures()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:8px;font-size:15px;margin-top:12px;cursor:pointer">关闭</button>
   </div>
 </div>
 
@@ -1392,7 +1398,7 @@ function showHelp() {
     overlay.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
     document.body.appendChild(overlay);
   }
-  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;position:relative"><button onclick="document.getElementById(&quot;helpOverlay&quot;).style.display=&quot;none&quot;" style="position:absolute;top:8px;right:12px;background:none;border:none;font-size:24px;cursor:pointer;color:#999">×</button>' + html + '</div>';
+  overlay.innerHTML = '<div style="background:#fff;border-radius:12px;padding:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;position:relative"><button class="modal-close" onclick="document.getElementById(&quot;helpOverlay&quot;).style.display=&quot;none&quot;" title="关闭">×</button>' + html + '</div>';
   overlay.style.display = 'flex';
 }
 
@@ -2671,7 +2677,7 @@ function setupIdCardKeyboard() {
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.7.7 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.7.8 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
