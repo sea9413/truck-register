@@ -57,6 +57,8 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .rec-field.empty { background: #f5f5f5; color: #999; }
 .rec-field:hover { opacity: 0.7; }
 .rec-row { line-height: 1.8; }
+.loc-unknown { color:#c62828; font-weight:600; background:#fff3e0; border:1px solid #ffab91; border-radius:6px; padding:6px 8px; margin-top:6px; }
+.loc-unknown-input { border-color:#e53935 !important; box-shadow:0 0 0 2px rgba(229,57,53,.25); background:#fff5f5; }
 .rec-candidates { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; }
 .rec-candidate { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 5px 12px; margin: 4px 4px 0 0; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }
 .rec-candidate.active { background: #e65100; color: white; border-color: #e65100; }
@@ -1129,16 +1131,34 @@ function doRecognize() {
     // 地址原文带引号/尖括号都不能破坏标签结构:用 data-addr 传值,onclick 不再内嵌用户输入
     toCandidatesHtml = '<div class="rec-candidates"><span style="color:#e65100">📍 多收货地候选(点选切换):</span>' + r.toCandidates.map((c, i) => '<button class="rec-candidate' + (i === r.toCandidates.length - 1 ? ' active' : '') + '" data-addr="' + escapeHtml(c) + '" onclick="pickToCandidate(this.dataset.addr)">' + escapeHtml(c) + '</button>').join('') + '</div>';
   }
-  // 地点标准化对照:只有真的被改了才显示,方便一眼核对
+  // 地点标准化对照:匹配到显示"已统一";匹配不到则保留原文填入,但给醒目提醒
   let locHint = '';
   const locParts = [];
-  if (fromRaw && fromStd !== fromRaw) locParts.push('装货地 ' + fromRaw + ' → ' + fromStd);
-  if (toRaw && toStd !== toRaw) locParts.push('收货地 ' + toRaw + ' → ' + toStd);
+  const locUnknown = [];
+  if (fromRaw) {
+    if (fromStd !== fromRaw) locParts.push('装货地 ' + fromRaw + ' → ' + fromStd);
+    else if (!locInLib(fromRaw)) locUnknown.push('装货地「' + fromRaw + '」');
+  }
+  if (toRaw) {
+    if (toStd !== toRaw) locParts.push('收货地 ' + toRaw + ' → ' + toStd);
+    else if (!locInLib(toRaw)) locUnknown.push('收货地「' + toRaw + '」');
+  }
   if (locParts.length) {
-    locHint = '<div class="rec-row"><span style="color:#1565c0">📍 名称已统一：</span>' + locParts.map(escapeHtml).join(' ｜ ') + '</div>';
+    locHint += '<div class="rec-row"><span style="color:#1565c0">📍 名称已统一：</span>' + locParts.map(escapeHtml).join(' ｜ ') + '</div>';
+  }
+  if (locUnknown.length) {
+    locHint += '<div class="rec-row loc-unknown">⚠️ 地点不在地点库：' + locUnknown.map(escapeHtml).join('、') + '（请核对或维护地点库）</div>';
   }
   resultEl.innerHTML = '<div class="rec-summary"><div class="rec-row">' + filledHtml + '</div>' + emptyHtml + toCandidatesHtml + locHint + '</div>';
   resultEl.style.display = 'block';
+  // 未匹配地点的输入框标红,提醒核对
+  ['fFrom', 'fTo'].forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const v = (el.value || '').trim();
+    if (v && !locInLib(v)) el.classList.add('loc-unknown-input');
+    else el.classList.remove('loc-unknown-input');
+  });
   // v1.7.2 识别不准的原文攒起来:整段没识别出 / 关键字段(车牌·姓名·手机)缺 2 个以上
   const keyMissing = ['plateMain', 'name', 'phone'].filter(k => !r[k]);
   if (r.allEmpty) reportRecognizeFailure(text, 'all_empty', keyMissing, r);
@@ -2755,6 +2775,13 @@ function normalizeLocation(input) {
   return best || text;
 }
 
+// 判断一个地点名是否在地点库里(已知):用于未匹配时给出醒目提醒
+function locInLib(text) {
+  const t = (text || '').trim();
+  if (!t) return true;
+  return locationLib.some(function (it) { return it.standard === t || it.aliases.indexOf(t) !== -1; });
+}
+
 // 输入框失焦时才统一,不干扰打字过程
 function normalizeLocationInput(id) {
   const el = document.getElementById(id);
@@ -2764,7 +2791,14 @@ function normalizeLocationInput(id) {
   const std = normalizeLocation(raw);
   if (std !== raw) {
     el.value = std;
+    el.classList.remove('loc-unknown-input');
     toast('📍 已统一为「' + std + '」', true);
+  } else if (!locInLib(raw)) {
+    // 没匹配到:保留原文填入(便于登记),但给明显提醒
+    el.classList.add('loc-unknown-input');
+    toast('⚠️ 地点不在地点库：「' + raw + '」，请核对或维护地点库', false, true);
+  } else {
+    el.classList.remove('loc-unknown-input');
   }
 }
 
@@ -2955,7 +2989,7 @@ function saveStandardName(index, newVal) {
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.8.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.8.2 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
