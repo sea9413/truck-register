@@ -225,3 +225,83 @@ order by tablename;
 -- 地点库应有 20 条映射、13 个标准名
 select count(*) as 映射条数, count(distinct standard_name) as 标准名个数
 from location_aliases;
+
+
+-- ===== 第 9 块：v1.9.1 客户 / 供货商归属（一个客户或供货商可以对应多个地点）=====
+
+-- 场景：同一个供货商可能从好几个地点发货（几个仓库），
+--       同一个客户也可能有好几个工地。光按地点名统计会把同一个供货商拆成好几行。
+-- 这里存的是「地点标准名 → 归属的客户 / 供货商」。没配的地方仍然按 v1.9.0 的规则
+-- 派生（客户名 = 地点名），所以这张表不建也不影响老功能，只是没法把多个地点合并。
+CREATE TABLE IF NOT EXISTS location_parties (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  standard_name TEXT NOT NULL UNIQUE,  -- 地点标准名，对应 location_aliases.standard_name
+  customer_name TEXT,                  -- 这个地点属于哪个客户（留空 = 客户名就是地点名）
+  supplier_name TEXT                   -- 这个地点属于哪个供货商（留空 = 供货商名就是地点名）
+);
+
+CREATE INDEX IF NOT EXISTS idx_party_standard ON location_parties (standard_name);
+
+ALTER TABLE location_parties ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anonymous read party" ON location_parties;
+CREATE POLICY "Allow anonymous read party" ON location_parties FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow anonymous insert party" ON location_parties;
+CREATE POLICY "Allow anonymous insert party" ON location_parties FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous update party" ON location_parties;
+CREATE POLICY "Allow anonymous update party" ON location_parties FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous delete party" ON location_parties;
+CREATE POLICY "Allow anonymous delete party" ON location_parties FOR DELETE USING (true);
+
+-- 验收：跑完第 9 块后应该有 1 行；rls_enabled = true、policy_count = 4 才算跑全。
+-- 只跑上面那段 CREATE TABLE 的话这里 rls_enabled 会是 false、policy_count = 0；
+-- 而如果 RLS 开着却没有 4 条策略，浏览器端会「读不到 + 存不进」，所以必须对齐。
+-- （0 行 = 表还没建；0 行数据没关系，等你在地点库里填归属）
+select c.relname as table_name,
+       c.relrowsecurity as rls_enabled,
+       (select count(*) from pg_policies p
+         where p.schemaname = 'public' and p.tablename = 'location_parties') as policy_count
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relname = 'location_parties';
+
+
+-- ===== 第 10 块：v1.10.0 供货商 / 客户名称表（防手打错字造成一个供货商两个名字）=====
+
+-- 场景：地点库里「归属客户 / 归属供货商」原来是手打的自由文本，同一个人很容易打出两种写法
+--       （「某某建材」/「某某建材有限公司」），统计里就被拆成两行。
+-- 这张表存的是下拉候选清单：地点归属那两格改成从清单里选，选出来的一定一模一样。
+-- 注意：归属本身仍然存在 location_parties 的字符串列里，这张表只是「候选池 + 统一改名的地方」。
+--       所以不跑这块也能用 —— 下拉会自动把「已经在用的名字」收集进来，
+--       只是没法预先登记新名字，改名/删除也不会同步到别的设备。
+CREATE TABLE IF NOT EXISTS party_names (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  kind TEXT NOT NULL,              -- 'customer' 客户 / 'supplier' 供货商
+  name TEXT NOT NULL,              -- 名称本身
+  sort_order INTEGER DEFAULT 0,    -- 排序用，大的在前
+  UNIQUE (kind, name)              -- 同一类里名字不重复
+);
+
+CREATE INDEX IF NOT EXISTS idx_party_names_kind ON party_names (kind);
+
+-- 权限策略（和 records 一致：anon 可读可写）
+ALTER TABLE party_names ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anonymous read party_names" ON party_names;
+CREATE POLICY "Allow anonymous read party_names" ON party_names FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow anonymous insert party_names" ON party_names;
+CREATE POLICY "Allow anonymous insert party_names" ON party_names FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous update party_names" ON party_names;
+CREATE POLICY "Allow anonymous update party_names" ON party_names FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous delete party_names" ON party_names;
+CREATE POLICY "Allow anonymous delete party_names" ON party_names FOR DELETE USING (true);
+
+-- 验收：跑完第 10 块后应该有 1 行；rls_enabled = true、policy_count = 4 才算跑全。
+-- 数据 0 行没关系，名字是在页面上「📍 地点库 → 🏷️ 名称表」里加的。
+select c.relname as table_name,
+       c.relrowsecurity as rls_enabled,
+       (select count(*) from pg_policies p
+         where p.schemaname = 'public' and p.tablename = 'party_names') as policy_count
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relname = 'party_names';

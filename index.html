@@ -59,6 +59,32 @@ body { font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft
 .rec-row { line-height: 1.8; }
 .loc-unknown { color:#c62828; font-weight:600; background:#fff3e0; border:1px solid #ffab91; border-radius:6px; padding:6px 8px; margin-top:6px; }
 .loc-unknown-input { border-color:#e53935 !important; box-shadow:0 0 0 2px rgba(229,57,53,.25); background:#fff5f5; }
+/* 地点下拉选择（v1.8.3）:点装货地/收货地就弹出地点库标准名 */
+.loc-pick { position: fixed; z-index: 10000; display: none; background: #fff; border: 1px solid #ddd; border-radius: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.18); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.loc-pick.show { display: block; }
+.loc-pick .loc-pick-hd { position: sticky; top: 0; background: #fafafa; padding: 8px 12px; font-size: 12px; color: #888; border-bottom: 1px solid #f0f0f0; }
+.loc-pick .loc-pick-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 11px 12px; border-bottom: 1px solid #f5f5f5; cursor: pointer; min-height: 44px; box-sizing: border-box; -webkit-tap-highlight-color: rgba(0,0,0,0.05); }
+.loc-pick .loc-pick-item:last-child { border-bottom: none; }
+.loc-pick .loc-pick-item.hl { background: #e8f1ff; }
+.loc-pick .loc-pick-std { font-size: 15px; font-weight: 600; color: #1565c0; white-space: nowrap; }
+.loc-pick .loc-pick-std.cur::after { content: ' ✓'; color: #2e7d32; font-size: 13px; }
+.loc-pick .loc-pick-ali { font-size: 12px; color: #999; max-width: 50%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; }
+.loc-pick .loc-pick-tip { padding: 9px 12px; font-size: 12px; color: #e65100; background: #fff8e1; border-bottom: 1px solid #ffe0b2; }
+.loc-pick .loc-pick-more { padding: 11px 12px; font-size: 13px; color: #1565c0; font-weight: 600; border-top: 1px solid #f0f0f0; cursor: pointer; text-align: center; }
+.loc-pick .loc-pick-acts { display: flex; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #ffe0b2; background: #fffdf7; }
+.loc-pick .loc-pick-act { flex: 1; min-height: 36px; padding: 8px 6px; border: 1px solid #1565c0; background: #fff; color: #1565c0; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.loc-pick .loc-pick-act:active { background: #e8f1ff; }
+/* 地点统计（v1.8.4） */
+.stats-dim { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.stats-dim .goods-btn { padding: 9px 6px; font-size: 13px; }
+.stats-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.stats-table th { color: #888; font-weight: 600; text-align: right; padding: 6px; border-bottom: 1px solid #eee; white-space: nowrap; }
+.stats-table td { padding: 8px 6px; border-bottom: 1px solid #f2f2f2; text-align: right; white-space: nowrap; }
+.stats-table th:first-child, .stats-table td:first-child { text-align: left; white-space: normal; }
+.stats-table tbody tr:active { background: #f5f9ff; }
+.stats-table .stats-loc { color: #1565c0; font-weight: 600; }
+.stats-bar { height: 4px; background: #eef4ff; border-radius: 2px; margin-top: 4px; }
+.stats-bar > i { display: block; height: 100%; background: #1a7af8; border-radius: 2px; }
 .rec-candidates { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #ddd; }
 .rec-candidate { background: #fff3e0; color: #e65100; border: 1px solid #ffcc80; padding: 5px 12px; margin: 4px 4px 0 0; border-radius: 6px; font-size: 13px; cursor: pointer; font-weight: 500; }
 .rec-candidate.active { background: #e65100; color: white; border-color: #e65100; }
@@ -262,6 +288,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <div class="filter-row">
         <input type="text" id="filterKeyword" placeholder="搜地点/车牌/姓名" oninput="applyFilter()">
         <button class="filter-btn-reset" onclick="resetFilter()">重置</button>
+        <button class="filter-btn-export" onclick="showStats()">📊 地点统计</button>
         <button class="filter-btn-export" onclick="exportCSV()">导出</button>
         <button class="filter-btn-backup" onclick="exportAllCSV()">💾 备份全部</button>
       </div>
@@ -527,6 +554,22 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
   </div>
 </div>
 
+<!-- ===== 地点统计（v1.8.4）===== -->
+<div class="confirm-overlay" id="statsModal">
+  <div class="confirm-box" style="max-width:92%; width:560px; max-height:85vh; overflow-y:auto; text-align:left; position:relative">
+    <button class="modal-close" onclick="closeStats()" title="关闭">×</button>
+    <div class="confirm-title" style="margin-bottom:12px; padding-right:34px">📊 统计 <span style="font-size:12px;color:#888;font-weight:400">地点 / 客户 / 供货商，按当前日期范围 + 类型/货物筛选</span></div>
+    <div id="statsContent"><div class="loading">加载中...</div></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="copyStatsText()" style="flex:1;background:#1a7af8;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;min-height:44px">📋 复制报表</button>
+      <button onclick="closeStats()" style="flex:1;background:#f0f0f0;color:#333;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;min-height:44px">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 地点下拉浮层（v1.8.3）：装货地/收货地输入框共用 ===== -->
+<div class="loc-pick" id="locPick"></div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -585,6 +628,10 @@ async function checkGate() {
     document.getElementById('gatePassword').value = '';
     document.getElementById('gateError').textContent = '';
     if (typeof initSupabase === 'function') initSupabase();
+    // 刚输密码这一次不会走 init(),地点库要在这里补拉一次,下拉才是云端(多机共享)的那份
+    if (typeof loadLocationLib === 'function') loadLocationLib();
+    if (typeof loadPartyMap === 'function') loadPartyMap();
+    if (typeof loadPartyNames === 'function') loadPartyNames();
   } else {
     document.getElementById('gateError').textContent = '密码错误';
     document.getElementById('gatePassword').value = '';
@@ -1101,6 +1148,7 @@ function doRecognize() {
   const toStd = normalizeLocation(toRaw);
   document.getElementById('fFrom').value = fromStd;
   document.getElementById('fTo').value = toStd;
+  refreshLocationPickIfOpen(); // 识别结果改了值,开着的下拉跟着刷新
   document.getElementById('fFreight').value = r.freight;
   document.getElementById('fWeight').value = r.weight || '';
   if (r.weight) updateTon();
@@ -1370,6 +1418,8 @@ function showHelp() {
     <li>从微信复制司机发来的装货信息(可含车牌、姓名、装货地、收货地、运费等)</li>
     <li>点「<b>🔍 一键识别</b>」按钮,工具会自动填入能识别的字段</li>
     <li>补全必填项:<b>主车车牌</b> + <b>装货地</b> + <b>日期</b> + <b>货物</b> + <b>运费</b></li>
+    <li><b>装货地 / 收货地</b>:点输入框会弹出<b>地点库标准名</b>,点一下直接填;也可以自己手打,离开输入框时会自动统一成标准名</li>
+    <li><b>地点不在库里?</b>下拉里直接给两个按钮:「<b>＋ 记为新标准名</b>」或「<b>挂到已有地点当别名</b>」,顺手入库,不用登记完再跑去地点库补</li>
     <li>点「<b>提交登记</b>」,列表自动刷新</li>
   </ol>
   <h4 style="margin:12px 0 4px;color:#1565c0">二、生成通知文字发群</h4>
@@ -1383,6 +1433,10 @@ function showHelp() {
     <li><b>按日期范围</b>:选开始/结束日期</li>
     <li><b>搜地点/车牌/姓名</b>:在搜索框输入关键字(同时匹配货车从、收货地、车牌、姓名)</li>
     <li><b>地点筛选</b>:下拉选择“全部地点/装货地/收货地”</li>
+    <li><b>📊 统计</b>:可切“装货地 / 收货地 / 装+收 / <b>客户</b> / <b>供货商</b>”五个维度;点表格里一行就只看这个地点,「📋 复制报表」可直接发群</li>
+    <li><b>客户 / 供货商不用单独填</b>:系统按类型从地点算出来 —— 送货时<b>收货地=客户、装货地=供货商</b>;退货时<b>装货地=客户、收货地=供货商</b>(货从客户工地拉回来)。客户维度下会分「送 / 退 / 净吨」三列,净吨负数说明退的比送的多</li>
+    <li><b>一个供货商有几个发货点 / 一个客户有几个工地</b>:去「<b>📍 地点库</b>」给这几个地点填同一个归属名,统计就会合并成一行;留空 = 名字就是地点名,<b>不是必填</b><br>⚠️ 一个地点只在一边生效:它当<b>客户那一端</b>(送货的收货地/退货的装货地)时读「归属客户」,当<b>供货商那一端</b>(送货的装货地/退货的收货地)时读「归属供货商」,另一格填了也不生效。所以工地只需填「客户」那格 —— 一个工地被几家供货商送货是正常的,供货商看的是<b>装货地</b></li>
+    <li><b>一个供货商别打出两个名字</b>:地点库里「归属」那两格是<b>下拉选择</b>,选项来自弹窗顶部的「🏷️ 名称表」,从清单里选就不会出现「某某建材」和「某某建材有限公司」被统计成两行;<br>万一已经有了两个写法,去名称表点<b>改名</b>把它们并成一个 —— 正在用旧名字的地点会一起改过来<br>(名称表来自 <code>database.sql</code> 的【第 10 块】;<b>不跑也能用</b>,下拉会自动把已经在用的名字收进候选,跑了才能预先登记新名字、改名/删除才会同步到所有设备)</li>
     <li>点「<b>重置</b>」清除所有筛选条件</li>
   </ul>
   <h4 style="margin:12px 0 4px;color:#1565c0">四、补填/修改/删除</h4>
@@ -1400,7 +1454,7 @@ function showHelp() {
     <li><b>下载模板</b>:下载空模板(CSV),填完从「导入历史」上传</li>
     <li><b>支持的格式</b>:.csv / .xlsx / .xls 均可直接拖入(Excel 文件无需另存为 CSV)</li>
     <li>编码自动识别: UTF-8(推荐) / GBK(Excel 中文版另存常见)均可</li>
-    <li>按<b>列名</b>匹配(不是列顺序),列名用「日期/主车/挂车/姓名/手机号/身份证号/装货地/收货地/货物/运费/过磅费/过磅重量/类型/备注/已支付/修改次数」</li>
+    <li>按<b>列名</b>匹配(不是列顺序),列名用「日期/主车/挂车/姓名/手机号/身份证号/装货地/收货地/货物/运费/过磅费/过磅重量/类型/备注/已支付/修改次数」(导出的「客户/供货商」两列是算出来的,导入时会被忽略)</li>
     <li>Excel 日期支持 2025-5-29 / 2025/5/29 / 2025年5月29日 多种写法,自动统一</li>
     <li>导入时如发现<b>日期+主车车牌+重量+类型</b>四者重复,会自动跳过</li>
   </ul>
@@ -1489,8 +1543,12 @@ function getFilteredRecords() {
   if (showRecycle) {
     let del = (currentRecords || []).filter(r => r.deleted === true);
     if (filterKeyword) {
-      const kw = filterKeyword.toLowerCase();
-      del = del.filter(r => (r.plate_main && r.plate_main.toLowerCase().includes(kw)) || (r.name && r.name.toLowerCase().includes(kw)));
+      const kws = splitKeywords(filterKeyword);
+      if (kws.length) {
+        del = del.filter(r => kws.some(function (kw) {
+          return (r.plate_main && r.plate_main.toLowerCase().includes(kw)) || (r.name && r.name.toLowerCase().includes(kw));
+        }));
+      }
     }
     del = del.slice().sort((a, b) => (b.deleted_at || '').localeCompare(a.deleted_at || ''));
     return del;
@@ -1503,14 +1561,18 @@ function getFilteredRecords() {
   if (tsStart) list = list.filter(r => parseDateTs(r.date) >= tsStart);
   if (tsEnd) list = list.filter(r => { const ts = parseDateTs(r.date); return ts > 0 && ts <= tsEnd; });
   if (filterKeyword) {
-    const kw = filterKeyword.toLowerCase();
-    list = list.filter(r =>
-      (r.plate_main && r.plate_main.toLowerCase().includes(kw)) ||
-      (r.plate_trailer && r.plate_trailer.toLowerCase().includes(kw)) ||
-      (r.name && r.name.toLowerCase().includes(kw)) ||
-      (r.from_location && r.from_location.toLowerCase().includes(kw)) ||
-      (r.to_location && r.to_location.toLowerCase().includes(kw))
-    );
+    // v1.9.1:支持用 | 隔多个关键字(任一命中即可)。点统计里的客户/供货商行时会用到:
+    // 一个客户、一个供货商可能有好几个地点,得一起筛出来
+    const kws = splitKeywords(filterKeyword);
+    if (kws.length) {
+      list = list.filter(r => kws.some(function (kw) {
+        return (r.plate_main && r.plate_main.toLowerCase().includes(kw)) ||
+          (r.plate_trailer && r.plate_trailer.toLowerCase().includes(kw)) ||
+          (r.name && r.name.toLowerCase().includes(kw)) ||
+          (r.from_location && r.from_location.toLowerCase().includes(kw)) ||
+          (r.to_location && r.to_location.toLowerCase().includes(kw));
+      }));
+    }
   }
   if (locationFilter !== 'every') {
     // 类型筛选(v1.7.4): all=送货+退货; every=全部类型; other=兜底
@@ -1539,6 +1601,11 @@ function getFilteredRecords() {
 }
 
 // 把任意日期格式转成时间戳用于排序(支持 2026-8-13 / 2026年8月13日 / 2026-08-13)
+// 搜索框里的多个关键字:用 | 或 ｜ 隔开,任一命中即可(v1.9.1)
+function splitKeywords(raw) {
+  return String(raw || '').split(/[|｜]/).map(function (s) { return s.trim().toLowerCase(); }).filter(Boolean);
+}
+
 function parseDateTs(s) {
   if (!s) return 0;
   // v1.7.6:分隔符支持 - 年 / . 四种,否则 2026/8/13 会被当成无效日期、在筛选中漏掉
@@ -1697,6 +1764,511 @@ function setGoodsFilter(mode) {
   renderList();
 }
 
+// ===== 客户 / 供货商（v1.9.0 派生，v1.9.1 支持一个供货商多个地点）=====
+// 基础规则:一条记录的两端,一端是客户、一端是供货商。
+//   送货: 装货地(供货商) → 收货地(客户)
+//   退货: 装货地(客户)   → 收货地(供货商)   货从客户工地拉回来,收回自己这边
+// 一句话:**客户 = 工地那一端,供货商 = 自己这一端**,只看类型就知道取哪头。
+function recordTypeOf(r) { return ((r.delivery_type || '').toString().trim() || '送货'); }
+
+// v1.9.1:一个供货商可能有好几个发货地点(几个仓库),光按地点名统计会把同一个供货商
+// 拆成好几行。于是加一张"地点 → 归属"的对照表 location_parties(database.sql 第 9 块)。
+// 查到归属就用归属名,查不到(或表根本没建)就回落到 v1.9.0 的派生:名字就是地点名。
+// 所以这张表不建也完全能用,只是没法把多个地点合并成同一个供货商。
+let partyMap = {};            // { 地点标准名: { customer:'', supplier:'' } }
+let partyMapTask = null;
+let partyMapMissing = false;  // 表没建:标记后不再反复请求,免得刷屏报错
+// v1.10.0:客户/供货商名称表(database.sql 第 10 块) —— 归属那两格的下拉候选池
+let partyNames = { customer: [], supplier: [] };
+let partyNamesTask = null;
+let partyNamesMissing = false;
+window._partyPanelOpen = false; // 名称表面板的展开状态(重渲染后要保持)
+function loadPartyMap(force) {
+  if (partyMapMissing && !force) return Promise.resolve(partyMap);
+  if (partyMapTask && !force) return partyMapTask;
+  partyMapTask = (async function () {
+    try {
+      if (navigator.onLine) {
+        const { data, error } = await supabaseClient
+          .from('location_parties').select('standard_name, customer_name, supplier_name');
+        if (error) throw error;
+        const map = {};
+        (data || []).forEach(function (row) {
+          const s = (row.standard_name || '').trim();
+          if (!s) return;
+          map[s] = { customer: (row.customer_name || '').trim(), supplier: (row.supplier_name || '').trim() };
+        });
+        partyMap = map;
+      }
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      // 表不存在 / 没权限:认作"还没配",以后别再请求了
+      if (/location_parties|Could not find the table|does not exist|relation/i.test(msg)) partyMapMissing = true;
+      console.warn('客户/供货商归属没读到,按地点派生:', msg);
+    }
+    return partyMap;
+  })();
+  return partyMapTask;
+}
+async function reloadPartyMap() {
+  partyMapTask = null;
+  partyMapMissing = false;
+  partyNamesTask = null;
+  partyNamesMissing = false;
+  await Promise.all([loadPartyMap(true), loadPartyNames(true)]);
+  renderLocationLib();
+}
+
+// ===== v1.10.0 供货商 / 客户名称表 =====
+// 要解决的问题：「归属」原来是手打的自由文本，同一个人很容易打出两种写法
+// （「某某建材」/「某某建材有限公司」），统计里就被拆成两行。
+// 现在归属那两格是下拉选择，选项就来自这份清单，选出来的一定一模一样。
+// 清单本身只是「候选池」：地点归属照旧存在 location_parties 的字符串列里，
+// 所以 party_names 表不建也能用 —— 下拉会自动把「已经在用的名字」收进来，
+// 只是没法预先登记新名字、改名也不会同步到别的设备。
+function loadPartyNames(force) {
+  if (partyNamesMissing && !force) return Promise.resolve(partyNames);
+  if (partyNamesTask && !force) return partyNamesTask;
+  partyNamesTask = (async function () {
+    try {
+      if (navigator.onLine) {
+        const { data, error } = await supabaseClient
+          .from('party_names').select('kind, name, sort_order').order('sort_order', { ascending: false });
+        if (error) throw error;
+        const next = { customer: [], supplier: [] };
+        (data || []).forEach(function (row) {
+          const kind = (row.kind || '').trim();
+          const nm = (row.name || '').trim();
+          if (!nm || !next[kind]) return;                         // 只认 customer / supplier 两类
+          if (next[kind].indexOf(nm) === -1) next[kind].push(nm);
+        });
+        partyNames = next;
+      }
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      // 表不存在 / 没权限:认作"还没配",以后别再请求了(和 partyMap 一个套路)
+      if (/party_names|Could not find the table|does not exist|relation/i.test(msg)) partyNamesMissing = true;
+      console.warn('名称表没读到(不影响归属本身):', msg);
+    }
+    return partyNames;
+  })();
+  return partyNamesTask;
+}
+function partyKindLabel(kind) { return kind === 'customer' ? '客户' : '供货商'; }
+// 下拉候选项 = 名称表 + 地点里已经在用的名字。
+// 后者必须带上：不然历史填过的名字一渲染就不在选项里，等于替用户把数据改掉。
+function partyNameOptions(kind) {
+  const list = [];
+  const add = function (v) {
+    v = (v || '').trim();
+    if (v && list.indexOf(v) === -1) list.push(v);
+  };
+  (partyNames[kind] || []).forEach(add);
+  Object.keys(partyMap).forEach(function (std) { add((partyMap[std] || {})[kind]); });
+  return list.sort(function (a, b) { return a.localeCompare(b, 'zh-Hans-CN'); });
+}
+// 这个名字正被哪些地点的归属用着(改名/删除前要讲清影响面)
+function partyNameUsage(kind, name) {
+  const locs = [];
+  Object.keys(partyMap).forEach(function (std) {
+    if ((((partyMap[std] || {})[kind]) || '').trim() === name) locs.push(std);
+  });
+  return locs;
+}
+// 把一个名字写进名称表(不碰任何地点归属);返回同步结果,交给调用方决定怎么提示
+async function savePartyNameRow(kind, name) {
+  if (!navigator.onLine) return 'offline';
+  if (partyNamesMissing) return 'missing';
+  try {
+    const { error } = await supabaseClient.from('party_names')
+      .upsert([{ kind: kind, name: name, sort_order: 0 }], { onConflict: 'kind,name' });
+    if (error) throw error;
+    return 'ok';
+  } catch (e) {
+    const msg = String((e && e.message) || e);
+    if (/party_names|Could not find the table|does not exist|relation/i.test(msg)) partyNamesMissing = true;
+    console.warn('名称表同步失败:', e);
+    return 'error';
+  }
+}
+function partyNameSyncTip(why, what) {
+  if (why === 'offline') toast('当前离线，' + what + '只记在本机', false, true);
+  else if (why === 'missing') toast(what + '只记在本机。要云端同步，请在 Supabase 跑 database.sql 的【第 10 块】', false, true);
+  else toast(what + '同步云端失败，只记在本机', false, true);
+}
+// 加一个名字进名称表(不设归属)
+async function addPartyName(kind, name) {
+  name = (name || '').trim();
+  if (!name) return;
+  partyNames[kind] = partyNames[kind] || [];
+  const existed = partyNames[kind].indexOf(name) !== -1;
+  if (!existed) partyNames[kind].push(name);
+  const why = await savePartyNameRow(kind, name);
+  const label = partyKindLabel(kind);
+  if (why === 'ok') toast(existed ? '「' + name + '」本来就在' + label + '名称表里' : '已把「' + name + '」加进' + label + '名称表', true);
+  else partyNameSyncTip(why, '名称');
+}
+// 选到下拉里的「＋ 新增名称…」时走这里:先加进名称表,再顺手设成这个地点的归属
+// index 传 -1 = 只是往名称表里加个名字,不改任何地点
+async function promptAddPartyName(kind, index) {
+  const input = prompt('新增一个' + partyKindLabel(kind) + '名（加进名称表后，下拉里就能直接选，不会打错）:');
+  const nm = (input || '').trim();
+  if (!nm) { if (index >= 0) renderLocationLib(); return; }   // 取消了,把下拉还原
+  await addPartyName(kind, nm);
+  if (index >= 0 && locationLib[index]) await savePartyName(index, kind, nm);
+  renderLocationLib();
+}
+// 改名 = 收口"一个供货商两个名字"的正规做法:清单换名,同时把正在用这个名字的地点一起改过来。
+// 新名字已经存在 → 等同于把两个名字合并。
+async function renamePartyName(kind, oldName) {
+  const label = partyKindLabel(kind);
+  const input = prompt('把' + label + '「' + oldName + '」改成:', oldName);
+  if (input === null) return;
+  const newName = input.trim();
+  if (!newName || newName === oldName) return;
+  const used = partyNameUsage(kind, oldName);
+  const merged = partyNameOptions(kind).indexOf(newName) !== -1;
+  const ask = (merged ? '「' + newName + '」已经存在，改名等于把两个名字并成同一个。\n\n' : '') +
+    (used.length > 0
+      ? '这 ' + used.length + ' 个地点的' + label + '归属会一起改成「' + newName + '」：\n' +
+        used.slice(0, 8).join('、') + (used.length > 8 ? ' 等' : '') + '\n\n'
+      : '') + '确定？';
+  if (!confirm(ask)) return;
+
+  // 1) 先改内存:界面立刻就是对的,断网也不影响本机统计
+  partyNames[kind] = (partyNames[kind] || []).filter(function (n) { return n !== oldName; });
+  if (partyNames[kind].indexOf(newName) === -1) partyNames[kind].push(newName);
+  const patch = [];
+  used.forEach(function (std) {
+    const cur = partyMap[std] || { customer: '', supplier: '' };
+    const row = { standard_name: std, customer_name: cur.customer || '', supplier_name: cur.supplier || '' };
+    row[kind + '_name'] = newName;
+    partyMap[std] = { customer: row.customer_name, supplier: row.supplier_name };
+    patch.push(row);
+  });
+  renderLocationLib();
+
+  // 2) 再同步云端
+  if (!navigator.onLine || partyNamesMissing) {
+    partyNameSyncTip(partyNamesMissing ? 'missing' : 'offline', '改名');
+    return;
+  }
+  try {
+    const del = await supabaseClient.from('party_names').delete().eq('kind', kind).eq('name', oldName);
+    if (del.error) throw del.error;
+    const ins = await supabaseClient.from('party_names')
+      .upsert([{ kind: kind, name: newName, sort_order: 0 }], { onConflict: 'kind,name' });
+    if (ins.error) throw ins.error;
+    if (patch.length > 0) {
+      const up = await supabaseClient.from('location_parties').upsert(patch, { onConflict: 'standard_name' });
+      if (up.error) throw up.error;
+    }
+    toast('已把「' + oldName + '」改成「' + newName + '」' + (patch.length ? '，' + patch.length + ' 个地点跟着改' : ''), true);
+  } catch (e) {
+    console.warn('改名同步云端失败:', e);
+    toast('改名只在本次有效，刷新页面会还原', false, true);
+  }
+}
+// 从名称表删掉一个名字。正被地点用着的要连那些地点的归属一起清掉 ——
+// 只删清单里那一条的话，名字会因为「地点还在用」立刻又出现在下拉里，删了等于没删。
+async function removePartyName(kind, name) {
+  const label = partyKindLabel(kind);
+  const used = partyNameUsage(kind, name);
+  if (used.length > 0) {
+    if (!confirm('「' + name + '」现在有 ' + used.length + ' 个地点在用：\n' +
+        used.slice(0, 8).join('、') + (used.length > 8 ? ' 等' : '') +
+        '\n\n删除后这些地点的' + label + '归属会被清空，改回按地点名统计。\n如果只是想换个写法，请点「改名」。\n\n确定删除？')) return;
+  } else if (!confirm('从名称表里删掉' + label + '「' + name + '」？')) return;
+
+  partyNames[kind] = (partyNames[kind] || []).filter(function (n) { return n !== name; });
+  const patch = [];
+  used.forEach(function (std) {
+    const cur = partyMap[std] || { customer: '', supplier: '' };
+    const row = { standard_name: std, customer_name: cur.customer || '', supplier_name: cur.supplier || '' };
+    row[kind + '_name'] = '';
+    partyMap[std] = { customer: row.customer_name, supplier: row.supplier_name };
+    patch.push(row);
+  });
+  renderLocationLib();
+
+  if (!navigator.onLine || partyNamesMissing) {
+    partyNameSyncTip(partyNamesMissing ? 'missing' : 'offline', '删除');
+    return;
+  }
+  try {
+    const del = await supabaseClient.from('party_names').delete().eq('kind', kind).eq('name', name);
+    if (del.error) throw del.error;
+    if (patch.length > 0) {
+      const up = await supabaseClient.from('location_parties').upsert(patch, { onConflict: 'standard_name' });
+      if (up.error) throw up.error;
+    }
+    toast('已删除' + label + '「' + name + '」' + (patch.length ? '，' + patch.length + ' 个地点的归属已清空' : ''), true);
+  } catch (e) {
+    console.warn('删除名称同步云端失败:', e);
+    toast('删除只在本次有效，刷新页面会还原', false, true);
+  }
+}
+// 地点 → 客户名 / 供货商名(没配归属就用地点名本身)
+function partyNameOf(loc, kind) {
+  const p = partyMap[loc];
+  const v = p ? (kind === 'customer' ? p.customer : p.supplier) : '';
+  return (v || loc || '').trim();
+}
+// v1.9.2:这个地点在实际记录里到底扮演哪一端?数一数,地点库里就能标出来 ——
+// 免得把「归属供货商」往一个只当过收货地的地方填(填了也永远不生效)。
+// 客户那一端 = 送货的收货地 / 退货的装货地;供货商那一端 = 送货的装货地 / 退货的收货地。
+function locationRoleCounts(std) {
+  let cust = 0, sup = 0;
+  const target = (std || '').trim();
+  if (!target) return { cust: cust, sup: sup };
+  (currentRecords || []).forEach(function (r) {
+    if (r.deleted) return;                        // 回收站的记录不算
+    const from = (r.from_location || '').trim();
+    const to = (r.to_location || '').trim();
+    if (recordTypeOf(r) === '退货') {             // 退货:两头正好对调
+      if (to === target) sup++;
+      if (from === target) cust++;
+    } else {                                      // 送货(含"不统计"等其它类型)
+      if (from === target) sup++;
+      if (to === target) cust++;
+    }
+  });
+  return { cust: cust, sup: sup };
+}
+// 只取"地点名"(不套归属),统计里记明细用
+function customerLocOf(r) {
+  return (recordTypeOf(r) === '退货' ? (r.from_location || '') : (r.to_location || '')).trim();
+}
+function supplierLocOf(r) {
+  return (recordTypeOf(r) === '退货' ? (r.to_location || '') : (r.from_location || '')).trim();
+}
+function customerOf(r) { return partyNameOf(customerLocOf(r), 'customer'); }
+function supplierOf(r) { return partyNameOf(supplierLocOf(r), 'supplier'); }
+// 地点库里改某个地点的归属
+async function savePartyName(index, kind, val) {
+  const item = locationLib[index];
+  if (!item) return;
+  const v = (val || '').trim();
+  const cur = partyMap[item.standard] || { customer: '', supplier: '' };
+  const next = {
+    standard_name: item.standard,
+    customer_name: (kind === 'customer' ? v : (cur.customer || '')),
+    supplier_name: (kind === 'supplier' ? v : (cur.supplier || ''))
+  };
+  partyMap[item.standard] = { customer: next.customer_name, supplier: next.supplier_name };
+  if (!navigator.onLine) {
+    toast('当前离线，这次只记在本机；联网后刷新页面再填一次', false, true);
+    return;
+  }
+  if (partyMapMissing) {
+    // v1.9.2:分开说清"没读到"和"没建表"——表建好了但页面记着旧状态时,提示里给的出路才对得上
+    toast('归属表没读到，这次只记在本机。请刷新页面，或点地点库上方的「重新拉取」；仍不行再去 Supabase 跑 database.sql 的【第 9 块】', false, true);
+    return;
+  }
+  try {
+    const { error } = await supabaseClient.from('location_parties').upsert([next], { onConflict: 'standard_name' });
+    if (error) throw error;
+    // v1.10.0:下拉里选过 / 手填过的名字,自动沉淀进名称表,下次直接能选,不用手动收。
+    // 不 await:名称表写失败不该影响"归属已保存"这个结论。
+    if (v && (partyNames[kind] || []).indexOf(v) === -1) {
+      partyNames[kind] = partyNames[kind] || [];
+      partyNames[kind].push(v);
+      savePartyNameRow(kind, v);
+    }
+    toast('已保存「' + item.standard + '」的' + (kind === 'customer' ? '客户' : '供货商') + '归属', true);
+  } catch (e) {
+    console.warn('保存归属失败:', e);
+    toast('保存失败，仅本机生效', false, true);
+  }
+}
+
+// ===== 地点统计（v1.8.4 / v1.9.0 加客户·供货商）=====
+// 看"某地点运了多少车/多少吨"。统计范围 = 当前日期范围 + 类型 + 货物筛选，
+// 故意不含搜索关键词:关键词常常就是地点本身,带上会把结果压成一个地点。
+const STATS_DIMS = [
+  { v: 'from',     label: '装货地' },
+  { v: 'to',       label: '收货地' },
+  { v: 'both',     label: '装+收' },
+  { v: 'customer', label: '客户' },
+  { v: 'supplier', label: '供货商' }
+];
+const STATS_DIM_LABEL = { from: '装货地', to: '收货地', both: '装货地+收货地', customer: '客户', supplier: '供货商' };
+let statsDimension = 'from';
+let statsRows = [];          // 最近一次统计结果(复制报表 / 点行筛选用)
+
+function showStats() {
+  const modal = document.getElementById('statsModal');
+  if (!modal) return;
+  const box = document.getElementById('statsContent');
+  if (box && !window._statsBound) {
+    window._statsBound = true;
+    box.addEventListener('click', function (e) {
+      const tr = e.target && e.target.closest ? e.target.closest('tr[data-loc]') : null;
+      if (tr) filterByStatsRow(tr.dataset.loc, (tr.dataset.locs || '').split('|').filter(Boolean));
+    });
+  }
+  modal.classList.add('show');
+  renderStats();
+}
+function closeStats() {
+  const m = document.getElementById('statsModal');
+  if (m) m.classList.remove('show');
+}
+function setStatsDimension(d) { statsDimension = d; renderStats(); }
+
+// 点统计表里的一行 → 回到列表只看它。
+// 客户/供货商可能对应好几个地点,这时把几个地点用 | 一起塞进搜索框(任一命中),
+// 用户看得见、也能自己改。
+function filterByStatsRow(name, locs) {
+  const list = (locs || []).filter(Boolean);
+  const el = document.getElementById('filterKeyword');
+  if (el) el.value = list.length > 1 ? list.join('|') : (name || '');
+  applyFilter();
+  closeStats();
+  toast('已筛选：' + name + (list.length > 1 ? '（' + list.length + ' 个地点）' : ''), true);
+}
+
+function renderStats() {
+  const box = document.getElementById('statsContent');
+  if (!box) return;
+  const dimBtn = function (v, label) {
+    return '<div class="goods-btn' + (statsDimension === v ? ' active' : '') + '" onclick="setStatsDimension(\'' + v + '\')">' + label + '</div>';
+  };
+  const dimHead = '<div class="stats-dim">' + STATS_DIMS.map(function (d) { return dimBtn(d.v, d.label); }).join('') + '</div>';
+  if (showRecycle) {
+    box.innerHTML = dimHead + '<div class="empty">回收站模式下不做统计，先退出回收站再看。</div>';
+    statsRows = [];
+    return;
+  }
+  // 临时清掉关键词再取筛选结果(同步操作,取完立刻还原)
+  const savedKw = filterKeyword;
+  filterKeyword = '';
+  let list = [];
+  try { list = getFilteredRecords(); } finally { filterKeyword = savedKw; }
+  list = list.filter(function (r) { return !r.deleted; });
+  if (list.length === 0) {
+    box.innerHTML = dimHead + '<div class="empty">当前筛选下没有记录<br>试试放宽日期范围</div>';
+    statsRows = [];
+    return;
+  }
+  // 车次按条数算;"吨位" = 这个地点经手的全部重量,送货和退货都记正数 ——
+  // 退货也是从这个地点装车拉走的货,算负的会出现"某地点 -5 吨"这种没法看的数。
+  // 退货量单独记一列小字(退 N 车 / 退 X 吨),要看净到货量自己减一下即可。
+  // "不统计"类型不计入,和列表页汇总口径一致
+  const isParty = (statsDimension === 'customer' || statsDimension === 'supplier');
+  const agg = {};
+  list.forEach(function (r) {
+    const dt = recordTypeOf(r);
+    if (dt === '不统计') return;
+    const isBack = (dt === '退货');
+    const tons = parseNum(r.weight) / 1000;
+    // 一个维度下一辆车可能要记到 1~2 个名字上("装+收"是两头都记)
+    const names = [];
+    if (statsDimension === 'from') names.push((r.from_location || '').trim());
+    else if (statsDimension === 'to') names.push((r.to_location || '').trim());
+    else if (statsDimension === 'customer') names.push(customerOf(r));
+    else if (statsDimension === 'supplier') names.push(supplierOf(r));
+    else { names.push((r.from_location || '').trim()); names.push((r.to_location || '').trim()); }
+    names.forEach(function (name) {
+      if (!name) return;
+      if (!agg[name]) agg[name] = { loc: name, locs: [], count: 0, tons: 0, sendCount: 0, sendTons: 0, backCount: 0, backTons: 0, freight: 0 };
+      const a = agg[name];
+      a.count += 1;
+      a.tons += tons;
+      a.freight += parseNum(r.freight);
+      if (isBack) { a.backCount += 1; a.backTons += tons; }
+      else { a.sendCount += 1; a.sendTons += tons; }
+      // 记下这个客户/供货商背后到底是哪几个地点(点一行时要把它们一起筛出来)
+      if (isParty) {
+        const raw = (statsDimension === 'customer' ? customerLocOf(r) : supplierLocOf(r)).trim();
+        if (raw && a.locs.indexOf(raw) === -1) a.locs.push(raw);
+      }
+    });
+  });
+  statsRows = Object.keys(agg).map(function (k) { return agg[k]; })
+    .sort(function (a, b) { return (b.count - a.count) || (b.tons - a.tons) || a.loc.localeCompare(b.loc); });
+  const sum = function (key) { return statsRows.reduce(function (s, r) { return s + r[key]; }, 0); };
+  const totalCount = sum('count'), totalTons = sum('tons'), totalFreight = sum('freight');
+  const range = (filterStartDate || '最早') + ' ~ ' + (filterEndDate || '今天');
+  let html = dimHead +
+    '<div style="font-size:12px;color:#888;margin-bottom:8px">共 ' + list.length + ' 条记录参与统计（' + escapeHtml(range) + '）· 点一行可只看这个地点</div>';
+  if (statsRows.length === 0) {
+    html += '<div class="empty">这些记录都没填' + (isParty ? STATS_DIM_LABEL[statsDimension] : '地点') + '</div>';
+  } else if (isParty) {
+    // 客户 / 供货商:送、退分列,再看净吨(送 − 退)。
+    // 这里负数是有意义的:说明这段时间退的比送的多,正是对账要盯的信号。
+    const maxCount = statsRows[0].count || 1;
+    const dimName = STATS_DIM_LABEL[statsDimension];
+    html += '<table class="stats-table"><thead><tr><th>' + dimName + '</th><th>送</th><th>退</th><th>净吨</th><th>运费</th></tr></thead><tbody>';
+    html += statsRows.map(function (r) {
+      const net = r.sendTons - r.backTons;
+      const warn = locInLib(r.loc) ? '' : ' <span style="color:#e65100">⚠️</span>';
+      const sub = function (txt, color) { return '<div style="font-size:11px;color:' + (color || '#888') + '">' + txt + '</div>'; };
+      return '<tr data-loc="' + escapeHtml(r.loc) + '" data-locs="' + escapeHtml(r.locs.join('|')) + '">' +
+        '<td><span class="stats-loc">' + escapeHtml(r.loc) + '</span>' + warn +
+        (r.locs.length > 1 ? '<div style="font-size:11px;color:#888">' + r.locs.length + ' 个地点</div>' : '') +
+        '<div class="stats-bar"><i style="width:' + Math.round(r.count / maxCount * 100) + '%"></i></div></td>' +
+        '<td>' + r.sendCount + sub(r.sendTons.toFixed(3)) + '</td>' +
+        '<td>' + (r.backCount ? '<span style="color:#e65100">' + r.backCount + '</span>' : '0') + sub(r.backTons.toFixed(3), '#e65100') + '</td>' +
+        '<td style="font-weight:600;color:' + (net < 0 ? '#e65100' : '#333') + '">' + net.toFixed(3) + '</td>' +
+        '<td>' + r.freight.toFixed(0) + '</td>' +
+        '</tr>';
+    }).join('');
+    html += '</tbody><tfoot><tr style="font-weight:700;background:#fafafa">' +
+      '<td>合计</td><td>' + sum('sendCount') + '</td><td>' + sum('backCount') + '</td>' +
+      '<td>' + (sum('sendTons') - sum('backTons')).toFixed(3) + '</td><td>' + totalFreight.toFixed(0) + '</td>' +
+      '</tr></tfoot></table>';
+    html += '<div style="font-size:12px;color:#999;margin-top:8px">' + dimName +
+      '由地点派生：送货看' + (statsDimension === 'customer' ? '收货地' : '装货地') + '、退货看' + (statsDimension === 'customer' ? '装货地' : '收货地') +
+      '。净吨 = 送货 − 退货（负数 = 退的比送的多）；「不统计」类型不计入。⚠️ = 这个写法不在地点库，可能是名称没统一。</div>';
+  } else {
+    const maxCount = statsRows[0].count || 1;
+    html += '<table class="stats-table"><thead><tr><th>地点</th><th>车次</th><th>吨位</th><th>运费</th></tr></thead><tbody>';
+    html += statsRows.map(function (r) {
+      const warn = locInLib(r.loc) ? '' : ' <span style="color:#e65100">⚠️</span>';
+      const small = function (txt) { return '<div style="font-size:11px;color:#e65100">退 ' + txt + '</div>'; };
+      return '<tr data-loc="' + escapeHtml(r.loc) + '">' +
+        '<td><span class="stats-loc">' + escapeHtml(r.loc) + '</span>' + warn +
+        '<div class="stats-bar"><i style="width:' + Math.round(r.count / maxCount * 100) + '%"></i></div></td>' +
+        '<td>' + r.count + (r.backCount ? small(r.backCount + '车') : '') + '</td>' +
+        '<td>' + r.tons.toFixed(3) + (r.backTons ? small(r.backTons.toFixed(3)) : '') + '</td>' +
+        '<td>' + r.freight.toFixed(0) + '</td>' +
+        '</tr>';
+    }).join('');
+    html += '</tbody><tfoot><tr style="font-weight:700;background:#fafafa">' +
+      '<td>合计</td><td>' + totalCount + '</td><td>' + totalTons.toFixed(3) + '</td><td>' + totalFreight.toFixed(0) + '</td>' +
+      '</tr></tfoot></table>';
+    html += '<div style="font-size:12px;color:#999;margin-top:8px">吨位 = 这个地点经手的全部重量（送货 + 退货都记正数，退回的货也是从这里装车拉走的）；下面小字「退」是其中的退货量。「不统计」类型不计入。⚠️ = 这个写法不在地点库，可能是名称没统一。</div>';
+  }
+  box.innerHTML = html;
+}
+
+function copyStatsText() {
+  if (statsRows.length === 0) { toast('还没有可复制的统计', false, true); return; }
+  const dimLabel = STATS_DIM_LABEL[statsDimension] || '';
+  const isParty = (statsDimension === 'customer' || statsDimension === 'supplier');
+  const reduce = function (key) { return statsRows.reduce(function (s, r) { return s + r[key]; }, 0); };
+  let t = '📊 ' + (isParty ? dimLabel : '地点') + '统计（按' + dimLabel + '）' + (filterStartDate || '最早') + '~' + (filterEndDate || '今天') + '\n';
+  if (isParty) {
+    t += dimLabel + '\t送(车/吨)\t退(车/吨)\t净吨\t运费\n';
+    statsRows.forEach(function (r) {
+      t += r.loc + '\t' + r.sendCount + '/' + r.sendTons.toFixed(3) + '\t' + r.backCount + '/' + r.backTons.toFixed(3) +
+        '\t' + (r.sendTons - r.backTons).toFixed(3) + '\t' + r.freight.toFixed(0) + '\n';
+    });
+    t += '合计\t' + reduce('sendCount') + '/' + reduce('sendTons').toFixed(3) + '\t' + reduce('backCount') + '/' + reduce('backTons').toFixed(3) +
+      '\t' + (reduce('sendTons') - reduce('backTons')).toFixed(3) + '\t' + reduce('freight').toFixed(0);
+  } else {
+    t += '地点\t车次\t吨位\t运费\n';
+    statsRows.forEach(function (r) {
+      t += r.loc + '\t' + r.count + '\t' + r.tons.toFixed(3) + '\t' + r.freight.toFixed(0) +
+        (r.backCount ? '\t(退' + r.backCount + '车/' + r.backTons.toFixed(3) + '吨)' : '') + '\n';
+    });
+    t += '合计\t' + reduce('count') + '\t' + reduce('tons').toFixed(3) + '\t' + reduce('freight').toFixed(0);
+    if (reduce('backCount')) t += '\n其中退货合计：' + reduce('backCount') + ' 车 / ' + reduce('backTons').toFixed(3) + ' 吨';
+  }
+  copyText(t);
+}
+
 function resetFilter() {
   document.getElementById('filterStart').value = '';
   document.getElementById('filterEnd').value = '';
@@ -1715,10 +2287,11 @@ function resetFilter() {
 function exportCSV() {
   const list = getFilteredRecords();
   if (list.length === 0) { toast('没有可导出的记录', false, true); return; }
-  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数'];
+  // 客户 / 供货商是派生的(送货:装货地=供货商、收货地=客户;退货反过来),导出时算出来方便在 Excel 里透视
+  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','客户','供货商','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数'];
   const rows = list.map(r => [
     r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
-    r.id_card || '', r.from_location || '', r.to_location || '', r.goods || '', r.freight || '',
+    r.id_card || '', r.from_location || '', r.to_location || '', customerOf(r), supplierOf(r), r.goods || '', r.freight || '',
     r.weigh_fee || '', r.weight || '', r.delivery_type || '送货', r.note || '', (r.is_paid === true) ? '是' : '否', r.modified_count || 0
   ]);
   let csv = '\uFEFF' + headers.join(',') + '\n';
@@ -1741,10 +2314,10 @@ function exportCSV() {
 function exportAllCSV() {
   const list = (currentRecords || []).slice();
   if (list.length === 0) { toast('没有可导出的记录', false, true); return; }
-  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数','已删除'];
+  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','客户','供货商','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数','已删除'];
   const rows = list.map(r => [
     r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
-    r.id_card || '', r.from_location || '', r.to_location || '', r.goods || '', r.freight || '',
+    r.id_card || '', r.from_location || '', r.to_location || '', customerOf(r), supplierOf(r), r.goods || '', r.freight || '',
     r.weigh_fee || '', r.weight || '', r.delivery_type || '送货', r.note || '', (r.is_paid === true) ? '是' : '否', r.modified_count || 0, (r.deleted === true) ? '是' : '否'
   ]);
   let csv = '\uFEFF' + headers.join(',') + '\n';
@@ -2727,28 +3300,51 @@ let locationLib = DEFAULT_LOCATION_LIB.map(x => ({ standard: x.standard, aliases
 let locationLibFromDb = false; // 当前用的是云端库还是内置库
 
 // 加载地点库:先用内置兜底,再尝试云端覆盖(多设备共享)
-async function loadLocationLib() {
-  try {
-    if (navigator.onLine) {
-      const { data, error } = await supabaseClient
-        .from('location_aliases').select('standard_name, alias')
-        .order('sort_order', { ascending: false });
-      if (!error && data && data.length > 0) {
-        const map = {};
-        data.forEach(row => {
-          const s = (row.standard_name || '').trim();
-          const a = (row.alias || '').trim();
-          if (!s || !a) return;
-          if (!map[s]) map[s] = [];
-          if (map[s].indexOf(a) === -1) map[s].push(a);
-        });
-        const list = Object.keys(map).map(k => ({ standard: k, aliases: map[k] }));
-        if (list.length > 0) { locationLib = list; locationLibFromDb = true; }
+// v1.8.4:同一时刻只拉一次(入口多:init 后台拉 / 打开地点库 / 下拉里加地点),
+// 并把它做成可 await 的 promise —— 打开地点库时先等结果再渲染,
+// 否则首屏一进来就点开,看到的是还没被云端覆盖的内置库。
+let locationLibTask = null;
+let locationLibTried = false; // 至少尝试过一次(用于区分"没拉到"和"还在拉")
+function loadLocationLib(force) {
+  if (locationLibTask && !force) return locationLibTask;
+  locationLibTask = (async function () {
+    try {
+      if (navigator.onLine) {
+        const { data, error } = await supabaseClient
+          .from('location_aliases').select('standard_name, alias')
+          .order('sort_order', { ascending: false });
+        if (!error && data && data.length > 0) {
+          const map = {};
+          data.forEach(row => {
+            const s = (row.standard_name || '').trim();
+            const a = (row.alias || '').trim();
+            if (!s || !a) return;
+            if (!map[s]) map[s] = [];
+            if (map[s].indexOf(a) === -1) map[s].push(a);
+          });
+          const list = Object.keys(map).map(k => ({ standard: k, aliases: map[k] }));
+          if (list.length > 0) { locationLib = list; locationLibFromDb = true; refreshLocationPickIfOpen(); }
+        }
       }
+    } catch (e) {
+      console.warn('加载地点库失败,继续用内置:', e);
     }
-  } catch (e) {
-    console.warn('加载地点库失败,继续用内置:', e);
-  }
+    locationLibTried = true;
+    return locationLib;
+  })();
+  return locationLibTask;
+}
+// 地点库弹窗里的「重新拉取 / 重试」
+// v1.9.2:客户/供货商归属表也一起重拉。原先只重拉了地点库,而 partyMapMissing 一旦置位
+// 就不再请求归属表,导致表建好后点「重新拉取」照样提示"归属表还没建好",非得刷新整页才行。
+async function reloadLocationLib() {
+  locationLibTask = null;
+  partyMapTask = null;
+  partyMapMissing = false;
+  partyNamesTask = null;
+  partyNamesMissing = false;
+  await Promise.all([loadLocationLib(true), loadPartyMap(true), loadPartyNames(true)]);
+  renderLocationLib();
 }
 
 // 地点标准化:精确匹配 > 最长包含匹配;都匹配不到就返回原文(绝不硬猜)
@@ -2802,28 +3398,360 @@ function normalizeLocationInput(id) {
   }
 }
 
+// ===== 地点下拉选择（v1.8.3）=====
+// 新增登记 / 修改页的「装货地·收货地」:点输入框就弹出地点库标准名,点一下即填。
+// 仍然允许手打:手打后失焦照样走 normalizeLocationInput 统一名称 + 未匹配标红。
+const LOC_PICK_FIELDS = ['fFrom', 'fTo', 'mFrom', 'mTo'];
+let locPickEl = null;
+let locPickInput = null;   // 当前挂着的输入框
+let locPickItems = [];     // 当前列出的条目(下标与 DOM 的 data-i 一致)
+let locPickHl = -1;        // 键盘高亮项(-1 = 没有)
+let locPickMode = 'list';  // 'list' = 选标准名;'parent' = 给新写法挑一个归属标准名
+let locPickNewAlias = '';  // 准备入库的那个原始写法(切到 parent 模式时记下来)
+
+function setupLocationPickers() {
+  if (!locPickEl) locPickEl = document.getElementById('locPick');
+  if (!locPickEl) return;
+  LOC_PICK_FIELDS.forEach(function (id) {
+    const el = document.getElementById(id);
+    if (!el || el.dataset.locPickReady === '1') return;
+    el.dataset.locPickReady = '1';
+    el.setAttribute('autocomplete', 'off');
+    el.addEventListener('focus', function () { openLocationPick(el); });
+    el.addEventListener('click', function () { openLocationPick(el); });
+    el.addEventListener('input', function () {
+      if (locPickInput === el) { renderLocationPick(); positionLocationPick(); }
+      else openLocationPick(el);
+    });
+    el.addEventListener('keydown', locationPickKeydown);
+    el.addEventListener('blur', function () {
+      // 点选项时先不能立刻关:留一点时间让"点"这个动作先落地
+      // (点列表外的立刻在 pointerdown 里关掉了,这里只是兜底)
+      setTimeout(function () {
+        if (document.activeElement === el) return;
+        // "选归属"进行中别关:点「挂到已有地点当别名」也会让输入框失焦,
+        // 一关就把刚清空的输入框填回原写法、列表也没了。等用户点选或点别处(pointerdown 关)。
+        if (locPickMode === 'parent') return;
+        closeLocationPick();
+      }, 300);
+    });
+  });
+  if (window._locPickBound) return;
+  window._locPickBound = true;
+  window.addEventListener('resize', positionLocationPick);
+  window.addEventListener('scroll', positionLocationPick, true);
+  if (window.visualViewport) window.visualViewport.addEventListener('resize', positionLocationPick);
+  // 点输入框和列表之外的地方 → 关掉(手机上软键盘顶起页面也走这里)
+  document.addEventListener('pointerdown', function (e) {
+    if (!locPickEl.classList.contains('show')) return;
+    if (locPickEl.contains(e.target) || e.target === locPickInput) return;
+    closeLocationPick();
+  }, true);
+  // pointerdown 和 click 都接:谁先到谁生效,选完立刻 close,后到的那次被 show 判断挡掉
+  locPickEl.addEventListener('pointerdown', function (e) { locationPickTap(e.target); });
+  locPickEl.addEventListener('click', function (e) { locationPickTap(e.target); });
+}
+
+function locationPickTap(target) {
+  if (!locPickEl || !locPickEl.classList.contains('show')) return;
+  if (!target || !target.closest) return;
+  const more = target.closest('.loc-pick-more');
+  if (more) {
+    const el = locPickInput;
+    closeLocationPick();
+    if (el && typeof el.blur === 'function') el.blur();
+    showLocationLib();
+    return;
+  }
+  const act = target.closest('[data-act]');
+  if (act) {
+    if (act.dataset.act === 'newstd') addUnknownAsStandard();
+    else if (act.dataset.act === 'alias') enterAliasParentMode();
+    else if (act.dataset.act === 'back') { locPickMode = 'list'; locPickNewAlias = ''; renderLocationPick(); positionLocationPick(); }
+    return;
+  }
+  const item = target.closest('.loc-pick-item');
+  if (!item) return;
+  const it = locPickItems[parseInt(item.dataset.i, 10)];
+  if (!it) return;
+  if (locPickMode === 'parent') pickAliasParent(it.standard);
+  else pickLocationFromDrop(it.standard);
+}
+
+// 未匹配地点 → 就地记为新标准名(顺手入库,不用登记完再跑去地点库补)
+async function addUnknownAsStandard() {
+  const el = locPickInput;
+  const raw = (el ? el.value : '').trim();
+  if (!el || !raw) return;
+  await saveLocationEntry(raw, [raw]);
+  el.value = raw;
+  el.classList.remove('loc-unknown-input');
+  closeLocationPick();
+  if (typeof el.blur === 'function') el.blur();
+  toast(locationLibFromDb ? '📍 已入库：「' + raw + '」' : '📍 已加到本机：「' + raw + '」（云端表没连上，刷新会丢）', locationLibFromDb);
+}
+
+// 未匹配地点 → 挂到某个已有标准名下当别名:先切到"选归属"模式
+function enterAliasParentMode() {
+  const el = locPickInput;
+  const raw = (el ? el.value : '').trim();
+  if (!el || !raw) return;
+  locPickNewAlias = raw;
+  locPickMode = 'parent';
+  el.value = '';   // 空出来,好在"选归属"里搜标准名(程序改 value 不触发 input)
+  renderLocationPick();
+  positionLocationPick();
+}
+function renderAliasParentPick(el) {
+  const q = (el.value || '').trim();
+  locPickItems = locationLib.filter(function (it) {
+    if (!q) return true;
+    if (it.standard.indexOf(q) !== -1) return true;
+    return it.aliases.some(function (a) { return a.indexOf(q) !== -1; });
+  });
+  locPickHl = -1;
+  let html = '<div class="loc-pick-tip">把「' + escapeHtml(locPickNewAlias) + '」挂到哪个标准名下？<br>挂上以后，司机再写这个写法就会自动统一成那个标准名。</div>' +
+    '<div class="loc-pick-item" data-act="back"><span class="loc-pick-std">← 返回</span></div>';
+  if (locPickItems.length === 0) {
+    html += '<div class="loc-pick-tip">没搜到，换个词再搜；或者返回后选「记为新标准名」</div>';
+  } else {
+    html += locPickItems.map(function (it, i) {
+      return '<div class="loc-pick-item" data-i="' + i + '">' +
+        '<span class="loc-pick-std">' + escapeHtml(it.standard) + '</span>' +
+        '<span class="loc-pick-ali">' + escapeHtml(it.aliases.join('、')) + '</span>' +
+        '</div>';
+    }).join('');
+  }
+  locPickEl.innerHTML = html;
+}
+async function pickAliasParent(std) {
+  const el = locPickInput;
+  const alias = locPickNewAlias;
+  if (!el || !alias) return;
+  await saveLocationEntry(std, [alias]);
+  el.value = std;   // 登记里存的一律是标准名
+  el.classList.remove('loc-unknown-input');
+  closeLocationPick();
+  if (typeof el.blur === 'function') el.blur();
+  toast(locationLibFromDb ? '📍「' + alias + '」已挂到「' + std + '」' : '📍 已加到本机（云端表没连上，刷新会丢）', locationLibFromDb);
+}
+
+function openLocationPick(el) {
+  if (!locPickEl) locPickEl = document.getElementById('locPick');
+  if (!locPickEl || !el) return;
+  locPickInput = el;
+  renderLocationPick();
+  locPickEl.classList.add('show');
+  positionLocationPick();
+}
+
+function closeLocationPick() {
+  const el = locPickInput;
+  // 在"选归属"半路放弃:把原始写法还回输入框,别让人白打一遍
+  if (locPickMode === 'parent' && el && !(el.value || '').trim() && locPickNewAlias) el.value = locPickNewAlias;
+  if (locPickEl) locPickEl.classList.remove('show');
+  locPickInput = null;
+  locPickItems = [];
+  locPickHl = -1;
+  locPickMode = 'list';
+  locPickNewAlias = '';
+}
+
+// 下拉开着时地点库刚拉到云端 → 立刻换成云端那份
+function refreshLocationPickIfOpen() {
+  if (locPickEl && locPickEl.classList.contains('show')) renderLocationPick();
+}
+
+function renderLocationPick() {
+  const el = locPickInput;
+  if (!el || !locPickEl) return;
+  if (locPickMode === 'parent') { renderAliasParentPick(el); return; }
+  const q = (el.value || '').trim();
+  const cur = q ? normalizeLocation(q) : '';
+  // 过滤:标准名或任一别名含有输入内容(输入只是前缀时也能搜到,如"沉香"→茂名沉香工地)
+  locPickItems = locationLib.filter(function (it) {
+    if (!q) return true;
+    if (it.standard.indexOf(q) !== -1) return true;
+    return it.aliases.some(function (a) { return a.indexOf(q) !== -1; });
+  });
+  locPickHl = -1;
+  let html = '';
+  if (locPickItems.length === 0) {
+    // 一个都匹配不上才算"不在地点库";只输了一半("沉香")不算,别在打字时乱报警
+    // v1.8.4:就地给两个按钮,登记到一半顺手入库,不用再跑去地点库补
+    html += '<div class="loc-pick-tip">⚠️「' + escapeHtml(q) + '」不在地点库' +
+      (locationLibFromDb ? '' : '（当前是内置库，加了只在本次有效）') + '</div>' +
+      '<div class="loc-pick-acts">' +
+        '<button type="button" class="loc-pick-act" data-act="newstd">＋ 记为新标准名</button>' +
+        '<button type="button" class="loc-pick-act" data-act="alias">挂到已有地点当别名</button>' +
+      '</div>';
+  } else {
+    html += '<div class="loc-pick-hd">📚 地点库标准名 · ' + locPickItems.length + ' 个' + (locationLibFromDb ? '' : '（内置）') + '</div>';
+    html += locPickItems.map(function (it, i) {
+      const aliases = it.aliases.filter(function (a) { return a !== it.standard; });
+      return '<div class="loc-pick-item" data-i="' + i + '">' +
+        '<span class="loc-pick-std' + (it.standard === cur ? ' cur' : '') + '">' + escapeHtml(it.standard) + '</span>' +
+        (aliases.length ? '<span class="loc-pick-ali">' + escapeHtml(aliases.join('、')) + '</span>' : '') +
+        '</div>';
+    }).join('');
+  }
+  html += '<div class="loc-pick-more">📍 维护地点库</div>';
+  locPickEl.innerHTML = html;
+}
+
+function pickLocationFromDrop(std) {
+  const el = locPickInput;
+  if (!el || !std) return;
+  el.value = std;
+  el.classList.remove('loc-unknown-input');
+  closeLocationPick();
+  if (typeof el.blur === 'function') el.blur();  // 收起手机软键盘
+  toast('📍 已选择「' + std + '」', true);
+}
+
+// 贴着输入框显示:下面放不下就翻到上面(手机上软键盘顶起后再算一次)
+function positionLocationPick() {
+  if (!locPickEl || !locPickEl.classList.contains('show') || !locPickInput) return;
+  const r = locPickInput.getBoundingClientRect();
+  const vv = window.visualViewport;
+  const viewTop = vv ? vv.offsetTop : 0;
+  const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const viewLeft = vv ? vv.offsetLeft : 0;
+  const viewRight = vv ? vv.offsetLeft + vv.width : window.innerWidth;
+  const gap = 6, minH = 132, maxH = 264;
+  const below = viewBottom - r.bottom - gap;
+  const above = r.top - viewTop - gap;
+  const openUp = below < minH && above > below;
+  const h = Math.max(minH, Math.min(maxH, openUp ? above : below));
+  const w = Math.max(r.width, 200);
+  const left = Math.max(viewLeft + 8, Math.min(r.left, viewRight - w - 8));
+  locPickEl.style.width = Math.round(w) + 'px';
+  locPickEl.style.left = Math.round(left) + 'px';
+  locPickEl.style.maxHeight = Math.round(h) + 'px';
+  locPickEl.style.top = Math.round(openUp ? (r.top - gap - h) : (r.bottom + gap)) + 'px';
+}
+
+// 电脑上可用 ↑↓ 选、Enter 填、Esc 关(手机端直接用手指点)
+function locationPickKeydown(e) {
+  if (!locPickEl || !locPickEl.classList.contains('show') || !locPickInput) return;
+  if (e.key === 'Escape') { closeLocationPick(); return; }
+  const items = locPickEl.querySelectorAll('.loc-pick-item');
+  if (e.key === 'Enter') {
+    if (locPickHl >= 0 && locPickItems[locPickHl]) {
+      e.preventDefault();
+      pickLocationFromDrop(locPickItems[locPickHl].standard);
+    }
+    return;
+  }
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  if (items.length === 0) return;
+  e.preventDefault();
+  locPickHl = e.key === 'ArrowDown' ? Math.min(locPickHl + 1, items.length - 1) : Math.max(locPickHl - 1, 0);
+  items.forEach(function (it, i) { it.classList.toggle('hl', i === locPickHl); });
+  if (items[locPickHl].scrollIntoView) items[locPickHl].scrollIntoView({ block: 'nearest' });
+}
+
 // ===== 地点名称库管理（v1.8.0）=====
 async function showLocationLib() {
   const modal = document.getElementById('locationModal');
   if (!modal) return;
   modal.classList.add('show');
   const box = document.getElementById('locationLibContent');
-  if (box) box.innerHTML = '<div class="loading">加载中...</div>';
-  await loadLocationLib();
+  if (box) box.innerHTML = '<div class="loading">正在拉取云端地点库...</div>';
+  await Promise.all([loadLocationLib(), loadPartyMap(), loadPartyNames()]); // v1.8.4:等云端结果落地再渲染
   renderLocationLib();
 }
 function closeLocationLib() {
   const modal = document.getElementById('locationModal');
   if (modal) modal.classList.remove('show');
 }
+// ===== v1.10.0 地点库里的「归属」下拉 + 名称表面板 =====
+// 归属格改成下拉:选项来自名称表(＋已经在用的名字),防止同一个供货商被打成两种写法。
+// 当前值不在清单里时,原样保留成一个选项(标「未收录」),免得一渲染就把人的数据改掉。
+function partySelectHtml(index, kind, curVal, boxStyle, dead) {
+  const label = partyKindLabel(kind);
+  const cur = (curVal || '').trim();
+  const opts = partyNameOptions(kind);
+  const emptyText = dead ? '（这地点用不到' + label + '）' : '（不用，按地点名）';
+  const title = dead ? '这地点在记录里不在' + label + '那一端，填了也不生效' : '留空 = ' + label + '名就用地点名';
+  let h = '<select title="' + escapeHtml(title) + '" ' +
+    'onchange="onPartySelectChange(' + index + ',\'' + kind + '\',this)" style="' + boxStyle + '">' +
+    '<option value=""' + (cur ? '' : ' selected') + '>' + emptyText + '</option>';
+  // 兜底:万一当前值不在候选里(清单被改过等),也原样保留成一个选项 ——
+  // 正常数据流下候选一定含当前值,这里是防"一渲染就把人的归属悄悄清掉"。
+  if (cur && opts.indexOf(cur) === -1) {
+    h += '<option value="' + escapeHtml(cur) + '" selected>' + escapeHtml(cur) + '（未收录）</option>';
+  }
+  h += opts.map(function (n) {
+    const inTable = (partyNames[kind] || []).indexOf(n) !== -1;
+    return '<option value="' + escapeHtml(n) + '"' + (n === cur ? ' selected' : '') + '>' +
+      escapeHtml(n) + (inTable ? '' : '（未收录）') + '</option>';
+  }).join('');
+  h += '<option value="__new__">＋ 新增' + label + '名…</option></select>';
+  return h;
+}
+// 归属下拉变更:普通选项直接存;选到「＋ 新增名称…」则先问名字、加进名称表、再设为归属
+async function onPartySelectChange(index, kind, sel) {
+  const item = locationLib[index];
+  if (!item) return;
+  const v = sel.value;
+  if (v === '__new__') {
+    await promptAddPartyName(kind, index);   // 里面会重渲染,顺便把下拉还原
+    return;
+  }
+  await savePartyName(index, kind, v);
+  renderLocationLib();                       // 下拉要按存下来的值重画
+}
+// 名称表面板(地点库顶部,默认收起)。
+// 名字里可能有单引号,所以走 data-* 传参,不要把名字拼进 onclick 字符串里。
+function partyNamePanelHtml() {
+  const col = function (kind) {
+    const label = partyKindLabel(kind);
+    const opts = partyNameOptions(kind);
+    const rows = opts.map(function (n) {
+      const used = partyNameUsage(kind, n).length;
+      const inTable = (partyNames[kind] || []).indexOf(n) !== -1;
+      const attrs = 'data-kind="' + kind + '" data-name="' + escapeHtml(n) + '" ';
+      return '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px dashed #eee">' +
+        '<span style="flex:1;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="' + escapeHtml(n) + '">' +
+          escapeHtml(n) + (inTable ? '' : '<span style="color:#e65100;font-size:11px"> 未收录</span>') + '</span>' +
+        '<span style="flex:0 0 auto;font-size:11px;color:#888">' + used + ' 地点</span>' +
+        '<span style="flex:0 0 auto;font-size:12px;color:#1565c0;cursor:pointer;padding:2px 4px" ' + attrs +
+          'onclick="renamePartyName(this.dataset.kind,this.dataset.name)">改名</span>' +
+        '<span style="flex:0 0 auto;font-size:12px;color:#c0392b;cursor:pointer;padding:2px 4px" ' + attrs +
+          'onclick="removePartyName(this.dataset.kind,this.dataset.name)">×</span>' +
+      '</div>';
+    }).join('');
+    return '<div style="flex:1;min-width:0">' +
+      '<div style="font-size:12px;font-weight:600;color:#555;margin-bottom:4px">' + label + '（' + opts.length + '）</div>' +
+      (rows || '<div style="font-size:12px;color:#bbb;padding:3px 0">还没有</div>') +
+      '<div style="font-size:12px;color:#1565c0;cursor:pointer;padding:3px 0" onclick="promptAddPartyName(\'' + kind + '\',-1)">＋ 新增' + label + '名</div>' +
+      '</div>';
+  };
+  return '<details style="margin-bottom:12px"' + (window._partyPanelOpen ? ' open' : '') +
+    ' ontoggle="window._partyPanelOpen=this.open">' +
+    '<summary style="cursor:pointer;font-size:13px;font-weight:600;color:#1565c0">🏷️ 名称表（供货商 / 客户 —— 归属那两格的下拉选项就来自这里）</summary>' +
+    '<div style="margin-top:8px;padding:8px;background:#fafafa;border:1px solid #eee;border-radius:8px">' +
+      '<div style="display:flex;gap:12px">' + col('customer') + col('supplier') + '</div>' +
+      '<div style="font-size:11px;color:#999;margin-top:8px">' +
+        '下面每条地点的「归属」是<b>下拉选择</b>，从清单里选就不会打出第二个写法；万一已经有了两个名字，用<b>改名</b>把它们并成一个 —— 正在用旧名字的地点会一起改过来。' +
+        '<br>标「未收录」的是历史手填、还没进清单的名字，点「＋ 新增」就能收进来。' +
+        (partyNamesMissing ? '<br>⚠️ 云端名称表没读到，这份清单只在本机；去 Supabase 跑 database.sql 的【第 10 块】，再点上面的「重新拉取」。' : '') +
+      '</div>' +
+    '</div>' +
+  '</details>';
+}
 function renderLocationLib() {
   const box = document.getElementById('locationLibContent');
   if (!box) return;
+  const retryLink = '<span style="color:#1565c0;cursor:pointer;text-decoration:underline" onclick="reloadLocationLib()">重新拉取</span>';
   const srcTip = locationLibFromDb
-    ? '<div style="color:#2e7d32;font-size:12px;margin-bottom:10px">✅ 正在用云端地点库，多设备共享</div>'
-    : '<div style="color:#e65100;font-size:12px;margin-bottom:10px">⚠️ 当前用内置地点库。想自己维护并多设备同步，请在 Supabase 跑一次 database.sql 的【第 7 块】</div>';
+    ? '<div style="color:#2e7d32;font-size:12px;margin-bottom:10px">✅ 正在用云端地点库，多设备共享 · ' + retryLink + '</div>'
+    : '<div style="color:#e65100;font-size:12px;margin-bottom:10px">⚠️ 当前用内置地点库（' +
+      (locationLibTried ? '没拉到云端数据' : '还在拉取中') + '）。想自己维护并多设备同步，请在 Supabase 跑一次 database.sql 的【第 7 块】，然后点' + retryLink + '</div>';
   let html = srcTip +
-    '<div style="font-size:12px;color:#888;margin-bottom:10px">司机写法会自动匹配到标准名，登记记录里存的一律是标准名，筛选和统计才准。<br>💡 标准名可直接点编辑；每个别名有 × 可单独删除；旁边「+ 加别名」可补新写法。</div>';
+    '<div style="font-size:12px;color:#888;margin-bottom:10px">司机写法会自动匹配到标准名，登记记录里存的一律是标准名，筛选和统计才准。<br>💡 标准名可直接点编辑；每个别名有 × 可单独删除；旁边「+ 加别名」可补新写法。<br>💡 <b>归属客户 / 归属供货商</b>是用来「把几个地点合并成同一个名字」的，不是必填：留空 = 名字就是地点名。这两格是<b>下拉选择</b>，选项来自下面的「🏷️ 名称表」，从清单里选就不会打出第二个写法。<br>⚠️ 一个地点只在一边生效：它当<b>客户那一端</b>（送货的收货地 / 退货的装货地）时读「归属客户」，当<b>供货商那一端</b>（送货的装货地 / 退货的收货地）时读「归属供货商」，另一格填了也不生效。<br>👉 下面每条会写出这个地点在<b>实际记录里当过哪一端</b>，<b>灰底那格就是用不到的那格</b>（工地只填「客户」；一个工地被好几家供货商送货是正常的，供货商看的是装货地）。</div>' +
+    partyNamePanelHtml();
   html += locationLib.map((item, i) => {
     const aliasChips = item.aliases.map((a, j) =>
       '<span style="display:inline-block;background:#f0f0f0;border:1px solid #ddd;border-radius:12px;padding:2px 8px;margin:2px 4px;font-size:13px">' +
@@ -2831,6 +3759,19 @@ function renderLocationLib() {
       ' <span style="color:#c0392b;cursor:pointer;font-weight:bold;margin-left:4px" onclick="removeOneAlias(' + i + ',' + j + ')" title="删除该别名">×</span>' +
       '</span>'
     ).join('');
+    // v1.9.2:标出这地点在实际记录里扮演哪一端,并把"永远不生效"的那格灰掉
+    const roleCnt = locationRoleCounts(item.standard);
+    const custDead = roleCnt.sup > 0 && roleCnt.cust === 0;  // 只在供货商那一端出现过 → 客户格用不到
+    const supDead = roleCnt.cust > 0 && roleCnt.sup === 0;   // 只在客户那一端出现过 → 供货商格用不到
+    const partyBoxBase = 'flex:1;min-width:0;border-radius:4px;padding:6px 8px;font-size:13px;';
+    const custBoxStyle = partyBoxBase + (custDead ? 'background:#f7f7f7;border:1px solid #f0f0f0;color:#bbb' : 'border:1px solid #eee');
+    const supBoxStyle = partyBoxBase + (supDead ? 'background:#f7f7f7;border:1px solid #f0f0f0;color:#bbb' : 'border:1px solid #eee');
+    const roleTip = (roleCnt.cust || roleCnt.sup)
+      ? '<div style="font-size:11px;color:#999;margin-top:6px">实际记录里：客户那一端 ' + roleCnt.cust + ' 次、供货商那一端 ' + roleCnt.sup + ' 次' +
+        (supDead ? ' —— 这地点只当收货地，只填左边「客户」那格就行'
+         : custDead ? ' —— 这地点只当装货地，只填右边「供货商」那格就行'
+         : ' —— 两头都用得上，两格按需填') + '</div>'
+      : '';
     return '<div class="sample-card">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px">' +
         '<input type="text" id="locStd_' + i + '" value="' + escapeHtml(item.standard) + '" style="flex:1;border:1px solid #eee;border-radius:4px;padding:6px 8px;font-size:14px;font-weight:600;color:#1565c0" onblur="saveStandardName(' + i + ', this.value)" onkeydown="if(event.key===\'Enter\'){this.blur()}">' +
@@ -2842,6 +3783,12 @@ function renderLocationLib() {
         '<span style="display:inline-block;border:1px dashed #90caf9;border-radius:12px;padding:2px 10px;margin:2px 4px;font-size:13px;color:#1565c0;cursor:pointer;background:#fff" onclick="promptAddAlias(' + i + ')">+ 加别名</span>' +
         '</div>' +
       '</div>' +
+      '<div style="display:flex;gap:6px;margin-top:8px;align-items:center">' +
+        '<span style="font-size:12px;color:#888;flex:0 0 auto">归属：</span>' +
+        partySelectHtml(i, 'customer', (partyMap[item.standard] || {}).customer || '', custBoxStyle, custDead) +
+        partySelectHtml(i, 'supplier', (partyMap[item.standard] || {}).supplier || '', supBoxStyle, supDead) +
+      '</div>' +
+      roleTip +
     '</div>';
   }).join('');
   html += '<div style="border-top:1px solid #eee;margin-top:14px;padding-top:12px">' +
@@ -2852,21 +3799,18 @@ function renderLocationLib() {
   '</div>';
   box.innerHTML = html;
 }
-async function addLocationAlias() {
-  const stdEl = document.getElementById('locNewStandard');
-  const aliasEl = document.getElementById('locNewAliases');
-  const std = (stdEl.value || '').trim();
-  if (!std) { toast('请填标准名', false, true); return; }
-  const aliases = (aliasEl.value || '').split(/[,，、]/).map(s => s.trim()).filter(Boolean);
-  if (aliases.length === 0) { toast('请至少填一个司机可能的写法', false, true); return; }
-  // 先更新内存,保证立刻可用
+// 入库的唯入口:先改内存(立刻能用),再同步云端(失败也不影响本机)
+// 下拉里"一键入库"和地点库弹窗里的表单都走这里,免得两处逻辑走偏
+async function saveLocationEntry(std, aliases) {
+  std = (std || '').trim();
+  const list = (aliases || []).map(a => (a || '').trim()).filter(Boolean);
+  if (!std || list.length === 0) return null;
   let item = locationLib.find(x => x.standard === std);
   if (!item) { item = { standard: std, aliases: [] }; locationLib.push(item); }
-  aliases.forEach(a => { if (item.aliases.indexOf(a) === -1) item.aliases.push(a); });
-  // 再同步云端(失败也不影响本机使用)
+  list.forEach(a => { if (item.aliases.indexOf(a) === -1) item.aliases.push(a); });
   if (locationLibFromDb && navigator.onLine) {
     try {
-      const rows = aliases.map(a => ({ standard_name: std, alias: a, sort_order: 0 }));
+      const rows = list.map(a => ({ standard_name: std, alias: a, sort_order: 0 }));
       const { error } = await supabaseClient
         .from('location_aliases').upsert(rows, { onConflict: 'alias,standard_name', ignoreDuplicates: true });
       if (error) throw error;
@@ -2875,6 +3819,16 @@ async function addLocationAlias() {
       toast('已加到本机，但同步云端失败', false, true);
     }
   }
+  return item;
+}
+async function addLocationAlias() {
+  const stdEl = document.getElementById('locNewStandard');
+  const aliasEl = document.getElementById('locNewAliases');
+  const std = (stdEl.value || '').trim();
+  if (!std) { toast('请填标准名', false, true); return; }
+  const aliases = (aliasEl.value || '').split(/[,，、]/).map(s => s.trim()).filter(Boolean);
+  if (aliases.length === 0) { toast('请至少填一个司机可能的写法', false, true); return; }
+  await saveLocationEntry(std, aliases);
   stdEl.value = '';
   aliasEl.value = '';
   renderLocationLib();
@@ -2973,6 +3927,9 @@ function saveStandardName(index, newVal) {
   renderLocationLib();
 }
 
+// 地点下拉浮层:一进页面就挂好,和密码门无关(输入框此时已存在)
+setupLocationPickers();
+
 // 初始化 (仅在密码验证后或已验证过才初始化;先恢复加密密钥再拉数据)
 (async function init() {
   if (window._supabaseLoadFailed) {
@@ -2986,10 +3943,12 @@ function saveStandardName(index, newVal) {
     setupMobileInputFocus();  // 手机端:聚焦输入框时防软键盘遮挡
     setupIdCardKeyboard();    // 手机端:身份证前17位数字键盘,末位X自动切文本
     loadLocationLib();        // 地点名称库(后台加载;内置库已先兜底,不阻塞首屏)
+    loadPartyMap();           // 客户/供货商归属(没建表就静默回落,不影响用)
+    loadPartyNames();         // v1.10.0 名称表(归属下拉的候选池;同样静默回落)
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.8.2 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.10.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
