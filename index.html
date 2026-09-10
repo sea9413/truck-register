@@ -1454,7 +1454,8 @@ function showHelp() {
     <li><b>下载模板</b>:下载空模板(CSV),填完从「导入历史」上传</li>
     <li><b>支持的格式</b>:.csv / .xlsx / .xls 均可直接拖入(Excel 文件无需另存为 CSV)</li>
     <li>编码自动识别: UTF-8(推荐) / GBK(Excel 中文版另存常见)均可</li>
-    <li>按<b>列名</b>匹配(不是列顺序),列名用「日期/主车/挂车/姓名/手机号/身份证号/装货地/收货地/货物/运费/过磅费/过磅重量/类型/备注/已支付/修改次数」(导出的「客户/供货商」两列是算出来的,导入时会被忽略)</li>
+    <li>按<b>列名</b>匹配(不是列顺序),列名用「日期/主车/挂车/姓名/手机号/身份证号/装货地/收货地/<b>客户/供货商</b>/货物/运费/过磅费/过磅重量/类型/备注/已支付/修改次数」</li>
+    <li><b>「客户 / 供货商」这两列不是单独存的</b>:由装货地 / 收货地 + 类型算出来 —— 送货时装货地=供货商、收货地=客户,退货反过来。模板里留着这两列是方便你<b>核对</b>;导入时会拿你填的值和算出来的比对,<b>对不上会告诉你</b>,去「<b>📍 地点库</b>」给该地点填归属就能对上(也能把几个地点合并成同一个客户 / 供货商)</li>
     <li>Excel 日期支持 2025-5-29 / 2025/5/29 / 2025年5月29日 多种写法,自动统一</li>
     <li>导入时如发现<b>日期+主车车牌+重量+类型</b>四者重复,会自动跳过</li>
   </ul>
@@ -2372,7 +2373,10 @@ function parseCSV(text) {
 }
 
 function downloadTemplate() {
-  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数'];
+  // v1.10.1:补上「客户 / 供货商」两列,和导出的列顺序一致 ——
+  // 这两列不是单独存的,是按装货地/收货地+类型算出来的;留着是为了填模板时能核对,
+  // 导入时会拿你填的值和算出来的比对,对不上会提示去地点库配归属。
+  const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','客户','供货商','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数'];
   const csv = '﻿' + headers.join(',') + '\n';
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -2470,6 +2474,7 @@ async function processImportedRows(rows) {
       const records = [];
       let skipped = 0;
       let duplicate = 0;
+      const partyMismatch = [];   // v1.10.1:用户填的「客户/供货商」和系统按地点算的对不上
       // 去重:先拉取已有记录的(日期+主车+重量)键
       let existingKeys = new Set();
       try {
@@ -2514,6 +2519,14 @@ async function processImportedRows(rows) {
         else if (tval === '不统计') rec.delivery_type = '不统计';
         const camel = { date: rec.date, plateMain: rec.plate_main, plateTrailer: rec.plate_trailer, name: rec.name, phone: rec.phone, weight: rec.weight, weighFee: rec.weigh_fee, from: rec.from_location, to: rec.to_location, goods: rec.goods, freight: rec.freight };
         rec.notice = generateNotice(camel);
+        // v1.10.1:模板里填的「客户 / 供货商」不是 records 的字段,系统只认地点推导出来的。
+        // 这里比对一下,对不上就记下来,导完告诉他去地点库配归属,免得他以为"填了就存下来了"。
+        const wantCust = get('客户', r);
+        const wantSup = get('供货商', r);
+        const gotCust = customerOf(rec);
+        const gotSup = supplierOf(rec);
+        if (wantCust && wantCust !== gotCust) partyMismatch.push('第 ' + (i + 1) + ' 行 · 客户：你填「' + wantCust + '」，系统按地点算的是「' + gotCust + '」');
+        if (wantSup && wantSup !== gotSup) partyMismatch.push('第 ' + (i + 1) + ' 行 · 供货商：你填「' + wantSup + '」，系统按地点算的是「' + gotSup + '」');
         records.push(rec);
       }
       if (records.length === 0) { toast(duplicate > 0 ? '全部 ' + duplicate + ' 条都是重复记录，未导入' : '没有可导入的有效记录（需有日期和主车）', false, true); return; }
@@ -2536,6 +2549,13 @@ async function processImportedRows(rows) {
         if (error) { toast('导入失败:' + error.message, false, true); return; }
       }
       toast('成功导入 ' + records.length + ' 条' + (duplicate > 0 ? '（跳过 ' + duplicate + ' 条重复）' : '') + (skipped > 0 ? '（跳过 ' + skipped + ' 行空数据）' : ''), true);
+      // v1.10.1:对不上的地方说清楚 —— 这两列不是单独存的,改它们得去地点库改归属
+      if (partyMismatch.length > 0) {
+        alert('成功导入 ' + records.length + ' 条，但有 ' + partyMismatch.length + ' 处填的「客户 / 供货商」和系统按地点算出来的对不上：\n\n' +
+          partyMismatch.slice(0, 5).join('\n') + (partyMismatch.length > 5 ? '\n…（共 ' + partyMismatch.length + ' 处）' : '') +
+          '\n\n⚠️ 这两列不是单独存的，是由装货地 / 收货地 + 类型推算出来的，所以导入以地点为准。\n' +
+          '想让它们对上，去「📍 地点库」给对应地点填归属（可以把几个地点合并成同一个客户 / 供货商）。');
+      }
       loadRecords();
 }
 
@@ -3948,7 +3968,7 @@ setupLocationPickers();
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.10.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.10.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
