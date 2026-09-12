@@ -337,6 +337,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       </div>
     </div>
     <div class="detail-items" id="detailItems"></div>
+    <div id="detailItemsBlock"></div>
     <div class="btn-row">
       <button class="copy-notice-btn" id="detailCopyBtn" onclick="copyDetailNotice()">📋 复制通知文字</button>
     </div>
@@ -429,9 +430,18 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       </div>
 
       <div style="display:flex;align-items:center;gap:6px;margin-bottom:0">
-        <input type="number" id="fWeight" inputmode="decimal" placeholder="过磅(公斤)" style="flex:1" oninput="updateTon()">
+        <input type="number" id="fWeight" inputmode="decimal" placeholder="过磅(公斤)" style="flex:1" oninput="updateTon();updateFormRecon()">
         <span id="tonDisplay" style="font-size:16px;color:#333;white-space:nowrap;font-weight:500"></span>
       </div>
+
+      <!-- ===== v1.12.0 产品明细 ===== -->
+      <div style="margin:14px 0 4px">
+        <div class="section-title" style="margin-bottom:6px">📦 产品明细 <span class="tag">按规格登记，与过磅对账</span></div>
+        <div id="formItems"></div>
+        <button type="button" onclick="addFormItem()" style="margin-top:4px;background:#e8f1ff;color:#1565c0;border:1px dashed #9cc4ff;border-radius:8px;padding:8px 12px;font-size:13px;cursor:pointer">＋ 添加产品</button>
+        <div id="formItemsRecon" style="font-size:12px;margin-top:6px;color:#555"></div>
+      </div>
+
       <textarea id="fNote" placeholder="备注：其他情况说明（如：茂南图书馆装套扣，回茂名仓库换货，送开平鹏峰）" style="width:100%;min-height:56px;padding:8px;border:1px solid #ddd;border-radius:8px;font-size:14px;margin-top:8px;resize:vertical;font-family:inherit"></textarea>
       <input type="text" id="fIdCard" readonly style="display:none">
     </div>
@@ -484,7 +494,13 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <input type="number" id="mWeighFee" inputmode="decimal" placeholder="过磅费">
       </div>
       <div class="field-label">过磅重量(公斤)</div>
-      <input type="number" id="mWeight" inputmode="decimal" placeholder="过磅重量">
+      <input type="number" id="mWeight" inputmode="decimal" placeholder="过磅重量" oninput="updateEditRecon()">
+      <div style="margin:12px 0 4px">
+        <div class="field-label">📦 产品明细 <span style="font-size:11px;color:#888">（与过磅对账）</span></div>
+        <div id="editItems"></div>
+        <button type="button" onclick="addEditItem()" style="margin-top:4px;background:#e8f1ff;color:#1565c0;border:1px dashed #9cc4ff;border-radius:8px;padding:7px 11px;font-size:13px;cursor:pointer">＋ 添加产品</button>
+        <div id="editItemsRecon" style="font-size:12px;margin-top:6px;color:#555"></div>
+      </div>
     </div>
     <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">💾 保存修改</button>
     <button class="cancel-btn" onclick="closeFullEdit()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">取消</button>
@@ -634,6 +650,7 @@ async function checkGate() {
     if (typeof loadLocationLib === 'function') loadLocationLib();
     if (typeof loadPartyMap === 'function') loadPartyMap();
     if (typeof loadPartyNames === 'function') loadPartyNames();
+    if (typeof loadProductSpecs === 'function') loadProductSpecs();
   } else {
     document.getElementById('gateError').textContent = '密码错误';
     document.getElementById('gatePassword').value = '';
@@ -819,6 +836,7 @@ let filterKeyword = '';
 let locationFilter = 'all'; // 'all' | 'from' | 'to'
 let goodsFilter = 'all'; // 'all' | '盘扣' | '套扣' | '其他'
 let currentDetail = null;
+let currentDetailItems = [];   // v1.12.0 当前详情记录的产品明细
 let deliveryType = '送货'; // 默认送货
 let showRecycle = false; // 回收站视图开关
 let autoFillTimer = null; // 司机自动填充防抖
@@ -864,6 +882,119 @@ function resetForm() {
   document.querySelectorAll('#typeBtns .goods-btn').forEach(b => {
     b.classList.toggle('active', b.textContent.trim() === '送货');
   });
+  formItems = []; renderFormItems();   // v1.12.0 清空产品明细
+}
+
+// ===== v1.12.0 产品明细（登记表单页）=====
+let formItems = [];   // [{ type, code, size, unit, qty, unit_weight, line_weight }]
+const ITEM_UNITS = ['件', '支', '根', '个', '套', '扎', '捆'];
+function formItemSystem() {
+  if (selectedGoods === '盘扣' || selectedGoods === '套扣') return selectedGoods;
+  return '';   // 其他 / 未选 → 手填模式
+}
+function addFormItem() {
+  formItems.push({ type: '', code: '', size: '', unit: '件', qty: '', unit_weight: '', line_weight: 0 });
+  renderFormItems();
+}
+function removeFormItem(idx) { formItems.splice(idx, 1); renderFormItems(); }
+function recomputeFormItem(idx) {
+  const it = formItems[idx];
+  it.line_weight = parseNum(it.qty) * parseNum(it.unit_weight);
+}
+function onFormItemType(idx, v) { formItems[idx].type = v; formItems[idx].code = ''; renderFormItems(); }
+function onFormItemSpec(idx, v) {
+  formItems[idx].code = v;
+  const sys = formItemSystem();
+  if (sys) {
+    const sp = specsForSystem(sys).find(function (s) { return s.code === v; });
+    if (sp) { formItems[idx].type = sp.type; formItems[idx].size = sp.size; formItems[idx].unit_weight = sp.unit_weight; }
+  }
+  recomputeFormItem(idx); renderFormItems();
+}
+function onFormItemWeight(idx, v) { formItems[idx].unit_weight = parseNum(v); recomputeFormItem(idx); updateFormRecon(); }
+function onFormItemUnit(idx, v) { formItems[idx].unit = v; }
+function onFormItemQty(idx, v) { formItems[idx].qty = v; recomputeFormItem(idx); updateFormRecon(); }
+function renderFormItems() {
+  const box = document.getElementById('formItems');
+  if (!box) return;
+  if (formItems.length === 0) {
+    box.innerHTML = '<div style="font-size:12px;color:#999;padding:4px 0">还没有产品明细，点「＋ 添加产品」逐规格登记（与过磅重量对账）</div>';
+    updateFormRecon(); return;
+  }
+  const sys = formItemSystem();
+  const specs = sys ? specsForSystem(sys) : [];
+  const types = []; specs.forEach(function (s) { if (types.indexOf(s.type) < 0) types.push(s.type); });
+  const useSpec = !!sys && specs.length > 0;
+  box.innerHTML = formItems.map(function (it, idx) {
+    const unitOpts = ITEM_UNITS.map(function (u) { return '<option value="' + u + '"' + (it.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('');
+    let typeCell, specCell;
+    if (useSpec) {
+      const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+      const sub = specs.filter(function (s) { return s.type === it.type; });
+      const specOpts = '<option value="">规格</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      typeCell = '<select onchange="onFormItemType(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
+      specCell = '<select onchange="onFormItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
+    } else {
+      // 手填（其他体系 或 规格表未加载）：规格名自由填 + 单重手填
+      typeCell = '<input type="text" placeholder="规格/名称" value="' + escapeHtml(it.code || '') + '" oninput="onFormItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:110px">';
+      specCell = '<input type="number" step="0.001" placeholder="单重kg" value="' + (it.unit_weight || '') + '" oninput="onFormItemWeight(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:74px">';
+    }
+    return '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' +
+      typeCell + specCell +
+      '<select onchange="onFormItemUnit(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + unitOpts + '</select>' +
+      '<input type="number" step="1" placeholder="数量" value="' + (it.qty === '' ? '' : it.qty) + '" oninput="onFormItemQty(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:64px">' +
+      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg</span>' +
+      '<button type="button" onclick="removeFormItem(' + idx + ')" style="border:none;background:#ffeaea;color:#c00;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:14px">×</button>' +
+      '</div>';
+  }).join('');
+  updateFormRecon();
+}
+function updateFormRecon() {
+  const el = document.getElementById('formItemsRecon'); if (!el) return;
+  const sum = formItems.reduce(function (s, it) { return s + (parseNum(it.line_weight) || 0); }, 0);
+  const w = parseNum(document.getElementById('fWeight').value);
+  if (formItems.length === 0) { el.innerHTML = ''; return; }
+  const diff = sum - w;
+  const bad = Math.abs(diff) > Math.max(5, w * 0.005);
+  el.innerHTML = '明细合计 <b>' + sum.toFixed(1) + 'kg</b> / 过磅 <b>' + (w ? w.toFixed(1) : '—') + 'kg</b> / 差值 ' +
+    '<b style="color:' + (bad ? '#e65100' : '#2e7d32') + '">' + (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'kg</b>' +
+    (bad ? ' ⚠️ 不一致' : ' ✓');
+}
+// 把表单明细整理成待写入 record_items 的行（去空）
+function collectFormItems(recordId) {
+  const sys = formItemSystem();
+  return formItems
+    .filter(function (it) { return (it.code || it.type) && parseNum(it.qty) > 0; })
+    .map(function (it) {
+      return {
+        record_id: recordId,
+        system: sys || null,
+        type: it.type || null,
+        spec_code: it.code || null,
+        spec_size: it.size || null,
+        unit: it.unit || '件',
+        qty: parseNum(it.qty),
+        unit_weight: parseNum(it.unit_weight),
+        line_weight: parseNum(it.qty) * parseNum(it.unit_weight)
+      };
+    });
+}
+// 生成 UUID（用于 record.id，便于挂载 record_items；兼容无 crypto.randomUUID 的环境）
+function genUuid() {
+  if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = Math.random() * 16 | 0; const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+// 一次性写入明细（best-effort：失败不影响主记录）
+async function saveRecordItems(rows) {
+  if (!rows || rows.length === 0) return;
+  if (!navigator.onLine || productSpecsMissing) return;   // 离线/表未建时跳过(明细随离线记录稍后补)
+  try {
+    const { error } = await supabaseClient.from('record_items').insert(rows);
+    if (error) throw error;
+  } catch (e) { console.warn('产品明细写入失败(主记录已存):', e); }
 }
 
 function checkPaste() {
@@ -1294,8 +1425,10 @@ async function doSubmit() {
   // 以下是可选字段(可能在某些版本不存在,自动去重)
   if (r.note) record.note = r.note;
   if (r.deliveryType) record.delivery_type = r.deliveryType;
+  record.id = genUuid();   // v1.12.0 客户端生成 id,用于挂载产品明细
   // 检测网络:在线则正常提交,离线则存本地队列
   if (!navigator.onLine) {
+    record._items = collectFormItems(record.id);   // v1.12.0 明细随离线记录一起存
     saveOfflineRecord(record);
     toast('📴 离线模式:已存本地,有网后自动同步', false);
     resetForm();
@@ -1318,6 +1451,7 @@ async function doSubmit() {
   if (error) {
     // 网络报错(可能是临时断网) → 也存本地
     if (/fetch|network|timeout|ENOTFOUND|connection/i.test(error.message)) {
+      record._items = collectFormItems(record.id);
       saveOfflineRecord(record);
       toast('📴 网络异常:已存本地,有网后自动同步', false);
       resetForm();
@@ -1327,6 +1461,7 @@ async function doSubmit() {
     toast('提交失败:' + error.message, false, true);
     return;
   }
+  await saveRecordItems(collectFormItems(record.id));   // v1.12.0 明细随主记录写入
   writeLog('create', null, r.plateMain, '新增登记' + (r.name ? ' · ' + r.name : ''));
   toast('已登记 ✓', true);
   resetForm();
@@ -1362,6 +1497,8 @@ async function syncOfflineQueue() {
     const cleanRec = { ...rec };
     delete cleanRec._offline_id;
     delete cleanRec._offline_time;
+    const items = cleanRec._items || null;   // v1.12.0 离线记录携带的明细
+    delete cleanRec._items;
     const { error } = await supabaseClient.from('records').insert([cleanRec]);
     if (error) {
       // 失败(除了列不存在的),留在队列
@@ -1371,12 +1508,13 @@ async function syncOfflineQueue() {
         if (cleanRec[m[1]] !== undefined) {
           delete cleanRec[m[1]];
           const retry = await supabaseClient.from('records').insert([cleanRec]);
-          if (!retry.error) { synced++; continue; }
+          if (!retry.error) { if (items) await saveRecordItems(items); synced++; continue; }
         }
       }
       failed++;
       remain.push(rec);
     } else {
+      if (items) await saveRecordItems(items);   // v1.12.0 明细随主记录补登
       synced++;
       writeLog('create', null, cleanRec.plate_main, '离线补登');
     }
@@ -1829,6 +1967,41 @@ async function reloadPartyMap() {
 let initialStocks = {};        // { 供货商名: 初始吨位(number) }
 let initialStocksMissing = false;
 let inventorySplitGoods = false;   // v1.11.1:存货量维度是否按货物(盘扣/套扣…)拆分展开
+// ===== v1.12.0 产品规格（盘扣/套扣标准，单重来源 = record_items 的 unit_weight）=====
+let productSpecs = [];           // [{ system, type, code, size, unit_weight, bundle, is_active, note }]
+let productSpecsMissing = false;
+let productSpecsTask = null;
+function loadProductSpecs(force) {
+  if (productSpecsMissing && !force) return Promise.resolve(productSpecs);
+  if (productSpecsTask && !force) return productSpecsTask;
+  productSpecsTask = (async function () {
+    try {
+      if (navigator.onLine) {
+        const { data, error } = await supabaseClient
+          .from('product_specs').select('system, type, code, size, unit_weight, bundle, is_active, note');
+        if (error) throw error;
+        productSpecs = (data || []).map(function (r) {
+          return {
+            system: r.system, type: r.type, code: r.code, size: r.size,
+            unit_weight: parseNum(r.unit_weight),
+            bundle: (r.bundle == null ? null : parseNum(r.bundle)),
+            is_active: r.is_active !== false, note: r.note || ''
+          };
+        });
+      }
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      if (/product_specs|Could not find the table|does not exist|relation/i.test(msg)) productSpecsMissing = true;
+      console.warn('产品规格没读到(明细录入将只能手填单重):', msg);
+    }
+    return productSpecs;
+  })();
+  return productSpecsTask;
+}
+// 某体系下的启用规格；system 为空(其他)返回 []
+function specsForSystem(sys) {
+  return productSpecs.filter(function (s) { return s.system === sys && s.is_active; });
+}
 let initialStocksTask = null;
 function loadInitialStocks(force) {
   if (initialStocksMissing && !force) return Promise.resolve(initialStocks);
@@ -2853,7 +3026,7 @@ function showRecordDetail(id) {
   const r = currentRecords.find(x => x.id === id);
   if (!r) return;
   currentDetail = r;
-  renderDetailChanged(r);
+  loadRecordItems(id).then(function (items) { currentDetailItems = items; renderDetailChanged(r); });
   showDetail();
 }
 
@@ -2887,11 +3060,105 @@ function renderDetail(r, changedKeys) {
   }).join('');
   document.getElementById('eWeight').value = r.weight || '';
   document.getElementById('eWeighFee').value = r.weigh_fee || '';
+  renderDetailItemsBlock();
   hideEdit();
+}
+// v1.12.0 详情页产品明细展示（依赖 currentDetailItems 全局，由 showRecordDetail / 保存后载入）
+function renderDetailItemsBlock() {
+  const box = document.getElementById('detailItemsBlock'); if (!box) return;
+  if (!currentDetailItems || currentDetailItems.length === 0) { box.innerHTML = ''; return; }
+  let sum = 0;
+  const rows = currentDetailItems.map(function (it) {
+    const lw = parseNum(it.line_weight); sum += lw;
+    const name = (it.type || it.spec_code || '产品') + (it.spec_size ? ' ' + it.spec_size : '') + (it.spec_code && it.spec_code !== it.type ? ' (' + it.spec_code + ')' : '');
+    return '<div class="detail-item"><span class="label">📦 ' + (it.system ? escapeHtml(it.system) + ' · ' : '') + escapeHtml(name) + '</span><span class="value">' + escapeHtml(it.qty + ' ' + (it.unit || '件') + ' · ' + lw.toFixed(1) + 'kg') + '</span></div>';
+  }).join('');
+  box.innerHTML = '<div style="margin-top:6px;padding-top:8px;border-top:1px dashed #eee">' + rows +
+    '<div class="detail-item"><span class="label">📦 明细合计</span><span class="value" style="font-weight:600">' + sum.toFixed(1) + ' kg</span></div></div>';
+}
+// v1.12.0 读取某记录的产品明细（best-effort）
+async function loadRecordItems(recordId) {
+  if (!recordId) return [];
+  try {
+    const { data, error } = await supabaseClient.from('record_items').select('*').eq('record_id', recordId);
+    if (error) throw error;
+    return data || [];
+  } catch (e) { console.warn('读取产品明细失败:', e); return []; }
+}
+
+// ===== v1.12.0 修改弹窗的产品明细（与登记表单页同构）=====
+let editItems = [];
+function editItemSystem() {
+  const g = document.querySelector('#fullEditForm .goods-btns .goods-btn.active');
+  const t = g ? g.textContent.trim() : '';
+  if (t === '盘扣' || t === '套扣') return t;
+  return '';
+}
+function addEditItem() { editItems.push({ type: '', code: '', size: '', unit: '件', qty: '', unit_weight: '', line_weight: 0 }); renderEditItems(); }
+function removeEditItem(idx) { editItems.splice(idx, 1); renderEditItems(); }
+function recomputeEditItem(idx) { const it = editItems[idx]; it.line_weight = parseNum(it.qty) * parseNum(it.unit_weight); }
+function onEditItemType(idx, v) { editItems[idx].type = v; editItems[idx].code = ''; renderEditItems(); }
+function onEditItemSpec(idx, v) {
+  editItems[idx].code = v; const sys = editItemSystem();
+  if (sys) { const sp = specsForSystem(sys).find(function (s) { return s.code === v; }); if (sp) { editItems[idx].type = sp.type; editItems[idx].size = sp.size; editItems[idx].unit_weight = sp.unit_weight; } }
+  recomputeEditItem(idx); renderEditItems();
+}
+function onEditItemWeight(idx, v) { editItems[idx].unit_weight = parseNum(v); recomputeEditItem(idx); updateEditRecon(); }
+function onEditItemUnit(idx, v) { editItems[idx].unit = v; }
+function onEditItemQty(idx, v) { editItems[idx].qty = v; recomputeEditItem(idx); updateEditRecon(); }
+function renderEditItems() {
+  const box = document.getElementById('editItems'); if (!box) return;
+  if (editItems.length === 0) { box.innerHTML = '<div style="font-size:12px;color:#999;padding:4px 0">还没有产品明细</div>'; updateEditRecon(); return; }
+  const sys = editItemSystem(); const specs = sys ? specsForSystem(sys) : []; const types = [];
+  specs.forEach(function (s) { if (types.indexOf(s.type) < 0) types.push(s.type); });
+  const useSpec = !!sys && specs.length > 0;
+  box.innerHTML = editItems.map(function (it, idx) {
+    const unitOpts = ITEM_UNITS.map(function (u) { return '<option value="' + u + '"' + (it.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('');
+    let typeCell, specCell;
+    if (useSpec) {
+      const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+      const sub = specs.filter(function (s) { return s.type === it.type; });
+      const specOpts = '<option value="">规格</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      typeCell = '<select onchange="onEditItemType(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
+      specCell = '<select onchange="onEditItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
+    } else {
+      typeCell = '<input type="text" placeholder="规格/名称" value="' + escapeHtml(it.code || '') + '" oninput="onEditItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:110px">';
+      specCell = '<input type="number" step="0.001" placeholder="单重kg" value="' + (it.unit_weight || '') + '" oninput="onEditItemWeight(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:74px">';
+    }
+    return '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + typeCell + specCell +
+      '<select onchange="onEditItemUnit(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + unitOpts + '</select>' +
+      '<input type="number" step="1" placeholder="数量" value="' + (it.qty === '' ? '' : it.qty) + '" oninput="onEditItemQty(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:64px">' +
+      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg</span>' +
+      '<button type="button" onclick="removeEditItem(' + idx + ')" style="border:none;background:#ffeaea;color:#c00;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:14px">×</button></div>';
+  }).join('');
+  updateEditRecon();
+}
+function updateEditRecon() {
+  const el = document.getElementById('editItemsRecon'); if (!el) return;
+  const sum = editItems.reduce(function (s, it) { return s + (parseNum(it.line_weight) || 0); }, 0);
+  const w = parseNum(document.getElementById('mWeight').value);
+  if (editItems.length === 0) { el.innerHTML = ''; return; }
+  const diff = sum - w; const bad = Math.abs(diff) > Math.max(5, w * 0.005);
+  el.innerHTML = '明细合计 <b>' + sum.toFixed(1) + 'kg</b> / 过磅 <b>' + (w ? w.toFixed(1) : '—') + 'kg</b> / 差值 <b style="color:' + (bad ? '#e65100' : '#2e7d32') + '">' + (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'kg</b>' + (bad ? ' ⚠️ 不一致' : ' ✓');
+}
+function collectEditItems(recordId) {
+  const sys = editItemSystem();
+  return editItems.filter(function (it) { return (it.code || it.type) && parseNum(it.qty) > 0; })
+    .map(function (it) {
+      return { record_id: recordId, system: sys || null, type: it.type || null, spec_code: it.code || null, spec_size: it.size || null, unit: it.unit || '件', qty: parseNum(it.qty), unit_weight: parseNum(it.unit_weight), line_weight: parseNum(it.qty) * parseNum(it.unit_weight) };
+    });
+}
+// 先删后插（best-effort：失败不影响主记录修改）
+async function replaceRecordItems(recordId, rows) {
+  if (!navigator.onLine || productSpecsMissing) return;
+  try {
+    await supabaseClient.from('record_items').delete().eq('record_id', recordId);
+    if (rows && rows.length) await supabaseClient.from('record_items').insert(rows);
+  } catch (e) { console.warn('产品明细更新失败:', e); }
 }
 
 // ===== 完整修改功能 =====
-function openFullEdit() {
+async function openFullEdit() {
   if (!currentDetail) return;
   const r = currentDetail;
   document.getElementById('mDate').value = toDateInputValue(r.date);
@@ -2927,6 +3194,8 @@ function openFullEdit() {
     otherInput.style.display = 'none';
     otherInput.value = '';
   }
+  editItems = await loadRecordItems(r.id);   // v1.12.0 载入已有明细
+  renderEditItems();
   document.getElementById('fullEditModal').classList.add('show');
   modalEditOriginal = {
     plate_main: r.plate_main, plate_trailer: r.plate_trailer,
@@ -2950,6 +3219,7 @@ function selectModalGoods(btn, name) {
     otherInput.style.display = 'none';
     otherInput.value = '';
   }
+  if (typeof renderEditItems === 'function') renderEditItems();   // v1.12.0 货物切换→重算规格下拉
 }
 
 function selectModalType(btn, type) {
@@ -3035,6 +3305,7 @@ async function saveFullEdit() {
     error = retry.error;
   }
   if (error) { toast('保存失败:' + error.message, false, true); return; }
+  await replaceRecordItems(currentDetail.id, collectEditItems(currentDetail.id));   // v1.12.0 同步明细
   writeLog('update', currentDetail.id, newData.plate_main,
     changedFields.length
       ? changedFields.map(f => f.label + ': ' + (f.oldVal || '空') + '→' + (f.newVal || '空')).join('；')
@@ -3044,6 +3315,7 @@ async function saveFullEdit() {
   if (data) {
     data.id_card = await decryptIdCard(data.id_card);
     currentDetail = data;
+    currentDetailItems = await loadRecordItems(currentDetail.id);
     renderDetailWithChanges(data, changedFields);
   }
   closeFullEdit();
@@ -4159,10 +4431,11 @@ setupLocationPickers();
     loadPartyMap();           // 客户/供货商归属(没建表就静默回落,不影响用)
     loadPartyNames();         // v1.10.0 名称表(归属下拉的候选池;同样静默回落)
     loadInitialStocks();       // v1.11.0 供货商初始库存(存货量维度用;没建表静默回落)
+    loadProductSpecs();        // v1.12.0 产品规格(明细录入自动带单重用;没建表静默回落)
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.11.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.12.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 

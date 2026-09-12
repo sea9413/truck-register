@@ -339,3 +339,98 @@ select c.relname as table_name,
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relname = 'initial_stocks';
+
+-- ===== 第 12 块：v1.12.0 产品规格表（盘扣/套扣标准，单重来源）=====
+-- 标准直接取自「脚手架重量计算器」的两套配件表 PARTS_PANKOU / PARTS_TAOKOU。
+-- 每款 weight = 单重(kg/件)，也即 record_items 录入时自动带出的 unit_weight。
+-- 体系(system)必须进唯一键：盘扣与套扣同部件(如立杆)单重不同。
+CREATE TABLE IF NOT EXISTS product_specs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  system TEXT NOT NULL,          -- '盘扣' | '套扣'
+  type TEXT NOT NULL,            -- 立杆/横杆/斜拉杆/顶托/底座/架子
+  code TEXT NOT NULL,            -- LG2.5 等规格代号
+  size TEXT,                     -- 0.2m / 40cm / 38*600m
+  unit_weight NUMERIC NOT NULL DEFAULT 0,  -- 单重 kg/件
+  bundle INTEGER,                -- 件/扎（参考）
+  is_active BOOLEAN DEFAULT true,
+  note TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_product_specs_sys_type_code
+  ON product_specs (system, type, code);
+ALTER TABLE product_specs ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anonymous read prodspec" ON product_specs;
+CREATE POLICY "Allow anonymous read prodspec" ON product_specs FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow anonymous insert prodspec" ON product_specs;
+CREATE POLICY "Allow anonymous insert prodspec" ON product_specs FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous update prodspec" ON product_specs;
+CREATE POLICY "Allow anonymous update prodspec" ON product_specs FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous delete prodspec" ON product_specs;
+CREATE POLICY "Allow anonymous delete prodspec" ON product_specs FOR DELETE USING (true);
+
+-- 种子数据（盘扣 = PARTS_PANKOU，套扣 = PARTS_TAOKOU；ON CONFLICT DO NOTHING 可重复跑）
+INSERT INTO product_specs (system, type, code, size, unit_weight, bundle) VALUES
+-- ── 盘扣 ──
+('盘扣','立杆','LG0.2','0.2m',1.750,805),
+('盘扣','立杆','LG0.3','0.3m',2.700,805),
+('盘扣','立杆','LG0.5','0.5m',3.500,483),
+('盘扣','立杆','LG1.0','1m',5.950,322),
+('盘扣','立杆','LG1.5','1.5m',8.300,161),
+('盘扣','立杆','LG2.0','2m',10.800,161),
+('盘扣','立杆','LG2.5','2.5m',13.100,161),
+('盘扣','横杆','HG0.3','0.3m',1.420,700),
+('盘扣','横杆','HG0.6','0.55m',2.480,320),
+('盘扣','横杆','HG0.9','0.85m',3.400,320),
+('盘扣','横杆','HG1.2','1.15m',4.350,320),
+('盘扣','斜拉杆','XLG1.61','1.61m',5.420,300),
+('盘扣','斜拉杆','XLG1.71','1.71m',5.700,300),
+('盘扣','斜拉杆','XLG1.86','1.86m',6.100,300),
+('盘扣','顶托','顶托','38*600m',4.920,150),
+('盘扣','底座','底座','38*500m',3.410,100),
+('盘扣','架子','架子','1套',30.000,NULL)
+ON CONFLICT (system, type, code) DO NOTHING;
+INSERT INTO product_specs (system, type, code, size, unit_weight, bundle) VALUES
+-- ── 套扣（套扣体系无斜拉杆）──
+('套扣','立杆','LG-40cm','40cm',1.64,500),
+('套扣','立杆','LG-45cm','45cm',2.13,400),
+('套扣','立杆','LG-70cm','70cm',2.96,300),
+('套扣','立杆','LG-100cm','100cm',4.28,200),
+('套扣','立杆','LG-130cm','130cm',5.27,200),
+('套扣','立杆','LG-190cm','190cm',7.59,100),
+('套扣','立杆','LG-250cm','250cm',9.91,100),
+('套扣','横杆','HG-52.5cm','52.5cm',1.86,420),
+('套扣','横杆','HG-60cm','60cm',2.11,135),
+('套扣','横杆','HG-90cm','90cm',3.11,210),
+('套扣','横杆','HG-105cm','105cm',3.61,289),
+('套扣','斜拉杆','XLG1.71','1.71m',5.700,300),
+('套扣','顶托','顶托','套扣顶托',4.3,300),
+('套扣','底座','底座','38*500',3.410,100)
+ON CONFLICT (system, type, code) DO NOTHING;
+
+-- ===== 第 13 块：v1.12.0 每车产品明细（一车多条）=====
+-- 送货/退货的一车可装多种规格产品；明细 Σline_weight 应与 records.weight(过磅)对账。
+-- system 冗余存储，便于按体系直接汇总，不必每次回 join product_specs。
+CREATE TABLE IF NOT EXISTS record_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  record_id UUID NOT NULL REFERENCES records(id) ON DELETE CASCADE,
+  system TEXT,                 -- 盘扣/套扣（冗余）
+  type TEXT,                   -- 部件类型
+  spec_code TEXT,
+  spec_size TEXT,
+  unit TEXT,                   -- 件/支/根/套
+  qty NUMERIC NOT NULL DEFAULT 0,
+  unit_weight NUMERIC NOT NULL DEFAULT 0,   -- 录入时由规格带出(可手改)
+  line_weight NUMERIC NOT NULL DEFAULT 0,   -- = qty * unit_weight
+  note TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_record_items_record ON record_items (record_id);
+ALTER TABLE record_items ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anonymous read recitem" ON record_items;
+CREATE POLICY "Allow anonymous read recitem" ON record_items FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow anonymous insert recitem" ON record_items;
+CREATE POLICY "Allow anonymous insert recitem" ON record_items FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous update recitem" ON record_items;
+CREATE POLICY "Allow anonymous update recitem" ON record_items FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous delete recitem" ON record_items;
+CREATE POLICY "Allow anonymous delete recitem" ON record_items FOR DELETE USING (true);
