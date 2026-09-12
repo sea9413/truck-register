@@ -902,18 +902,26 @@ function resetForm() {
 // ===== v1.12.0 产品明细（登记表单页）=====
 let formItems = [];   // [{ type, code, size, unit, qty, unit_weight, line_weight }]
 const ITEM_UNITS = ['件', '支', '根', '个', '套', '扎', '捆'];
+// 根据单位和 bundle 算有效单重：unit_weight 存的是单支/单个基础重量，
+// 选「捆」为单位时需乘以 bundle（每捆支数），和计算器逻辑一致
+function effectiveUnitWeight(it) {
+  var uw = parseNum(it.unit_weight) || 0;
+  var b = parseNum(it.bundle);
+  if (it.unit === '捆' && b > 0) return uw * b;
+  return uw;
+}
 function formItemSystem() {
   if (selectedGoods === '盘扣' || selectedGoods === '套扣') return selectedGoods;
   return '';   // 其他 / 未选 → 手填模式
 }
 function addFormItem() {
-  formItems.push({ type: '', code: '', size: '', unit: '件', qty: '', unit_weight: '', line_weight: 0 });
+  formItems.push({ type: '', code: '', size: '', unit: '支', qty: '', unit_weight: '', bundle: null, line_weight: 0 });
   renderFormItems();
 }
 function removeFormItem(idx) { formItems.splice(idx, 1); renderFormItems(); }
 function recomputeFormItem(idx) {
   const it = formItems[idx];
-  it.line_weight = parseNum(it.qty) * parseNum(it.unit_weight);
+  it.line_weight = parseNum(it.qty) * effectiveUnitWeight(it);
 }
 function onFormItemType(idx, v) { formItems[idx].type = v; formItems[idx].code = ''; renderFormItems(); }
 function onFormItemSpec(idx, v) {
@@ -921,12 +929,12 @@ function onFormItemSpec(idx, v) {
   const sys = formItemSystem();
   if (sys) {
     const sp = specsForSystem(sys).find(function (s) { return s.code === v; });
-    if (sp) { formItems[idx].type = sp.type; formItems[idx].size = sp.size; formItems[idx].unit_weight = sp.unit_weight; }
+    if (sp) { formItems[idx].type = sp.type; formItems[idx].size = sp.size; formItems[idx].unit_weight = sp.unit_weight; formItems[idx].bundle = sp.bundle; }
   }
   recomputeFormItem(idx); renderFormItems();
 }
 function onFormItemWeight(idx, v) { formItems[idx].unit_weight = parseNum(v); recomputeFormItem(idx); updateFormRecon(); }
-function onFormItemUnit(idx, v) { formItems[idx].unit = v; }
+function onFormItemUnit(idx, v) { formItems[idx].unit = v; recomputeFormItem(idx); updateFormRecon(); }
 function onFormItemQty(idx, v) { formItems[idx].qty = v; recomputeFormItem(idx); updateFormRecon(); }
 function renderFormItems() {
   const box = document.getElementById('formItems');
@@ -947,7 +955,7 @@ function renderFormItems() {
     if (hasAnySpecs) {
       const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
       const sub = specs.filter(function (s) { return s.type === it.type; });
-      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/' + (s.bundle ? '支' : '个') + (s.bundle ? ', ' + s.bundle + '/捆' : '') + ')</option>'; }).join('');
       typeCell = '<select onchange="onFormItemType(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
       specCell = '<select onchange="onFormItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
     } else {
@@ -955,11 +963,12 @@ function renderFormItems() {
       typeCell = '<input type="text" placeholder="规格/名称" value="' + escapeHtml(it.code || '') + '" oninput="onFormItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:110px">';
       specCell = '<input type="number" step="0.001" placeholder="单重kg" value="' + (it.unit_weight || '') + '" oninput="onFormItemWeight(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:74px">';
     }
+    var effW = effectiveUnitWeight(it);
     return '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' +
       typeCell + specCell +
       '<select onchange="onFormItemUnit(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + unitOpts + '</select>' +
       '<input type="number" step="1" placeholder="数量" value="' + (it.qty === '' ? '' : it.qty) + '" oninput="onFormItemQty(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:64px">' +
-      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg</span>' +
+      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg' + (effW ? ' (' + effW.toFixed(1) + 'kg/' + it.unit + ')' : '') + '</span>' +
       '<button type="button" onclick="removeFormItem(' + idx + ')" style="border:none;background:#ffeaea;color:#c00;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:14px">×</button>' +
       '</div>';
   }).join('');
@@ -3129,17 +3138,17 @@ function editItemSystem() {
   if (t === '盘扣' || t === '套扣') return t;
   return '';
 }
-function addEditItem() { editItems.push({ type: '', code: '', size: '', unit: '件', qty: '', unit_weight: '', line_weight: 0 }); renderEditItems(); }
+function addEditItem() { editItems.push({ type: '', code: '', size: '', unit: '支', qty: '', unit_weight: '', bundle: null, line_weight: 0 }); renderEditItems(); }
 function removeEditItem(idx) { editItems.splice(idx, 1); renderEditItems(); }
-function recomputeEditItem(idx) { const it = editItems[idx]; it.line_weight = parseNum(it.qty) * parseNum(it.unit_weight); }
+function recomputeEditItem(idx) { const it = editItems[idx]; it.line_weight = parseNum(it.qty) * effectiveUnitWeight(it); }
 function onEditItemType(idx, v) { editItems[idx].type = v; editItems[idx].code = ''; renderEditItems(); }
 function onEditItemSpec(idx, v) {
   editItems[idx].code = v; const sys = editItemSystem();
-  if (sys) { const sp = specsForSystem(sys).find(function (s) { return s.code === v; }); if (sp) { editItems[idx].type = sp.type; editItems[idx].size = sp.size; editItems[idx].unit_weight = sp.unit_weight; } }
+  if (sys) { const sp = specsForSystem(sys).find(function (s) { return s.code === v; }); if (sp) { editItems[idx].type = sp.type; editItems[idx].size = sp.size; editItems[idx].unit_weight = sp.unit_weight; editItems[idx].bundle = sp.bundle; } }
   recomputeEditItem(idx); renderEditItems();
 }
 function onEditItemWeight(idx, v) { editItems[idx].unit_weight = parseNum(v); recomputeEditItem(idx); updateEditRecon(); }
-function onEditItemUnit(idx, v) { editItems[idx].unit = v; }
+function onEditItemUnit(idx, v) { editItems[idx].unit = v; recomputeEditItem(idx); updateEditRecon(); }
 function onEditItemQty(idx, v) { editItems[idx].qty = v; recomputeEditItem(idx); updateEditRecon(); }
 function renderEditItems() {
   const box = document.getElementById('editItems'); if (!box) return;
@@ -3157,17 +3166,18 @@ function renderEditItems() {
     if (hasAnySpecs) {
       const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
       const sub = specs.filter(function (s) { return s.type === it.type; });
-      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/' + (s.bundle ? '支' : '个') + (s.bundle ? ', ' + s.bundle + '/捆' : '') + ')</option>'; }).join('');
       typeCell = '<select onchange="onEditItemType(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
       specCell = '<select onchange="onEditItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
     } else {
       typeCell = '<input type="text" placeholder="规格/名称" value="' + escapeHtml(it.code || '') + '" oninput="onEditItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:110px">';
       specCell = '<input type="number" step="0.001" placeholder="单重kg" value="' + (it.unit_weight || '') + '" oninput="onEditItemWeight(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:74px">';
     }
+    var effW2 = effectiveUnitWeight(it);
     return '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + typeCell + specCell +
       '<select onchange="onEditItemUnit(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + unitOpts + '</select>' +
       '<input type="number" step="1" placeholder="数量" value="' + (it.qty === '' ? '' : it.qty) + '" oninput="onEditItemQty(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:64px">' +
-      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg</span>' +
+      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg' + (effW2 ? ' (' + effW2.toFixed(1) + 'kg/' + it.unit + ')' : '') + '</span>' +
       '<button type="button" onclick="removeEditItem(' + idx + ')" style="border:none;background:#ffeaea;color:#c00;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:14px">×</button></div>';
   }).join('');
   updateEditRecon();
@@ -3204,25 +3214,25 @@ function openItemEdit() {
   itemEditSys = (currentDetail.goods === '盘扣' || currentDetail.goods === '套扣') ? currentDetail.goods : '';
   loadRecordItems(currentDetail.id).then(function (items) {
     itemEditState = (items || []).map(function (it) {
-      return { type: it.type || '', code: it.spec_code || '', size: it.spec_size || '', unit: it.unit || '件', qty: it.qty, unit_weight: it.unit_weight, line_weight: it.line_weight || 0 };
+      return { type: it.type || '', code: it.spec_code || '', size: it.spec_size || '', unit: it.unit || '支', qty: it.qty, unit_weight: it.unit_weight, bundle: null, line_weight: it.line_weight || 0 };
     });
     renderItemEdit();
     document.getElementById('itemEditModal').classList.add('show');
   });
 }
 function closeItemEdit() { document.getElementById('itemEditModal').classList.remove('show'); }
-function addItemEditRow() { itemEditState.push({ type: '', code: '', size: '', unit: '件', qty: '', unit_weight: '', line_weight: 0 }); renderItemEdit(); }
+function addItemEditRow() { itemEditState.push({ type: '', code: '', size: '', unit: '支', qty: '', unit_weight: '', bundle: null, line_weight: 0 }); renderItemEdit(); }
 function removeItemEditRow(idx) { itemEditState.splice(idx, 1); renderItemEdit(); }
-function recomputeItemEdit(idx) { const it = itemEditState[idx]; it.line_weight = parseNum(it.qty) * parseNum(it.unit_weight); }
+function recomputeItemEdit(idx) { const it = itemEditState[idx]; it.line_weight = parseNum(it.qty) * effectiveUnitWeight(it); }
 function onItemEditType(idx, v) { itemEditState[idx].type = v; itemEditState[idx].code = ''; renderItemEdit(); }
 function onItemEditSpec(idx, v) {
   itemEditState[idx].code = v;
   const sp = itemEditSys ? specsForSystem(itemEditSys).find(function (s) { return s.code === v; }) : null;
-  if (sp) { itemEditState[idx].type = sp.type; itemEditState[idx].size = sp.size; itemEditState[idx].unit_weight = sp.unit_weight; }
+  if (sp) { itemEditState[idx].type = sp.type; itemEditState[idx].size = sp.size; itemEditState[idx].unit_weight = sp.unit_weight; itemEditState[idx].bundle = sp.bundle; }
   recomputeItemEdit(idx); renderItemEdit();
 }
 function onItemEditWeight(idx, v) { itemEditState[idx].unit_weight = parseNum(v); recomputeItemEdit(idx); updateItemEditRecon(); }
-function onItemEditUnit(idx, v) { itemEditState[idx].unit = v; }
+function onItemEditUnit(idx, v) { itemEditState[idx].unit = v; recomputeItemEdit(idx); updateItemEditRecon(); }
 function onItemEditQty(idx, v) { itemEditState[idx].qty = v; recomputeItemEdit(idx); updateItemEditRecon(); }
 function renderItemEdit() {
   const box = document.getElementById('itemEditItems'); if (!box) return;
@@ -3238,17 +3248,18 @@ function renderItemEdit() {
     if (hasAnySpecs) {
       const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
       const sub = specs.filter(function (s) { return s.type === it.type; });
-      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/' + (s.bundle ? '支' : '个') + (s.bundle ? ', ' + s.bundle + '/捆' : '') + ')</option>'; }).join('');
       typeCell = '<select onchange="onItemEditType(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
       specCell = '<select onchange="onItemEditSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
     } else {
       typeCell = '<input type="text" placeholder="规格/名称" value="' + escapeHtml(it.code || '') + '" oninput="onItemEditSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:110px">';
       specCell = '<input type="number" step="0.001" placeholder="单重kg" value="' + (it.unit_weight || '') + '" oninput="onItemEditWeight(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:74px">';
     }
+    var effW3 = effectiveUnitWeight(it);
     return '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + typeCell + specCell +
       '<select onchange="onItemEditUnit(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + unitOpts + '</select>' +
       '<input type="number" step="1" placeholder="数量" value="' + (it.qty === '' ? '' : it.qty) + '" oninput="onItemEditQty(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:64px">' +
-      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg</span>' +
+      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg' + (effW3 ? ' (' + effW3.toFixed(1) + 'kg/' + it.unit + ')' : '') + '</span>' +
       '<button type="button" onclick="removeItemEditRow(' + idx + ')" style="border:none;background:#ffeaea;color:#c00;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:14px">×</button></div>';
   }).join('');
   updateItemEditRecon();
@@ -4575,7 +4586,7 @@ setupLocationPickers();
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.12.2 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.12.3 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
