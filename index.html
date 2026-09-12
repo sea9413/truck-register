@@ -935,17 +935,19 @@ function renderFormItems() {
     box.innerHTML = '<div style="font-size:12px;color:#999;padding:4px 0">还没有产品明细，点「＋ 添加产品」逐规格登记（与过磅重量对账）</div>';
     updateFormRecon(); return;
   }
+  // 规格表有数据就始终用两级下拉（和计算器一致），不再要求必须先选盘扣/套扣
   const sys = formItemSystem();
-  const specs = sys ? specsForSystem(sys) : [];
+  const allActiveSpecs = productSpecs.filter(function (s) { return s.is_active; });
+  const hasAnySpecs = allActiveSpecs.length > 0;
+  const specs = (sys && allActiveSpecs.some(function (s) { return s.system === sys; })) ? specsForSystem(sys) : allActiveSpecs;
   const types = []; specs.forEach(function (s) { if (types.indexOf(s.type) < 0) types.push(s.type); });
-  const useSpec = !!sys && specs.length > 0;
   box.innerHTML = formItems.map(function (it, idx) {
     const unitOpts = ITEM_UNITS.map(function (u) { return '<option value="' + u + '"' + (it.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('');
     let typeCell, specCell;
-    if (useSpec) {
+    if (hasAnySpecs) {
       const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
       const sub = specs.filter(function (s) { return s.type === it.type; });
-      const specOpts = '<option value="">规格</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
       typeCell = '<select onchange="onFormItemType(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
       specCell = '<select onchange="onFormItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
     } else {
@@ -3142,16 +3144,20 @@ function onEditItemQty(idx, v) { editItems[idx].qty = v; recomputeEditItem(idx);
 function renderEditItems() {
   const box = document.getElementById('editItems'); if (!box) return;
   if (editItems.length === 0) { box.innerHTML = '<div style="font-size:12px;color:#999;padding:4px 0">还没有产品明细</div>'; updateEditRecon(); return; }
-  const sys = editItemSystem(); const specs = sys ? specsForSystem(sys) : []; const types = [];
+  // 规格表有数据就始终用两级下拉（和计算器一致）
+  const sys = editItemSystem();
+  const allActiveSpecs = productSpecs.filter(function (s) { return s.is_active; });
+  const hasAnySpecs = allActiveSpecs.length > 0;
+  const specs = (sys && allActiveSpecs.some(function (s) { return s.system === sys; })) ? specsForSystem(sys) : allActiveSpecs;
+  const types = [];
   specs.forEach(function (s) { if (types.indexOf(s.type) < 0) types.push(s.type); });
-  const useSpec = !!sys && specs.length > 0;
   box.innerHTML = editItems.map(function (it, idx) {
     const unitOpts = ITEM_UNITS.map(function (u) { return '<option value="' + u + '"' + (it.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('');
     let typeCell, specCell;
-    if (useSpec) {
+    if (hasAnySpecs) {
       const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
       const sub = specs.filter(function (s) { return s.type === it.type; });
-      const specOpts = '<option value="">规格</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
       typeCell = '<select onchange="onEditItemType(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
       specCell = '<select onchange="onEditItemSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
     } else {
@@ -3208,6 +3214,7 @@ function closeItemEdit() { document.getElementById('itemEditModal').classList.re
 function addItemEditRow() { itemEditState.push({ type: '', code: '', size: '', unit: '件', qty: '', unit_weight: '', line_weight: 0 }); renderItemEdit(); }
 function removeItemEditRow(idx) { itemEditState.splice(idx, 1); renderItemEdit(); }
 function recomputeItemEdit(idx) { const it = itemEditState[idx]; it.line_weight = parseNum(it.qty) * parseNum(it.unit_weight); }
+function onItemEditType(idx, v) { itemEditState[idx].type = v; itemEditState[idx].code = ''; renderItemEdit(); }
 function onItemEditSpec(idx, v) {
   itemEditState[idx].code = v;
   const sp = itemEditSys ? specsForSystem(itemEditSys).find(function (s) { return s.code === v; }) : null;
@@ -3220,17 +3227,19 @@ function onItemEditQty(idx, v) { itemEditState[idx].qty = v; recomputeItemEdit(i
 function renderItemEdit() {
   const box = document.getElementById('itemEditItems'); if (!box) return;
   if (itemEditState.length === 0) { box.innerHTML = '<div style="font-size:12px;color:#999;padding:4px 0">还没有产品明细，点「＋ 添加产品」逐规格登记</div>'; updateItemEditRecon(); return; }
-  const specs = itemEditSys ? specsForSystem(itemEditSys) : [];
+  // 规格表有数据就始终用两级下拉（和计算器一致）
+  const allActiveSpecs = productSpecs.filter(function (s) { return s.is_active; });
+  const hasAnySpecs = allActiveSpecs.length > 0;
+  const specs = (itemEditSys && allActiveSpecs.some(function (s) { return s.system === itemEditSys; })) ? specsForSystem(itemEditSys) : allActiveSpecs;
   const types = []; specs.forEach(function (s) { if (types.indexOf(s.type) < 0) types.push(s.type); });
-  const useSpec = !!itemEditSys && specs.length > 0;
   box.innerHTML = itemEditState.map(function (it, idx) {
     const unitOpts = ITEM_UNITS.map(function (u) { return '<option value="' + u + '"' + (it.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('');
     let typeCell, specCell;
-    if (useSpec) {
+    if (hasAnySpecs) {
       const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
       const sub = specs.filter(function (s) { return s.type === it.type; });
-      const specOpts = '<option value="">规格</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
-      typeCell = '<select onchange="onItemEditSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
+      const specOpts = '<option value="">— 请选规格 —</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      typeCell = '<select onchange="onItemEditType(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
       specCell = '<select onchange="onItemEditSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
     } else {
       typeCell = '<input type="text" placeholder="规格/名称" value="' + escapeHtml(it.code || '') + '" oninput="onItemEditSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:110px">';
@@ -4566,7 +4575,7 @@ setupLocationPickers();
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.12.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.12.2 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
