@@ -1828,6 +1828,7 @@ async function reloadPartyMap() {
 // 表没建 / 没权限就静默回落（initialStocksMissing），页面里初始库存那格变成只读、并提示去跑【第 11 块】。
 let initialStocks = {};        // { 供货商名: 初始吨位(number) }
 let initialStocksMissing = false;
+let inventorySplitGoods = false;   // v1.11.1:存货量维度是否按货物(盘扣/套扣…)拆分展开
 let initialStocksTask = null;
 function loadInitialStocks(force) {
   if (initialStocksMissing && !force) return Promise.resolve(initialStocks);
@@ -2334,9 +2335,12 @@ function renderStats() {
   box.innerHTML = html;
 }
 
-// v1.11.0 真实存货量维度：按供货商汇总 送/退，算 自有仓库实物 / 在客户处存货 / 总存货。
+// v1.11.1 真实存货量维度：按供货商汇总 送/退，算 自有仓库实物 / 在客存货 / 总存货。
 // 累计全部（非回收站）记录，不受日期范围限制——初始库存是时点数，存货是滚动余额。
 // 调拨经 supplierOf 返回 '' 已被自动排除，严守「调拨不增供应商库存」铁律。
+// 开启「按货物拆分」后，每个供货商下按货物(盘扣/套扣/未填货物)展开子行，看各自的送/退/在客存货；
+// 初始库存只按供货商记、不按货物拆，故 自有仓库实物/总存货/守恒 仍在供货商汇总行成立。
+function toggleInventoryGoods() { inventorySplitGoods = !inventorySplitGoods; renderStats(); }
 function renderInventory(box, dimHead) {
   const list = (currentRecords || []).filter(function (r) { return !r.deleted; });
   const range = (filterStartDate || '最早') + ' ~ ' + (filterEndDate || '今天');
@@ -2346,37 +2350,43 @@ function renderInventory(box, dimHead) {
     if (dt === '不统计') return;                          // 不统计类型不算存货
     const so = supplierOf(r);                             // 调拨 → ''，自然不计入
     if (!so) return;
-    if (!agg[so]) agg[so] = { name: so, sendCount: 0, sendTons: 0, backCount: 0, backTons: 0 };
+    if (!agg[so]) agg[so] = { name: so, sendCount: 0, sendTons: 0, backCount: 0, backTons: 0, goods: {} };
     const a = agg[so];
     const tons = parseNum(r.weight) / 1000;
-    if (dt === '退货') { a.backCount += 1; a.backTons += tons; }
-    else { a.sendCount += 1; a.sendTons += tons; }        // 送货（不含调拨）
+    const g = (r.goods || '').trim() || '未填货物';
+    if (!a.goods[g]) a.goods[g] = { sendCount: 0, sendTons: 0, backCount: 0, backTons: 0 };
+    const ga = a.goods[g];
+    if (dt === '退货') { a.backCount += 1; a.backTons += tons; ga.backCount += 1; ga.backTons += tons; }
+    else { a.sendCount += 1; a.sendTons += tons; ga.sendCount += 1; ga.sendTons += tons; }  // 送货（不含调拨）
   });
   const rows = Object.keys(agg).map(function (k) { return agg[k]; })
     .sort(function (a, b) { return a.name.localeCompare(b.name, 'zh-Hans-CN'); });
   const reduceCnt = function (key) { return rows.reduce(function (s, r) { return s + r[key]; }, 0); };
   let html = dimHead +
-    '<div style="font-size:12px;color:#888;margin-bottom:8px">真实存货量 · 累计全部记录（' + escapeHtml(range) + '）· 按供货商汇总，调拨不计入</div>';
+    '<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">' +
+    '<span style="font-size:12px;color:#888">真实存货量 · 累计全部记录（' + escapeHtml(range) + '）· 按供货商汇总，调拨不计入</span>' +
+    '<button class="goods-btn' + (inventorySplitGoods ? ' active' : '') + '" onclick="toggleInventoryGoods()" style="margin-left:auto">按货物拆分</button>' +
+    '</div>';
   if (rows.length === 0) {
     html += '<div class="empty">还没有可算存货量的供货商<br>先去「📍 地点库」给装货地配上「归属供货商」，记录里的送货/退货就会归到供货商名下</div>';
     box.innerHTML = html;
     return;
   }
   html += '<table class="stats-table"><thead><tr>' +
-    '<th>供货商</th><th>初始库存(吨)</th><th>送货</th><th>退货</th>' +
+    '<th>供货商 / 货物</th><th>初始库存(吨)</th><th>送货</th><th>退货</th>' +
     '<th>自有仓库实物</th><th>在客存货</th><th>总存货</th><th>校验</th></tr></thead><tbody>';
   let totInit = 0, totWh = 0, totCust = 0, totAll = 0;
+  const sub = function (c, t) { return '<div style="font-size:11px;color:' + (c || '#888') + '">' + t + '</div>'; };
   rows.forEach(function (r) {
     const init = initialStocks[r.name] || 0;
     const own = init + r.backTons - r.sendTons;   // 自有仓库实物 = 初始 + 退货 − 送货
     const atCust = r.sendTons - r.backTons;        // 在客户处存货 = 送货 − 退货（净在客）
     const total = own + atCust;                     // = 初始（守恒）
     const ok = Math.abs(total - init) < 1e-6;
-    const sub = function (c, t) { return '<div style="font-size:11px;color:' + (c || '#888') + '">' + t + '</div>'; };
     const initCell = initialStocksMissing
       ? (init ? init.toFixed(3) : '—')
       : '<input class="init-stock-input" data-sup="' + escapeHtml(r.name) + '" type="number" step="0.001" value="' + init + '" style="width:88px" title="点一下改初始库存">';
-    html += '<tr data-sup="' + escapeHtml(r.name) + '">' +
+    html += '<tr data-sup="' + escapeHtml(r.name) + '" style="background:#f7fbff">' +
       '<td><span class="stats-loc">' + escapeHtml(r.name) + '</span></td>' +
       '<td>' + initCell + sub('#888', init ? '已录入' : '未录入') + '</td>' +
       '<td>' + r.sendCount + sub('#888', r.sendTons.toFixed(3)) + '</td>' +
@@ -2386,6 +2396,22 @@ function renderInventory(box, dimHead) {
       '<td>' + total.toFixed(3) + '</td>' +
       '<td>' + (ok ? '<span style="color:#2e7d32">守恒✓</span>' : '<span style="color:#e65100">异常</span>') + '</td>' +
       '</tr>';
+    if (inventorySplitGoods) {
+      const gs = Object.keys(r.goods).sort(function (a, b) { return a.localeCompare(b, 'zh-Hans-CN'); });
+      gs.forEach(function (g) {
+        const ga = r.goods[g];
+        const gAt = ga.sendTons - ga.backTons;
+        html += '<tr>' +
+          '<td style="padding-left:20px;color:#555">└ ' + escapeHtml(g) + '</td>' +
+          '<td>—</td>' +
+          '<td>' + ga.sendCount + sub('#888', ga.sendTons.toFixed(3)) + '</td>' +
+          '<td>' + (ga.backCount ? ga.backCount : '0') + sub('#e65100', ga.backTons.toFixed(3)) + '</td>' +
+          '<td>—</td>' +
+          '<td>' + gAt.toFixed(3) + sub('#888', '净在客') + '</td>' +
+          '<td>—</td><td>—</td>' +
+          '</tr>';
+      });
+    }
     totInit += init; totWh += own; totCust += atCust; totAll += total;
   });
   html += '</tbody><tfoot><tr style="font-weight:700;background:#fafafa">' +
@@ -2393,6 +2419,7 @@ function renderInventory(box, dimHead) {
     '</td><td>' + totWh.toFixed(3) + '</td><td>' + totCust.toFixed(3) + '</td><td>' + totAll.toFixed(3) + '</td><td></td></tr></tfoot></table>';
   html += '<div style="font-size:12px;color:#999;margin-top:8px">真实存货量 = 自有仓库实物 + 在客户处存货，两者守恒：' +
     '自有仓库实物 = 初始库存 + 退货 − 送货；在客户处存货 = 送货 − 退货（即还留在客户工地没退回的净吨）。' +
+    '点「按货物拆分」可按 盘扣/套扣 等货物看各自的送/退/在客存货；初始库存只按供货商记、不按货物拆，故 自有仓库实物/总存货/守恒 始终在供货商汇总行。' +
     '调拨两端都是客户、无供货商端，不计入供应商库存（不会虚增）。「总存货」应恒等于「初始库存」（守恒✓）；如显示异常，多半是底层派生函数被改动。' +
     '初始库存可点单元格直接填（存云端需在 Supabase 跑 database.sql【第 11 块】）；没填则按 0 算。</div>';
   box.innerHTML = html;
@@ -4135,7 +4162,7 @@ setupLocationPickers();
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.11.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.11.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
