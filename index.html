@@ -331,6 +331,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <span style="font-weight:600">记录详情</span>
       </div>
       <div class="detail-actions">
+        <button class="action-btn" id="itemEditBtn" onclick="openItemEdit()">📦 明细</button>
         <button class="action-btn edit-btn" onclick="openFullEdit()">📝 修改</button>
         <button class="action-btn edit-btn" id="editToggleBtn" onclick="toggleEdit()">✏️ 补填</button>
         <button class="action-btn delete-btn" onclick="confirmDelete()">🗑️ 删除</button>
@@ -504,6 +505,18 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
     </div>
     <button class="save-btn" onclick="saveFullEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">💾 保存修改</button>
     <button class="cancel-btn" onclick="closeFullEdit()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">取消</button>
+  </div>
+</div>
+
+<!-- ===== v1.12.1 轻量产品明细编辑（只改明细，不动车辆/过磅信息）===== -->
+<div class="confirm-overlay" id="itemEditModal">
+  <div class="confirm-box" style="max-width:90%; width:500px; max-height:90vh; overflow-y:auto; text-align:left">
+    <div class="confirm-title">📦 产品明细 <span style="font-size:12px;color:#888">（仅编辑明细，不影响车辆/过磅信息）</span></div>
+    <div id="itemEditItems"></div>
+    <button type="button" onclick="addItemEditRow()" style="margin-top:4px;background:#e8f1ff;color:#1565c0;border:1px dashed #9cc4ff;border-radius:8px;padding:7px 11px;font-size:13px;cursor:pointer">＋ 添加产品</button>
+    <div id="itemEditItemsRecon" style="font-size:12px;margin-top:6px;color:#555"></div>
+    <button class="save-btn" onclick="saveItemEdit()" style="width:100%;background:#1a7af8;color:white;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;margin-top:12px;cursor:pointer">💾 保存明细</button>
+    <button class="cancel-btn" onclick="closeItemEdit()" style="width:100%;background:#f0f0f0;color:#333;border:none;padding:10px;border-radius:8px;font-size:14px;margin-top:6px;cursor:pointer">取消</button>
   </div>
 </div>
 
@@ -837,6 +850,7 @@ let locationFilter = 'all'; // 'all' | 'from' | 'to'
 let goodsFilter = 'all'; // 'all' | '盘扣' | '套扣' | '其他'
 let currentDetail = null;
 let currentDetailItems = [];   // v1.12.0 当前详情记录的产品明细
+let recordItemsIdSet = null;   // v1.12.1 有产品明细的记录 id 集合(列表「待补明细」徽章用;null=未知/离线)
 let deliveryType = '送货'; // 默认送货
 let showRecycle = false; // 回收站视图开关
 let autoFillTimer = null; // 司机自动填充防抖
@@ -1582,6 +1596,7 @@ function showHelp() {
   <h4 style="margin:12px 0 4px;color:#1565c0">四、补填/修改/删除</h4>
   <ul style="margin:0 0 8px;padding-left:22px">
     <li><b>补填过磅</b>:详情页点「✏️ 补填」补重量/过磅费</li>
+    <li><b>产品明细（v1.12 起，可选增强）</b>:登记时「📦 产品明细」逐规格填产品/数量,系统用盘扣/套扣标准自动带单重、算出估算重量;详情页点「📦 明细」可<b>只改明细、不动车辆信息</b>。估算与过磅不一致会⚠️提示。没时间填明细也能按以前方式只登记车辆+重量统计，后期在详情页点「📦 明细」补登即可；列表靠「待补明细」徽章捡漏</li>
     <li><b>修改</b>:详情页点「📝 修改」可改任意字段,改过的字段会<b>标红加粗</b></li>
     <li><b>删除</b>:详情页点「🗑 删除」移到回收站(可恢复)</li>
     <li><b>回收站</b>:列表页点「🗑 回收站(N)」查看已删记录,点「♻️ 恢复」还原;<b>超过 30 天未恢复的记录会自动清除</b></li>
@@ -1673,6 +1688,7 @@ async function loadRecords() {
     await cleanupExpiredTrash();
     updateRecycleBtn();
     renderList();
+    refreshRecordItemsIdSet();   // v1.12.1 拉取有明细的记录集合(供列表「待补明细」徽章)
   } catch (e) {
     console.error('loadRecords异常:', e);
     showFatalError('加载异常:<br>' + escapeHtml(e.message));
@@ -1825,6 +1841,8 @@ function renderList() {
     const badges = [];
     if (!hasWeight) badges.push('<span class="badge-pending">待补重量</span>');
     if (!hasWeighFee) badges.push('<span class="badge-pending">待补过磅费</span>');
+    // v1.12.1 有重量但无明细 → 待补明细（recordItemsIdSet 为 null 时未知，不提示）
+    if (recordItemsIdSet && hasWeight && !recordItemsIdSet.has(r.id)) badges.push('<span class="badge-pending">待补明细</span>');
     if ((r.modified_count || 0) > 0) badges.push('<span class="badge-modified">已修改</span>');
     const badgeStr = badges.join('');
     const goods = escapeHtml(r.goods || '待填');
@@ -3066,15 +3084,30 @@ function renderDetail(r, changedKeys) {
 // v1.12.0 详情页产品明细展示（依赖 currentDetailItems 全局，由 showRecordDetail / 保存后载入）
 function renderDetailItemsBlock() {
   const box = document.getElementById('detailItemsBlock'); if (!box) return;
-  if (!currentDetailItems || currentDetailItems.length === 0) { box.innerHTML = ''; return; }
+  const hasW = currentDetail && currentDetail.weight && currentDetail.weight.trim();
+  const w = currentDetail ? parseNum(currentDetail.weight) : 0;
+  if (!currentDetailItems || currentDetailItems.length === 0) {
+    // (c) 有重量但没明细 → 待补明细；连重量都没有则不提示(已由重量字段标「待补重量」)
+    if (hasW) box.innerHTML = '<div style="margin-top:6px;padding-top:8px;border-top:1px dashed #eee;font-size:12px;color:#e65100">📦 未登记产品明细（仅过磅重量，待补明细）</div>';
+    else box.innerHTML = '';
+    return;
+  }
   let sum = 0;
   const rows = currentDetailItems.map(function (it) {
     const lw = parseNum(it.line_weight); sum += lw;
     const name = (it.type || it.spec_code || '产品') + (it.spec_size ? ' ' + it.spec_size : '') + (it.spec_code && it.spec_code !== it.type ? ' (' + it.spec_code + ')' : '');
     return '<div class="detail-item"><span class="label">📦 ' + (it.system ? escapeHtml(it.system) + ' · ' : '') + escapeHtml(name) + '</span><span class="value">' + escapeHtml(it.qty + ' ' + (it.unit || '件') + ' · ' + lw.toFixed(1) + 'kg') + '</span></div>';
   }).join('');
+  let recon;
+  if (hasW) {
+    // (a) 估算(明细合计) vs 过磅 对账
+    const diff = sum - w; const bad = Math.abs(diff) > Math.max(5, w * 0.005);
+    recon = '<div class="detail-item"><span class="label">⚖️ 估算/过磅</span><span class="value" style="font-weight:600;color:' + (bad ? '#e65100' : '#2e7d32') + '">估算 ' + sum.toFixed(1) + 'kg · 过磅 ' + w.toFixed(1) + 'kg · 差 ' + (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'kg' + (bad ? ' ⚠️' : ' ✓') + '</span></div>';
+  } else {
+    recon = '<div class="detail-item"><span class="label">⚖️ 估算重量</span><span class="value" style="font-weight:600">' + sum.toFixed(1) + 'kg（过磅待补）</span></div>';
+  }
   box.innerHTML = '<div style="margin-top:6px;padding-top:8px;border-top:1px dashed #eee">' + rows +
-    '<div class="detail-item"><span class="label">📦 明细合计</span><span class="value" style="font-weight:600">' + sum.toFixed(1) + ' kg</span></div></div>';
+    '<div class="detail-item"><span class="label">📦 明细合计</span><span class="value" style="font-weight:600">' + sum.toFixed(1) + ' kg</span></div>' + recon + '</div>';
 }
 // v1.12.0 读取某记录的产品明细（best-effort）
 async function loadRecordItems(recordId) {
@@ -3155,6 +3188,104 @@ async function replaceRecordItems(recordId, rows) {
     await supabaseClient.from('record_items').delete().eq('record_id', recordId);
     if (rows && rows.length) await supabaseClient.from('record_items').insert(rows);
   } catch (e) { console.warn('产品明细更新失败:', e); }
+}
+
+// ===== v1.12.1 轻量明细编辑（只保存 record_items，不动 records 其它字段）=====
+let itemEditState = [];
+let itemEditSys = '';
+function openItemEdit() {
+  if (!currentDetail) return;
+  itemEditSys = (currentDetail.goods === '盘扣' || currentDetail.goods === '套扣') ? currentDetail.goods : '';
+  loadRecordItems(currentDetail.id).then(function (items) {
+    itemEditState = (items || []).map(function (it) {
+      return { type: it.type || '', code: it.spec_code || '', size: it.spec_size || '', unit: it.unit || '件', qty: it.qty, unit_weight: it.unit_weight, line_weight: it.line_weight || 0 };
+    });
+    renderItemEdit();
+    document.getElementById('itemEditModal').classList.add('show');
+  });
+}
+function closeItemEdit() { document.getElementById('itemEditModal').classList.remove('show'); }
+function addItemEditRow() { itemEditState.push({ type: '', code: '', size: '', unit: '件', qty: '', unit_weight: '', line_weight: 0 }); renderItemEdit(); }
+function removeItemEditRow(idx) { itemEditState.splice(idx, 1); renderItemEdit(); }
+function recomputeItemEdit(idx) { const it = itemEditState[idx]; it.line_weight = parseNum(it.qty) * parseNum(it.unit_weight); }
+function onItemEditSpec(idx, v) {
+  itemEditState[idx].code = v;
+  const sp = itemEditSys ? specsForSystem(itemEditSys).find(function (s) { return s.code === v; }) : null;
+  if (sp) { itemEditState[idx].type = sp.type; itemEditState[idx].size = sp.size; itemEditState[idx].unit_weight = sp.unit_weight; }
+  recomputeItemEdit(idx); renderItemEdit();
+}
+function onItemEditWeight(idx, v) { itemEditState[idx].unit_weight = parseNum(v); recomputeItemEdit(idx); updateItemEditRecon(); }
+function onItemEditUnit(idx, v) { itemEditState[idx].unit = v; }
+function onItemEditQty(idx, v) { itemEditState[idx].qty = v; recomputeItemEdit(idx); updateItemEditRecon(); }
+function renderItemEdit() {
+  const box = document.getElementById('itemEditItems'); if (!box) return;
+  if (itemEditState.length === 0) { box.innerHTML = '<div style="font-size:12px;color:#999;padding:4px 0">还没有产品明细，点「＋ 添加产品」逐规格登记</div>'; updateItemEditRecon(); return; }
+  const specs = itemEditSys ? specsForSystem(itemEditSys) : [];
+  const types = []; specs.forEach(function (s) { if (types.indexOf(s.type) < 0) types.push(s.type); });
+  const useSpec = !!itemEditSys && specs.length > 0;
+  box.innerHTML = itemEditState.map(function (it, idx) {
+    const unitOpts = ITEM_UNITS.map(function (u) { return '<option value="' + u + '"' + (it.unit === u ? ' selected' : '') + '>' + u + '</option>'; }).join('');
+    let typeCell, specCell;
+    if (useSpec) {
+      const typeOpts = '<option value="">部件类型</option>' + types.map(function (t) { return '<option value="' + t + '"' + (it.type === t ? ' selected' : '') + '>' + t + '</option>'; }).join('');
+      const sub = specs.filter(function (s) { return s.type === it.type; });
+      const specOpts = '<option value="">规格</option>' + sub.map(function (s) { return '<option value="' + s.code + '"' + (it.code === s.code ? ' selected' : '') + '>' + s.code + ' ' + s.size + ' (' + s.unit_weight + 'kg/件)</option>'; }).join('');
+      typeCell = '<select onchange="onItemEditSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + typeOpts + '</select>';
+      specCell = '<select onchange="onItemEditSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + specOpts + '</select>';
+    } else {
+      typeCell = '<input type="text" placeholder="规格/名称" value="' + escapeHtml(it.code || '') + '" oninput="onItemEditSpec(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:110px">';
+      specCell = '<input type="number" step="0.001" placeholder="单重kg" value="' + (it.unit_weight || '') + '" oninput="onItemEditWeight(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:74px">';
+    }
+    return '<div style="display:flex;gap:5px;align-items:center;margin-bottom:6px;flex-wrap:wrap">' + typeCell + specCell +
+      '<select onchange="onItemEditUnit(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px">' + unitOpts + '</select>' +
+      '<input type="number" step="1" placeholder="数量" value="' + (it.qty === '' ? '' : it.qty) + '" oninput="onItemEditQty(' + idx + ', this.value)" style="padding:7px;border:1px solid #ddd;border-radius:6px;font-size:13px;width:64px">' +
+      '<span style="font-size:12px;color:#555;min-width:70px">小计 ' + (it.line_weight ? it.line_weight.toFixed(1) : '0') + 'kg</span>' +
+      '<button type="button" onclick="removeItemEditRow(' + idx + ')" style="border:none;background:#ffeaea;color:#c00;border-radius:6px;padding:4px 9px;cursor:pointer;font-size:14px">×</button></div>';
+  }).join('');
+  updateItemEditRecon();
+}
+function updateItemEditRecon() {
+  const el = document.getElementById('itemEditItemsRecon'); if (!el) return;
+  const sum = itemEditState.reduce(function (s, it) { return s + (parseNum(it.line_weight) || 0); }, 0);
+  const w = currentDetail ? parseNum(currentDetail.weight) : 0;
+  const hasW = currentDetail && currentDetail.weight && currentDetail.weight.trim();
+  if (itemEditState.length === 0) { el.innerHTML = ''; return; }
+  if (hasW) {
+    const diff = sum - w; const bad = Math.abs(diff) > Math.max(5, w * 0.005);
+    el.innerHTML = '明细合计 <b>' + sum.toFixed(1) + 'kg</b> / 过磅 <b>' + w.toFixed(1) + 'kg</b> / 差值 <b style="color:' + (bad ? '#e65100' : '#2e7d32') + '">' + (diff >= 0 ? '+' : '') + diff.toFixed(1) + 'kg</b>' + (bad ? ' ⚠️ 不一致' : ' ✓');
+  } else {
+    el.innerHTML = '明细合计 <b>' + sum.toFixed(1) + 'kg</b>（过磅待补，保存后详情页可看到估算重量）';
+  }
+}
+async function saveItemEdit() {
+  if (!currentDetail) return;
+  if (!navigator.onLine) { toast('📴 离线时无法保存明细，请联网后重试', false, true); return; }
+  const rows = itemEditState.filter(function (it) { return (it.code || it.type) && parseNum(it.qty) > 0; })
+    .map(function (it) {
+      return { record_id: currentDetail.id, system: itemEditSys || null, type: it.type || null, spec_code: it.code || null, spec_size: it.size || null, unit: it.unit || '件', qty: parseNum(it.qty), unit_weight: parseNum(it.unit_weight), line_weight: parseNum(it.qty) * parseNum(it.unit_weight) };
+    });
+  await replaceRecordItems(currentDetail.id, rows);
+  currentDetailItems = await loadRecordItems(currentDetail.id);
+  renderDetailItemsBlock();
+  if (recordItemsIdSet && rows.length) recordItemsIdSet.add(currentDetail.id);   // 立即消除列表「待补明细」徽章
+  closeItemEdit();
+  loadRecords();
+  toast('产品明细已保存 ✓', true);
+}
+// v1.12.1 拉取「哪些记录有产品明细」的集合，用于列表/详情的「待补明细」徽章
+async function refreshRecordItemsIdSet() {
+  if (!navigator.onLine) { recordItemsIdSet = null; renderList(); return; }   // 离线无法判断，不显示徽章
+  try {
+    const ids = (currentRecords || []).map(function (r) { return r.id; });
+    if (ids.length === 0) { recordItemsIdSet = new Set(); renderList(); return; }
+    const { data, error } = await supabaseClient.from('record_items').select('record_id').in('record_id', ids);
+    if (error) throw error;
+    recordItemsIdSet = new Set((data || []).map(function (d) { return d.record_id; }));
+  } catch (e) {
+    recordItemsIdSet = new Set();   // 表未建等：当作无明细，明细是可选增强，不报错
+    console.warn('读取明细 id 集合失败(待补明细徽章将不显示):', e);
+  }
+  renderList();
 }
 
 // ===== 完整修改功能 =====
@@ -4435,7 +4566,7 @@ setupLocationPickers();
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.12.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.12.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
