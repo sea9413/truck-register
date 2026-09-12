@@ -28,7 +28,7 @@ CREATE TABLE IF NOT EXISTS records (
   notice TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
 
-  -- v1.2+ 运输类型：送货 / 退货 / 不统计
+  -- v1.2+ 运输类型：送货 / 退货 / 不统计 / 调拨(v1.10.x 新增：客户间倒短，两端都是客户，无供货商端)
   delivery_type TEXT DEFAULT '送货',
   -- v1.3+ 备注
   note TEXT,
@@ -305,3 +305,37 @@ select c.relname as table_name,
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relname = 'party_names';
+
+
+-- ===== 第 11 块：v1.11.0 供货商初始库存（盘点基准，真实存货量维度用）=====
+-- 场景：存货量 = 自有仓库实物 + 在客户处存货，其中「自有仓库实物 = 初始库存 + 退货 − 送货」。
+--       这里的初始库存就是盘点时的实物基准（例：茂名仓库的盘点数）。没建这张表也能用，
+--       只是页面里「初始库存」那一格改不了（会提示去 Supabase 跑这块），默认按 0 算。
+CREATE TABLE IF NOT EXISTS initial_stocks (
+  supplier TEXT PRIMARY KEY,          -- 供货商名（和 location_parties.supplier_name 对齐）
+  tons NUMERIC NOT NULL DEFAULT 0,    -- 初始库存（盘点实物吨位）
+  note TEXT,
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_initstock_supplier ON initial_stocks (supplier);
+
+ALTER TABLE initial_stocks ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "Allow anonymous read initstock" ON initial_stocks;
+CREATE POLICY "Allow anonymous read initstock" ON initial_stocks FOR SELECT USING (true);
+DROP POLICY IF EXISTS "Allow anonymous insert initstock" ON initial_stocks;
+CREATE POLICY "Allow anonymous insert initstock" ON initial_stocks FOR INSERT WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous update initstock" ON initial_stocks;
+CREATE POLICY "Allow anonymous update initstock" ON initial_stocks FOR UPDATE USING (true) WITH CHECK (true);
+DROP POLICY IF EXISTS "Allow anonymous delete initstock" ON initial_stocks;
+CREATE POLICY "Allow anonymous delete initstock" ON initial_stocks FOR DELETE USING (true);
+
+-- 验收：跑完第 11 块后 rls_enabled = true、policy_count = 4 才算跑全；数据 0 行没关系，
+--       初始库存是在「📊 统计 → 存货量」里点单元格填的。
+select c.relname as table_name,
+       c.relrowsecurity as rls_enabled,
+       (select count(*) from pg_policies p
+         where p.schemaname = 'public' and p.tablename = 'initial_stocks') as policy_count
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relname = 'initial_stocks';

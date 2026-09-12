@@ -298,6 +298,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
             <option value="all">送货+退货</option>
             <option value="delivery">送货</option>
             <option value="return">退货</option>
+            <option value="transfer">调拨</option>
             <option value="nostat">不统计</option>
             <option value="every">全部类型</option>
             <option value="other">其他类型</option>
@@ -473,6 +474,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
       <div class="goods-btns" id="mTypeBtns">
         <div class="goods-btn" onclick="selectModalType(this, '送货')">送货</div>
         <div class="goods-btn" onclick="selectModalType(this, '退货')">退货</div>
+        <div class="goods-btn" onclick="selectModalType(this, '调拨')">调拨</div>
         <div class="goods-btn" onclick="selectModalType(this, '不统计')">不统计</div>
       </div>
       <input type="hidden" id="mDeliveryType" value="">
@@ -558,7 +560,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
 <div class="confirm-overlay" id="statsModal">
   <div class="confirm-box" style="max-width:92%; width:560px; max-height:85vh; overflow-y:auto; text-align:left; position:relative">
     <button class="modal-close" onclick="closeStats()" title="关闭">×</button>
-    <div class="confirm-title" style="margin-bottom:12px; padding-right:34px">📊 统计 <span style="font-size:12px;color:#888;font-weight:400">地点 / 客户 / 供货商，按当前日期范围 + 类型/货物筛选</span></div>
+    <div class="confirm-title" style="margin-bottom:12px; padding-right:34px">📊 统计 <span style="font-size:12px;color:#888;font-weight:400">地点 / 客户 / 供货商 / 存货量，按当前日期范围 + 类型/货物筛选</span></div>
     <div id="statsContent"><div class="loading">加载中...</div></div>
     <div style="display:flex;gap:8px;margin-top:14px">
       <button onclick="copyStatsText()" style="flex:1;background:#1a7af8;color:#fff;border:none;padding:12px;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;min-height:44px">📋 复制报表</button>
@@ -1581,8 +1583,9 @@ function getFilteredRecords() {
     if (locationFilter === 'all') list = list.filter(r => { const t = dt(r); return t === '送货' || t === '退货'; });
     else if (locationFilter === 'delivery') list = list.filter(r => dt(r) === '送货');
     else if (locationFilter === 'return') list = list.filter(r => dt(r) === '退货');
+    else if (locationFilter === 'transfer') list = list.filter(r => dt(r) === '调拨');
     else if (locationFilter === 'nostat') list = list.filter(r => dt(r) === '不统计');
-    else if (locationFilter === 'other') list = list.filter(r => !['送货','退货','不统计'].includes(dt(r)));
+    else if (locationFilter === 'other') list = list.filter(r => !['送货','退货','不统计','调拨'].includes(dt(r)));
   }
   if (goodsFilter !== 'all') {
     // 货物筛选: 'all'/'盘扣'/'套扣'/'其他' (其他 = 不是盘扣且不是套扣)
@@ -1820,6 +1823,56 @@ async function reloadPartyMap() {
   renderLocationLib();
 }
 
+// ===== v1.11.0 供货商初始库存（真实存货量维度用）=====
+// 初始库存 = 盘点时的实物基准（吨），页面「📊 统计 → 存货量」里点单元格就能填。
+// 表没建 / 没权限就静默回落（initialStocksMissing），页面里初始库存那格变成只读、并提示去跑【第 11 块】。
+let initialStocks = {};        // { 供货商名: 初始吨位(number) }
+let initialStocksMissing = false;
+let initialStocksTask = null;
+function loadInitialStocks(force) {
+  if (initialStocksMissing && !force) return Promise.resolve(initialStocks);
+  if (initialStocksTask && !force) return initialStocksTask;
+  initialStocksTask = (async function () {
+    try {
+      if (navigator.onLine) {
+        const { data, error } = await supabaseClient
+          .from('initial_stocks').select('supplier, tons');
+        if (error) throw error;
+        const next = {};
+        (data || []).forEach(function (row) {
+          const s = (row.supplier || '').trim();
+          if (!s) return;
+          next[s] = parseNum(row.tons);
+        });
+        initialStocks = next;
+      }
+    } catch (e) {
+      const msg = String((e && e.message) || e);
+      if (/initial_stocks|Could not find the table|does not exist|relation/i.test(msg)) initialStocksMissing = true;
+      console.warn('初始库存没读到(存货量维度默认可填):', msg);
+    }
+    return initialStocks;
+  })();
+  return initialStocksTask;
+}
+async function saveInitialStock(supplier, tons) {
+  supplier = (supplier || '').trim();
+  if (!supplier) return;
+  const t = parseNum(tons);
+  initialStocks[supplier] = t;          // 先写内存，界面立刻对；断网也不影响本机
+  if (!navigator.onLine) { toast('当前离线，初始库存只记在本机', false, true); return; }
+  if (initialStocksMissing) { toast('初始库存表还没建，本次只记本机。请在 Supabase 跑 database.sql 的【第 11 块】', false, true); return; }
+  try {
+    const { error } = await supabaseClient.from('initial_stocks')
+      .upsert([{ supplier: supplier, tons: t, updated_at: new Date().toISOString() }], { onConflict: 'supplier' });
+    if (error) throw error;
+    toast('已保存「' + supplier + '」初始库存 ' + t.toFixed(3) + ' 吨', true);
+  } catch (e) {
+    console.warn('保存初始库存失败:', e);
+    toast('保存失败，仅本机生效', false, true);
+  }
+}
+
 // ===== v1.10.0 供货商 / 客户名称表 =====
 // 要解决的问题：「归属」原来是手打的自由文本，同一个人很容易打出两种写法
 // （「某某建材」/「某某建材有限公司」），统计里就被拆成两行。
@@ -2037,14 +2090,31 @@ function locationRoleCounts(std) {
   return { cust: cust, sup: sup };
 }
 // 只取"地点名"(不套归属),统计里记明细用
+// 调拨:一趟车从客户A工地(装货)到客户B工地(收货),对供应商(自己)同时是A退货+B送货,
+// 两端都是客户端。故调拨时 customerLocOf 返回 [from, to] 两端地点,supplierLocOf 返回空
+// (调拨不经过自有仓库,无供货商端——这是"调拨不增供应商库存/不虚增"的铁律)。
 function customerLocOf(r) {
+  if (recordTypeOf(r) === '调拨') return [ (r.from_location || '').trim(), (r.to_location || '').trim() ];
   return (recordTypeOf(r) === '退货' ? (r.from_location || '') : (r.to_location || '')).trim();
 }
 function supplierLocOf(r) {
+  if (recordTypeOf(r) === '调拨') return ''; // 调拨无供货商端
   return (recordTypeOf(r) === '退货' ? (r.to_location || '') : (r.from_location || '')).trim();
 }
-function customerOf(r) { return partyNameOf(customerLocOf(r), 'customer'); }
-function supplierOf(r) { return partyNameOf(supplierLocOf(r), 'supplier'); }
+function customerOf(r) {
+  const loc = customerLocOf(r);
+  if (Array.isArray(loc)) return loc.map(function (x) { return partyNameOf(x, 'customer'); }).filter(Boolean);
+  return partyNameOf(loc, 'customer');
+}
+function supplierOf(r) {
+  const loc = supplierLocOf(r);
+  return loc ? partyNameOf(loc, 'supplier') : '';
+}
+// 导出/核对用:把派生的客户/供货商转成单元格文本(调拨客户是多端,用 、连接)
+function partyCell(r, kind) {
+  const v = kind === 'customer' ? customerOf(r) : supplierOf(r);
+  return Array.isArray(v) ? v.join('、') : (v || '');
+}
 // 地点库里改某个地点的归属
 async function savePartyName(index, kind, val) {
   const item = locationLib[index];
@@ -2091,13 +2161,14 @@ const STATS_DIMS = [
   { v: 'to',       label: '收货地' },
   { v: 'both',     label: '装+收' },
   { v: 'customer', label: '客户' },
-  { v: 'supplier', label: '供货商' }
+  { v: 'supplier', label: '供货商' },
+  { v: 'inventory', label: '存货量' }
 ];
 const STATS_DIM_LABEL = { from: '装货地', to: '收货地', both: '装货地+收货地', customer: '客户', supplier: '供货商' };
 let statsDimension = 'from';
 let statsRows = [];          // 最近一次统计结果(复制报表 / 点行筛选用)
 
-function showStats() {
+async function showStats() {
   const modal = document.getElementById('statsModal');
   if (!modal) return;
   const box = document.getElementById('statsContent');
@@ -2107,8 +2178,18 @@ function showStats() {
       const tr = e.target && e.target.closest ? e.target.closest('tr[data-loc]') : null;
       if (tr) filterByStatsRow(tr.dataset.loc, (tr.dataset.locs || '').split('|').filter(Boolean));
     });
+    // v1.11.0:存货量维度里「初始库存」单元格就地编辑
+    box.addEventListener('change', function (e) {
+      const inp = e.target && e.target.closest ? e.target.closest('.init-stock-input') : null;
+      if (inp) {
+        let v = parseFloat(inp.value);
+        if (isNaN(v)) v = 0;
+        saveInitialStock(inp.getAttribute('data-sup'), v).then(function () { if (statsDimension === 'inventory') renderStats(); });
+      }
+    });
   }
   modal.classList.add('show');
+  try { if (typeof loadInitialStocks === 'function') await loadInitialStocks(); } catch (e) {}
   renderStats();
 }
 function closeStats() {
@@ -2136,6 +2217,7 @@ function renderStats() {
     return '<div class="goods-btn' + (statsDimension === v ? ' active' : '') + '" onclick="setStatsDimension(\'' + v + '\')">' + label + '</div>';
   };
   const dimHead = '<div class="stats-dim">' + STATS_DIMS.map(function (d) { return dimBtn(d.v, d.label); }).join('') + '</div>';
+  if (statsDimension === 'inventory') { renderInventory(box, dimHead); return; }
   if (showRecycle) {
     box.innerHTML = dimHead + '<div class="empty">回收站模式下不做统计，先退出回收站再看。</div>';
     statsRows = [];
@@ -2161,28 +2243,36 @@ function renderStats() {
   list.forEach(function (r) {
     const dt = recordTypeOf(r);
     if (dt === '不统计') return;
-    const isBack = (dt === '退货');
     const tons = parseNum(r.weight) / 1000;
-    // 一个维度下一辆车可能要记到 1~2 个名字上("装+收"是两头都记)
-    const names = [];
-    if (statsDimension === 'from') names.push((r.from_location || '').trim());
-    else if (statsDimension === 'to') names.push((r.to_location || '').trim());
-    else if (statsDimension === 'customer') names.push(customerOf(r));
-    else if (statsDimension === 'supplier') names.push(supplierOf(r));
-    else { names.push((r.from_location || '').trim()); names.push((r.to_location || '').trim()); }
-    names.forEach(function (name) {
-      if (!name) return;
-      if (!agg[name]) agg[name] = { loc: name, locs: [], count: 0, tons: 0, sendCount: 0, sendTons: 0, backCount: 0, backTons: 0, freight: 0 };
-      const a = agg[name];
+    // 一个维度下一辆车可能要记到 1~2 个名字上(装+收是两头都记;调拨的客户维度是两端都记,且一端退一端送)
+    const items = [];
+    if (statsDimension === 'from') items.push({ name: (r.from_location || '').trim(), isBack: dt === '退货' });
+    else if (statsDimension === 'to') items.push({ name: (r.to_location || '').trim(), isBack: false });
+    else if (statsDimension === 'customer') {
+      const co = customerOf(r); // 调拨返回 [from客户, to客户],其余返回字符串
+      if (Array.isArray(co)) co.forEach(function (name, idx) { if (name) items.push({ name: name, isBack: idx === 0 }); }); // idx0=from端=退
+      else if (co) items.push({ name: co, isBack: dt === '退货' });
+    }
+    else if (statsDimension === 'supplier') {
+      const so = supplierOf(r); // 调拨返回 '' → 不计入供应商,严守"调拨不增供应商库存"
+      if (so) items.push({ name: so, isBack: dt === '退货' });
+    }
+    else { items.push({ name: (r.from_location || '').trim(), isBack: dt === '退货' }); items.push({ name: (r.to_location || '').trim(), isBack: false }); }
+    items.forEach(function (it) {
+      if (!it.name) return;
+      if (!agg[it.name]) agg[it.name] = { loc: it.name, locs: [], count: 0, tons: 0, sendCount: 0, sendTons: 0, backCount: 0, backTons: 0, freight: 0 };
+      const a = agg[it.name];
       a.count += 1;
       a.tons += tons;
       a.freight += parseNum(r.freight);
-      if (isBack) { a.backCount += 1; a.backTons += tons; }
+      if (it.isBack) { a.backCount += 1; a.backTons += tons; }
       else { a.sendCount += 1; a.sendTons += tons; }
       // 记下这个客户/供货商背后到底是哪几个地点(点一行时要把它们一起筛出来)
       if (isParty) {
-        const raw = (statsDimension === 'customer' ? customerLocOf(r) : supplierLocOf(r)).trim();
-        if (raw && a.locs.indexOf(raw) === -1) a.locs.push(raw);
+        const rawLocs = (statsDimension === 'customer')
+          ? (Array.isArray(customerLocOf(r)) ? customerLocOf(r) : [customerLocOf(r)])
+          : (supplierLocOf(r) ? [supplierLocOf(r)] : []);
+        rawLocs.forEach(function (rl) { if (rl && a.locs.indexOf(rl) === -1) a.locs.push(rl); });
       }
     });
   });
@@ -2221,7 +2311,7 @@ function renderStats() {
       '</tr></tfoot></table>';
     html += '<div style="font-size:12px;color:#999;margin-top:8px">' + dimName +
       '由地点派生：送货看' + (statsDimension === 'customer' ? '收货地' : '装货地') + '、退货看' + (statsDimension === 'customer' ? '装货地' : '收货地') +
-      '。净吨 = 送货 − 退货（负数 = 退的比送的多）；「不统计」类型不计入。⚠️ = 这个写法不在地点库，可能是名称没统一。</div>';
+      '。净吨 = 送货 − 退货（负数 = 退的比送的多）；「不统计」类型不计入。调拨两端都是客户（一端退、一端送），净吨两端此消彼长、合计为 0，不增不减自有库存。⚠️ = 这个写法不在地点库，可能是名称没统一。</div>';
   } else {
     const maxCount = statsRows[0].count || 1;
     html += '<table class="stats-table"><thead><tr><th>地点</th><th>车次</th><th>吨位</th><th>运费</th></tr></thead><tbody>';
@@ -2244,7 +2334,72 @@ function renderStats() {
   box.innerHTML = html;
 }
 
+// v1.11.0 真实存货量维度：按供货商汇总 送/退，算 自有仓库实物 / 在客户处存货 / 总存货。
+// 累计全部（非回收站）记录，不受日期范围限制——初始库存是时点数，存货是滚动余额。
+// 调拨经 supplierOf 返回 '' 已被自动排除，严守「调拨不增供应商库存」铁律。
+function renderInventory(box, dimHead) {
+  const list = (currentRecords || []).filter(function (r) { return !r.deleted; });
+  const range = (filterStartDate || '最早') + ' ~ ' + (filterEndDate || '今天');
+  const agg = {};
+  list.forEach(function (r) {
+    const dt = recordTypeOf(r);
+    if (dt === '不统计') return;                          // 不统计类型不算存货
+    const so = supplierOf(r);                             // 调拨 → ''，自然不计入
+    if (!so) return;
+    if (!agg[so]) agg[so] = { name: so, sendCount: 0, sendTons: 0, backCount: 0, backTons: 0 };
+    const a = agg[so];
+    const tons = parseNum(r.weight) / 1000;
+    if (dt === '退货') { a.backCount += 1; a.backTons += tons; }
+    else { a.sendCount += 1; a.sendTons += tons; }        // 送货（不含调拨）
+  });
+  const rows = Object.keys(agg).map(function (k) { return agg[k]; })
+    .sort(function (a, b) { return a.name.localeCompare(b.name, 'zh-Hans-CN'); });
+  const reduceCnt = function (key) { return rows.reduce(function (s, r) { return s + r[key]; }, 0); };
+  let html = dimHead +
+    '<div style="font-size:12px;color:#888;margin-bottom:8px">真实存货量 · 累计全部记录（' + escapeHtml(range) + '）· 按供货商汇总，调拨不计入</div>';
+  if (rows.length === 0) {
+    html += '<div class="empty">还没有可算存货量的供货商<br>先去「📍 地点库」给装货地配上「归属供货商」，记录里的送货/退货就会归到供货商名下</div>';
+    box.innerHTML = html;
+    return;
+  }
+  html += '<table class="stats-table"><thead><tr>' +
+    '<th>供货商</th><th>初始库存(吨)</th><th>送货</th><th>退货</th>' +
+    '<th>自有仓库实物</th><th>在客存货</th><th>总存货</th><th>校验</th></tr></thead><tbody>';
+  let totInit = 0, totWh = 0, totCust = 0, totAll = 0;
+  rows.forEach(function (r) {
+    const init = initialStocks[r.name] || 0;
+    const own = init + r.backTons - r.sendTons;   // 自有仓库实物 = 初始 + 退货 − 送货
+    const atCust = r.sendTons - r.backTons;        // 在客户处存货 = 送货 − 退货（净在客）
+    const total = own + atCust;                     // = 初始（守恒）
+    const ok = Math.abs(total - init) < 1e-6;
+    const sub = function (c, t) { return '<div style="font-size:11px;color:' + (c || '#888') + '">' + t + '</div>'; };
+    const initCell = initialStocksMissing
+      ? (init ? init.toFixed(3) : '—')
+      : '<input class="init-stock-input" data-sup="' + escapeHtml(r.name) + '" type="number" step="0.001" value="' + init + '" style="width:88px" title="点一下改初始库存">';
+    html += '<tr data-sup="' + escapeHtml(r.name) + '">' +
+      '<td><span class="stats-loc">' + escapeHtml(r.name) + '</span></td>' +
+      '<td>' + initCell + sub('#888', init ? '已录入' : '未录入') + '</td>' +
+      '<td>' + r.sendCount + sub('#888', r.sendTons.toFixed(3)) + '</td>' +
+      '<td>' + (r.backCount ? r.backCount : '0') + sub('#e65100', r.backTons.toFixed(3)) + '</td>' +
+      '<td style="font-weight:600">' + own.toFixed(3) + '</td>' +
+      '<td>' + atCust.toFixed(3) + sub('#888', '净在客') + '</td>' +
+      '<td>' + total.toFixed(3) + '</td>' +
+      '<td>' + (ok ? '<span style="color:#2e7d32">守恒✓</span>' : '<span style="color:#e65100">异常</span>') + '</td>' +
+      '</tr>';
+    totInit += init; totWh += own; totCust += atCust; totAll += total;
+  });
+  html += '</tbody><tfoot><tr style="font-weight:700;background:#fafafa">' +
+    '<td>合计</td><td>' + totInit.toFixed(3) + '</td><td>' + reduceCnt('sendCount') + '</td><td>' + reduceCnt('backCount') +
+    '</td><td>' + totWh.toFixed(3) + '</td><td>' + totCust.toFixed(3) + '</td><td>' + totAll.toFixed(3) + '</td><td></td></tr></tfoot></table>';
+  html += '<div style="font-size:12px;color:#999;margin-top:8px">真实存货量 = 自有仓库实物 + 在客户处存货，两者守恒：' +
+    '自有仓库实物 = 初始库存 + 退货 − 送货；在客户处存货 = 送货 − 退货（即还留在客户工地没退回的净吨）。' +
+    '调拨两端都是客户、无供货商端，不计入供应商库存（不会虚增）。「总存货」应恒等于「初始库存」（守恒✓）；如显示异常，多半是底层派生函数被改动。' +
+    '初始库存可点单元格直接填（存云端需在 Supabase 跑 database.sql【第 11 块】）；没填则按 0 算。</div>';
+  box.innerHTML = html;
+}
+
 function copyStatsText() {
+  if (statsDimension === 'inventory') { toast('存货量维度请在页面查看，暂不支持复制文本', false, true); return; }
   if (statsRows.length === 0) { toast('还没有可复制的统计', false, true); return; }
   const dimLabel = STATS_DIM_LABEL[statsDimension] || '';
   const isParty = (statsDimension === 'customer' || statsDimension === 'supplier');
@@ -2292,7 +2447,7 @@ function exportCSV() {
   const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','客户','供货商','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数'];
   const rows = list.map(r => [
     r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
-    r.id_card || '', r.from_location || '', r.to_location || '', customerOf(r), supplierOf(r), r.goods || '', r.freight || '',
+    r.id_card || '', r.from_location || '', r.to_location || '', partyCell(r, 'customer'), partyCell(r, 'supplier'), r.goods || '', r.freight || '',
     r.weigh_fee || '', r.weight || '', r.delivery_type || '送货', r.note || '', (r.is_paid === true) ? '是' : '否', r.modified_count || 0
   ]);
   let csv = '\uFEFF' + headers.join(',') + '\n';
@@ -2318,7 +2473,7 @@ function exportAllCSV() {
   const headers = ['日期','主车','挂车','姓名','手机号','身份证号','装货地','收货地','客户','供货商','货物','运费','过磅费','过磅重量','类型','备注','已支付','修改次数','已删除'];
   const rows = list.map(r => [
     r.date || '', r.plate_main || '', r.plate_trailer || '', r.name || '', r.phone || '',
-    r.id_card || '', r.from_location || '', r.to_location || '', customerOf(r), supplierOf(r), r.goods || '', r.freight || '',
+    r.id_card || '', r.from_location || '', r.to_location || '', partyCell(r, 'customer'), partyCell(r, 'supplier'), r.goods || '', r.freight || '',
     r.weigh_fee || '', r.weight || '', r.delivery_type || '送货', r.note || '', (r.is_paid === true) ? '是' : '否', r.modified_count || 0, (r.deleted === true) ? '是' : '否'
   ]);
   let csv = '\uFEFF' + headers.join(',') + '\n';
@@ -2502,8 +2657,8 @@ async function processImportedRows(rows) {
           name: get('姓名', r) || null,
           phone: get('手机号', r) || null,
           id_card: (await encryptIdCard(get('身份证号', r))) || null,
-          from_location: get('装货地', r) || null,
-          to_location: get('收货地', r) || null,
+          from_location: normalizeLocation(get('装货地', r) || '') || null,
+          to_location: normalizeLocation(get('收货地', r) || '') || null,
           goods: get('货物', r) || null,
           freight: get('运费', r) || null,
           weigh_fee: get('过磅费', r) || null,
@@ -2513,20 +2668,31 @@ async function processImportedRows(rows) {
           modified_fields: '[]',
           modified_count: mc
         };
-        // 仅当类型为退货/不统计时带上 delivery_type(避免 schema cache 报错)
+        // 导入标准化:装/收地过 normalizeLocation 存标准名,并把出现过的地点自动加进地点库(解决"导入后地点库空、没法配归属")
+        if (rec.from_location) await saveLocationEntry(rec.from_location, [(get('装货地', r) || '').trim()].filter(Boolean));
+        if (rec.to_location) await saveLocationEntry(rec.to_location, [(get('收货地', r) || '').trim()].filter(Boolean));
+        // delivery_type 列已存在(默认'送货'),所有类型都带上,确保调拨/退货/不统计正确落库
         const tval = get('类型', r);
         if (tval === '退货') rec.delivery_type = '退货';
         else if (tval === '不统计') rec.delivery_type = '不统计';
+        else if (tval === '调拨') rec.delivery_type = '调拨';
         const camel = { date: rec.date, plateMain: rec.plate_main, plateTrailer: rec.plate_trailer, name: rec.name, phone: rec.phone, weight: rec.weight, weighFee: rec.weigh_fee, from: rec.from_location, to: rec.to_location, goods: rec.goods, freight: rec.freight };
         rec.notice = generateNotice(camel);
         // v1.10.1:模板里填的「客户 / 供货商」不是 records 的字段,系统只认地点推导出来的。
         // 这里比对一下,对不上就记下来,导完告诉他去地点库配归属,免得他以为"填了就存下来了"。
         const wantCust = get('客户', r);
         const wantSup = get('供货商', r);
-        const gotCust = customerOf(rec);
-        const gotSup = supplierOf(rec);
-        if (wantCust && wantCust !== gotCust) partyMismatch.push('第 ' + (i + 1) + ' 行 · 客户：你填「' + wantCust + '」，系统按地点算的是「' + gotCust + '」');
-        if (wantSup && wantSup !== gotSup) partyMismatch.push('第 ' + (i + 1) + ' 行 · 供货商：你填「' + wantSup + '」，系统按地点算的是「' + gotSup + '」');
+        const gotCust = customerOf(rec);   // 调拨返回 [from客户, to客户]
+        const gotSup = supplierOf(rec);     // 调拨返回 ''
+        const gotCustArr = Array.isArray(gotCust) ? gotCust : [gotCust];
+        if (recordTypeOf(rec) === '调拨') {
+          // 调拨两端都是客户、无供货商端
+          if (wantCust && !gotCustArr.includes(wantCust)) partyMismatch.push('第 ' + (i + 1) + ' 行 · 客户：你填「' + wantCust + '」，系统按地点算的是「' + gotCustArr.join('、') + '」');
+          if (wantSup) partyMismatch.push('第 ' + (i + 1) + ' 行 · 供货商：调拨业务无供货商端，请留空');
+        } else {
+          if (wantCust && wantCust !== gotCust) partyMismatch.push('第 ' + (i + 1) + ' 行 · 客户：你填「' + wantCust + '」，系统按地点算的是「' + gotCust + '」');
+          if (wantSup && wantSup !== gotSup) partyMismatch.push('第 ' + (i + 1) + ' 行 · 供货商：你填「' + wantSup + '」，系统按地点算的是「' + gotSup + '」');
+        }
         records.push(rec);
       }
       if (records.length === 0) { toast(duplicate > 0 ? '全部 ' + duplicate + ' 条都是重复记录，未导入' : '没有可导入的有效记录（需有日期和主车）', false, true); return; }
@@ -3965,10 +4131,11 @@ setupLocationPickers();
     loadLocationLib();        // 地点名称库(后台加载;内置库已先兜底,不阻塞首屏)
     loadPartyMap();           // 客户/供货商归属(没建表就静默回落,不影响用)
     loadPartyNames();         // v1.10.0 名称表(归属下拉的候选池;同样静默回落)
+    loadInitialStocks();       // v1.11.0 供货商初始库存(存货量维度用;没建表静默回落)
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.10.1 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.11.0 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
