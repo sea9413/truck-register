@@ -409,6 +409,7 @@ input[id="fIdCard"] { background: #f5f5f5; color: #888; }
         <div class="goods-btns" id="typeBtns">
           <div class="goods-btn active" onclick="selectType(this, '送货')">送货</div>
           <div class="goods-btn" onclick="selectType(this, '退货')">退货</div>
+          <div class="goods-btn" onclick="selectType(this, '调拨')">调拨</div>
           <div class="goods-btn" onclick="selectType(this, '不统计')">不统计</div>
         </div>
       </div>
@@ -4586,7 +4587,7 @@ setupLocationPickers();
   }
 })();
 </script>
-<div class="version-footer">装货登记 v1.12.3 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
+<div class="version-footer">装货登记 v1.12.4 | 开发者: sea9413 · <span id="offlineBadge" style="display:none"></span> · <a href="javascript:void(0)" onclick="showHelp()" style="color:#1565c0;text-decoration:underline">使用说明</a> · <a href="javascript:void(0)" onclick="showLocationLib()" style="color:#1565c0;text-decoration:underline">📍 地点库</a> · <a href="javascript:void(0)" onclick="showLogs()" style="color:#1565c0;text-decoration:underline">📜 操作日志</a> · <a href="javascript:void(0)" onclick="showFailures()" style="color:#1565c0;text-decoration:underline">🔬 识别样本</a> · <a href="javascript:void(0)" onclick="askOperator()" style="color:#1565c0;text-decoration:underline"><span id="operatorName">👤 设置姓名</span></a> · <a href="javascript:void(0)" onclick="localStorage.removeItem('truck_gate_ok_v2');localStorage.removeItem('truck_gate_ok');localStorage.removeItem('truck_aes_key_v1');location.reload();" style="color:#1565c0;text-decoration:underline">重新登录</a></div>
 </body>
 </html>
 
