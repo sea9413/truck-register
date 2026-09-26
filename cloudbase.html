@@ -6,7 +6,11 @@
 <title>装货登记</title>
 <!-- 加载失败时只置标志位:此时 <body> 还没解析,直接取 recordList 会拿到 null 而报错。
      真正的提示统一在 initSupabase() 里用 showFatalError() 输出。 -->
-<!-- CloudBase 迁移阶段一：supabase-js UMD 已移除，@cloudbase/js-sdk 改在 initSupabase() 里动态加载 -->
+<!-- CloudBase SDK：自托管单文件（同源加载，不依赖任何 CDN），暴露全局变量 cloudbase。
+     2026-09-26 修复：原方案从 jsdelivr 动态 import "+esm" 包，浏览器还需再拉 8 个子模块，
+     任一子模块失败即整个数据库层失效；且为异步，启动代码会早于初始化完成去调 .from()。
+     现改为同源单文件 + 同步加载，两个问题一并消除。 -->
+<script src="vendor/cloudbase-sdk.js" onerror="window._cloudbaseSdkLoadFailed=true"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 <style>
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -622,7 +626,8 @@ function escapeHtml(v) {
 // ===== CloudBase 迁移阶段一（2026-09-26）：腾讯云 CloudBase for Supabase 版 =====
 const CLOUDBASE_ENV = 'why1314-d9gl2oy5ic9f3db5f';
 const CLOUDBASE_KEY = 'eyJhbGciOiJSUzI1NiIsImtpZCI6IjY5NzE5YmQ0LTI1YjgtNDk5Mi1hZjBjLTNmOTliZTA1YTgxNyJ9.eyJpc3MiOiJodHRwczovL3doeTEzMTQtZDlnbDJveTVpYzlmM2RiNWYuYXAtc2hhbmdoYWkudGNiLWFwaS50ZW5jZW50Y2xvdWRhcGkuY29tIiwic3ViIjoiYW5vbiIsImF1ZCI6IndoeTEzMTQtZDlnbDJveTVpYzlmM2RiNWYiLCJleHAiOjQwOTQwODYyODAsImlhdCI6MTc5MDQwMzA4MCwibm9uY2UiOiJuU1dhcFlHc1FsQ1p2dWdsVm11cGdnIiwiYXRfaGFzaCI6Im5TV2FwWUdzUWxDWnZ1Z2xWbXVwZ2ciLCJuYW1lIjoiQW5vbnltb3VzIiwic2NvcGUiOiJhbm9ueW1vdXMiLCJwcm9qZWN0X2lkIjoid2h5MTMxNC1kOWdsMm95NWljOWYzZGI1ZiIsIm1ldGEiOnsicGxhdGZvcm0iOiJQdWJsaXNoYWJsZUtleSJ9LCJyb2xlIjoiYW5vbiIsImlzX2Fub255bW91cyI6dHJ1ZSwiYXBwX21ldGFkYXRhIjp7InByb3ZpZGVyIjoiYW5vbnltb3VzIiwicHJvdmlkZXJzIjpbImFub255bW91cyJdfSwidXNlcl9tZXRhZGF0YSI6eyJuYW1lIjoiQW5vbnltb3VzIn0sInVzZXJfdHlwZSI6IiIsImNsaWVudF90eXBlIjoiY2xpZW50X3VzZXIiLCJpc19zeXN0ZW1fYWRtaW4iOmZhbHNlfQ.DaFpurH49Yo36EMS7VnoB-xz4gk20-Z9znv6_BYOCJsByan002T0yst2nXr-RTDFH6YfGc3o7qTW1OWdmcgJcRVkopb7mWLNXXP1AyBVufyWrLuigwwLK4hy_E_V9nGxTx27t3_hHs5oo0xwoOJJi6JF2xPjJo34eqybOn8cbpC0tXlPTPy36skIkBg6d_f1S6MpACU6ENQF38LrK_EoufEW96vJ7CYnQKok3rDeBZsrhgbkFn1S9Zt5uwaN-Og5ZugBEEmTAEXsbw-UiHBDRR5hMoaPRGyhQvdw99R7LyMXRPccg4a27vHcOSLEfMAwteLY9eeN4HSgK72JJgNxlA';   // Publishable Key（公开值，等价 supabase anon key）
-const CLOUDBASE_SDK = 'https://cdn.jsdelivr.net/npm/@cloudbase/js-sdk@3.10.1/+esm';
+// 【已废弃】原先从 jsdelivr 动态 import 的地址；现改用同源自托管单文件 vendor/cloudbase-sdk.js（见 <head>）
+// const CLOUDBASE_SDK = 'https://cdn.jsdelivr.net/npm/@cloudbase/js-sdk@3.10.1/+esm';
 
 // ===== 访问密码门 =====
 // 密码 "123456" 的 SHA-256 哈希 (可随时改 passwordHash 换密码)
@@ -803,28 +808,42 @@ function showFatalError(msg) {
   if (cnt) cnt.textContent = '加载失败';
 }
 
-let supabaseInitRetry = 0;
-const SUPABASE_INIT_MAX_RETRY = 50; // 50 × 100ms = 最多等 5 秒
+// CloudBase 客户端初始化。
+// 设计要点（2026-09-26 修复）：
+//  ① SDK 改为自托管单文件 vendor/cloudbase-sdk.js（<head> 里同步 <script> 加载），此处 window.cloudbase 已就绪；
+//  ② 不再用异步动态 import()：原写法还需向 jsdelivr 再拉 8 个子模块，任一失败整个数据库层失效；
+//  ③ 赋值不经过 await，调用本函数后 supabaseClient 立即可用，消除「初始化未完成就调 .from()」的竞态；
+//  ④ 幂等：重复调用返回同一个 Promise，原有调用点无需改动。
+var cloudbaseInitPromise = null;
 
-async function initSupabase() {
-  try {
-    // CloudBase for Supabase：动态加载 @cloudbase/js-sdk（ESM），rdb() 链式 API 与 supabase-js 对齐，
-    // 全部 from/select/insert/update/delete/upsert 调用点零改动（阶段一已逐一核对）。
-    const mod = await import(CLOUDBASE_SDK);
-    const cloudbase = mod.default;
-    const app = cloudbase.init({ env: CLOUDBASE_ENV, accessKey: CLOUDBASE_KEY });
-    supabaseClient = app.rdb();   // 变量名保持 supabaseClient，调用点零改动
-    console.log('CloudBase 初始化完成');
-    if (typeof loadRecords === 'function') loadRecords();
-    // 初始化时检查离线队列,在线则自动同步
-    updateOfflineBadge();
-    if (navigator.onLine && getOfflineQueue().length > 0) {
-      setTimeout(() => syncOfflineQueue(), 1000);
+function initSupabase() {
+  if (cloudbaseInitPromise) return cloudbaseInitPromise;
+  cloudbaseInitPromise = (async function () {
+    try {
+      if (typeof cloudbase === 'undefined') {
+        throw new Error(window._cloudbaseSdkLoadFailed
+          ? 'vendor/cloudbase-sdk.js 未能加载（请确认该文件已随页面一同部署）'
+          : 'window.cloudbase 不存在：SDK 未加载');
+      }
+      const app = cloudbase.init({ env: CLOUDBASE_ENV, accessKey: CLOUDBASE_KEY });
+      const db = app.rdb();
+      if (!db || typeof db.from !== 'function') {
+        throw new Error('app.rdb() 未返回可用的数据库客户端（云开发 PG 模式是否已开启？）');
+      }
+      supabaseClient = db;   // 变量名保持 supabaseClient，调用点零改动
+      console.log('CloudBase 初始化完成');
+      if (typeof loadRecords === 'function') loadRecords();
+      // 初始化时检查离线队列,在线则自动同步
+      updateOfflineBadge();
+      if (navigator.onLine && getOfflineQueue().length > 0) {
+        setTimeout(() => syncOfflineQueue(), 1000);
+      }
+    } catch (e) {
+      console.error('CloudBase 初始化失败:', e);
+      showFatalError('CloudBase 初始化失败:<br>' + escapeHtml(e.message));
     }
-  } catch (e) {
-    console.error('CloudBase 初始化失败:', e);
-    showFatalError('CloudBase 初始化失败:<br>' + escapeHtml(e.message));
-  }
+  })();
+  return cloudbaseInitPromise;
 }
 
 // 作为全局变量供后续函数使用
@@ -4558,8 +4577,8 @@ setupLocationPickers();
 
 // 初始化 (仅在密码验证后或已验证过才初始化;先恢复加密密钥再拉数据)
 (async function init() {
-  if (window._supabaseLoadFailed) {
-    showFatalError('Supabase 脚本加载失败<br>请检查网络后刷新页面');
+  if (window._supabaseLoadFailed || window._cloudbaseSdkLoadFailed) {
+    showFatalError('SDK 脚本加载失败（vendor/cloudbase-sdk.js）<br>请确认该文件已随页面一同部署，然后刷新重试');
     return;
   }
   if (gateIsValid() && hasStoredAesKey()) {
